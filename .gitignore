@@ -1,0 +1,35 @@
+# Python/Django
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment Variables
+.env
+.env.local
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# Media and Static Files
+media/
+staticfiles/
+exports/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db

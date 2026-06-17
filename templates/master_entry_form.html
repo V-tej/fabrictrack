@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Master Entry{% endblock %}
+{% block page_title %}📋 New Master Entry{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div class="form-card" id="masterEntryCard">
+    <div class="form-card-header">
+      <h2>Create Master Entry</h2>
+      <p class="form-subtitle">Create a Date + Lot No. record that P1 and other persons will link their submissions to.</p>
+    </div>
+
+    <form method="post" id="masterEntryForm">
+      {% csrf_token %}
+      <div class="form-section">
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
+            {{ form.date }}
+            {% if form.date.errors %}<span class="field-error">{{ form.date.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_job_card_number" class="form-label">Job Card Number <span class="required-star">*</span></label>
+            {{ form.job_card_number }}
+            {% if form.job_card_number.errors %}<span class="field-error">{{ form.job_card_number.errors.0 }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary" id="btnCreateMaster">Create Entry</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Confirm Delete{% endblock %}
+{% block page_title %}⚠️ Confirm Delete{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div class="form-card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 2rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+    <h2 style="color: var(--text-dark); margin-bottom: 1rem;">Are you absolutely sure?</h2>
+    
+    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 1.1rem;">
+      You are about to delete <strong>{{ object }}</strong>.
+    </p>
+    
+    <p style="color: var(--danger); font-weight: 500; margin-bottom: 2rem; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: var(--radius);">
+      This action cannot be undone. Any related reports will also be permanently deleted.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url cancel_url %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn" style="background-color: var(--danger); color: white;">
+          Yes, Delete Permanently
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

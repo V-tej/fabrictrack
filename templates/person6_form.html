@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Finishing Report{% endblock %}
+{% block page_title %}👔 Finishing Report{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div class="form-card" id="cuttingReportCard">
+
+    <div class="form-card-header">
+      <h2>{% if is_edit %}Edit{% else %}Submit{% endif %} Finishing Report</h2>
+      <p class="form-subtitle">Fill in all required fields marked with <span class="required-star">*</span></p>
+    </div>
+
+    {# Pass cutting reports data for JS auto-fill #}
+    <script>
+      window.CUTTING_REPORTS = {{ cutting_reports_json|safe }};
+      window.IS_ADMIN = {{ is_admin|yesno:"true,false" }};
+    </script>
+
+    <form method="post" enctype="multipart/form-data" id="cuttingReportForm" novalidate>
+      {% csrf_token %}
+
+      <!-- ── Section: Link to P1 Report ───────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">📋 Select P1 Cutting Report</div>
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="id_cutting_report" class="form-label">Select Cutting Report <span class="required-star">*</span></label>
+            {{ form.cutting_report }}
+            {% if form.cutting_report.errors %}
+            <span class="field-error">{{ form.cutting_report.errors.0 }}</span>
+            {% endif %}
+            {% if not cutting_reports %}
+            <span class="field-hint">⚠️ No P1 reports available. Person 1 must submit a report first.</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section: Details ────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">👔 Details</div>
+
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
+            {{ form.date }}
+            {% if form.date.errors %}
+            <span class="field-error">{{ form.date.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_lot_no" class="form-label">Lot No <span class="required-star">*</span></label>
+            {{ form.lot_no }}
+            {% if form.lot_no.errors %}
+            <span class="field-error">{{ form.lot_no.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row three-col">
+          <div class="form-group">
+            <label for="id_total_pcs" class="form-label">Total Pcs <span class="required-star">*</span></label>
+            {{ form.total_pcs }}
+            {% if form.total_pcs.errors %}
+            <span class="field-error">{{ form.total_pcs.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_total_pcs_short" class="form-label">Total Pcs Short <span class="required-star">*</span></label>
+            {{ form.total_pcs_short }}
+            {% if form.total_pcs_short.errors %}
+            <span class="field-error">{{ form.total_pcs_short.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_total_pcs_packed" class="form-label">Total Pcs Packed <span class="required-star">*</span></label>
+            {{ form.total_pcs_packed }}
+            {% if form.total_pcs_packed.errors %}
+            <span class="field-error">{{ form.total_pcs_packed.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row three-col">
+          <div class="form-group">
+            <label for="id_green_tape" class="form-label">Green Tape <span class="required-star">*</span></label>
+            {{ form.green_tape }}
+            {% if form.green_tape.errors %}
+            <span class="field-error">{{ form.green_tape.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_red_tape" class="form-label">Red Tape <span class="required-star">*</span></label>
+            {{ form.red_tape }}
+            {% if form.red_tape.errors %}
+            <span class="field-error">{{ form.red_tape.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_blue_tape" class="form-label">Blue Tape <span class="required-star">*</span></label>
+            {{ form.blue_tape }}
+            {% if form.blue_tape.errors %}
+            <span class="field-error">{{ form.blue_tape.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section: Photos ─────────────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">📷 Job Card Photos</div>
+
+        <div class="form-group">
+          <label for="id_photos" class="form-label">
+            Job Card Photos <span class="required-star">*</span>
+            <span class="file-count-badge">Up to 5 files • Max 100 MB each</span>
+          </label>
+
+          <div class="file-upload-zone" id="fileUploadZone">
+            <div class="file-upload-inner">
+              <div class="upload-icon">📸</div>
+              <p class="upload-text">Click to select photos or drag &amp; drop here</p>
+              <p class="upload-hint">JPG, PNG, HEIC supported • Up to 5 photos</p>
+              <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
+            </div>
+          </div>
+
+          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+          <div class="photo-count-display" id="photoCountDisplay"></div>
+        </div>
+      </div>
+
+      <!-- ── Section: Signature ──────────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">✍️ Signature <span class="required-star">*</span></div>
+        <div class="form-group">
+          <label class="form-label">Sign Here <span class="required-star">*</span></label>
+          {{ form.signature }}
+          <div class="signature-wrapper">
+            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+            <div class="signature-actions">
+              <button type="button" class="btn-clear-sig" id="btnClearSig">Clear Signature</button>
+            </div>
+          </div>
+          {% if form.signature.errors %}
+          <span class="field-error">{{ form.signature.errors.0 }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── Submit ──────────────────────────────────────────────── -->
+      <div class="form-actions">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary" id="btnCancel">Cancel</a>
+        <button type="submit" class="btn btn-primary" id="btnSubmit">
+          <span class="btn-text">{% if is_edit %}Save Changes{% else %}Submit Report{% endif %}</span>
+          <span class="btn-loader" style="display:none">Submitting…</span>
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

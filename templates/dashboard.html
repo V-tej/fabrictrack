@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid fade-in">
+
+  <!-- ── Stats Row ──────────────────────────────────────────────────── -->
+  <div class="stats-row">
+    <div class="stat-card" id="stat-master">
+      <div class="stat-icon">📋</div>
+      <div class="stat-body">
+        <span class="stat-value">{{ master_entries_count }}</span>
+        <span class="stat-label">Master Entries</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-submissions">
+      <div class="stat-icon">📝</div>
+      <div class="stat-body">
+        <span class="stat-value">{{ user_submissions_count|default:"0" }}</span>
+        <span class="stat-label">Your Submissions</span>
+      </div>
+    </div>
+    <div class="stat-card accent" id="stat-user">
+      <div class="stat-icon">👤</div>
+      <div class="stat-body">
+        <span class="stat-value">
+          {% if user.profile %}{{ user.profile.get_person_type_display }}{% else %}User{% endif %}
+        </span>
+        <span class="stat-label">Your Role</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Quick Actions ──────────────────────────────────────────────── -->
+  <div class="section-card" id="quick-actions">
+    <h2 class="section-title">Quick Actions</h2>
+    <div class="action-grid">
+
+      {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+      <a href="{% url 'create_master_entry' %}" class="action-card" id="action-master">
+        <div class="action-icon">📋</div>
+        <div class="action-label">New Master Entry</div>
+        <div class="action-desc">Create Date + Lot No record</div>
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P1' or user.is_superuser %}
+      <a href="{% url 'cutting_report' %}" class="action-card primary" id="action-cutting">
+        <div class="action-icon">✂️</div>
+        <div class="action-label">Cutting Report</div>
+        <div class="action-desc">Submit a new cutting report</div>
+      </a>
+      {% endif %}
+
+      <a href="{% url 'submission_list' %}" class="action-card" id="action-submissions">
+        <div class="action-icon">📊</div>
+        <div class="action-label">View Submissions</div>
+        <div class="action-desc">Browse past entries</div>
+      </a>
+
+      <a href="{% url 'export_excel' %}" class="action-card success" id="action-export">
+        <div class="action-icon">⬇️</div>
+        <div class="action-label">Download Excel</div>
+        <div class="action-desc">Export all data to .xlsx</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Recent Reports ─────────────────────────────────────────────── -->
+  <div class="section-card" id="recent-reports">
+    <h2 class="section-title">Recent Reports</h2>
+    {% if recent_reports %}
+    <div class="table-wrapper">
+      <table class="data-table" id="recentTable">
+        <thead>
+          <tr>
+            <th>Job Card / Lot No</th>
+            {% if person_type == 'P1' or person_type == 'ADMIN' %}
+              <th>Item</th><th>Cutting Master</th>
+            {% elif person_type == 'P2' %}
+              <th>Item</th><th>CR Lakshay Master</th>
+            {% elif person_type == 'P3' %}
+              <th>Item</th><th>CR Rahul Master</th>
+            {% elif person_type == 'P4' %}
+              <th>Item</th><th>Total Rate</th>
+            {% elif person_type == 'P5' %}
+              <th>Jobworker</th><th>Type</th>
+            {% elif person_type == 'P6' %}
+              <th>Date</th><th>Packed</th>
+            {% endif %}
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Submitted At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in recent_reports %}
+          <tr>
+            <td>
+              {% if person_type == 'P6' %}
+                <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.lot_no }}</span>
+              {% elif person_type == 'P5' or person_type == 'P4' %}
+                <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.job_card_no }}</span>
+              {% elif person_type == 'P2' or person_type == 'P3' %}
+                <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.cutting_report.master_entry.job_card_number }}</span>
+              {% else %}
+                <a href="{% url 'job_card_print' report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                  <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.master_entry.job_card_number }}</span>
+                </a>
+              {% endif %}
+            </td>
+
+            {% if person_type == 'P1' or person_type == 'ADMIN' %}
+              <td>{{ report.item_name }}</td><td>{{ report.cutting_master_name|default:"—" }}</td>
+            {% elif person_type == 'P2' or person_type == 'P3' %}
+              <td>{{ report.item_name }}</td><td>{{ report.cutting_master_name|default:"—" }}</td>
+            {% elif person_type == 'P4' %}
+              <td>{{ report.item_name }}</td><td>₹{{ report.total_rate }}</td>
+            {% elif person_type == 'P5' %}
+              <td>{{ report.jobworker }}</td><td>{{ report.job_work_type }}</td>
+            {% elif person_type == 'P6' %}
+              <td>{{ report.date|date:"d-b-Y" }}</td><td>{{ report.total_pcs_packed }}</td>
+            {% endif %}
+
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>{{ report.created_at|date:"d-b-Y H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'submission_list' %}" class="btn-link" id="view-all-link">View all submissions →</a>
+    {% else %}
+    <div class="empty-state" id="empty-dashboard">
+      <div class="empty-icon">📭</div>
+      <p>No reports found. Submit your first report to see it here.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
