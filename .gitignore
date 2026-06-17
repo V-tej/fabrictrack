@@ -16,7 +16,6 @@ venv.bak/
 .env.local
 
 # Database
-db.sqlite3
 db.sqlite3-journal
 
 # Media and Static Files
