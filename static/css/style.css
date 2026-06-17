@@ -400,6 +400,8 @@ a:hover { text-decoration: underline; }
   border-bottom: 1px solid var(--border);
   color: var(--text-primary);
   vertical-align: middle;
+  white-space: nowrap;
+  line-height: 1.5;
 }
 
 .data-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
