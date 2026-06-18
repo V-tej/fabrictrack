@@ -5,7 +5,7 @@
 {% block content %}
 <div class="fade-in">
 
-  {% if user.profile.person_type != 'P2' and user.profile.person_type != 'P3' and user.profile.person_type != 'P4' %}
+  {% if show_p1 and user.profile.person_type != 'P2' and user.profile.person_type != 'P3' and user.profile.person_type != 'P4' %}
   <div class="section-card" id="submissionsCard">
     <div class="section-header-row">
       <h2 class="section-title">Cutting Reports</h2>
@@ -93,7 +93,7 @@
   </div>
   {% endif %}
 
-  {% if user.profile.person_type == 'P2' or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+  {% if show_p2 and user.profile.person_type in 'P2,ADMIN' or show_p2 and user.is_superuser %}
   <!-- CR Lakshay Section -->
   <div class="section-card" id="p2SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
@@ -181,7 +181,7 @@
   </div>
   {% endif %}
 
-  {% if user.profile.person_type == 'P3' or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+  {% if show_p3 and user.profile.person_type in 'P3,ADMIN' or show_p3 and user.is_superuser %}
   <!-- CR Rahul Section -->
   <div class="section-card" id="p3SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
@@ -269,7 +269,7 @@
   </div>
   {% endif %}
 
-  {% if user.profile.person_type == 'P4' or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+  {% if show_p4 and user.profile.person_type in 'P4,ADMIN' or show_p4 and user.is_superuser %}
   <!-- Stitching Miya Ji Section -->
   <div class="section-card" id="p4SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
@@ -349,7 +349,7 @@
   </div>
   {% endif %}
 
-  {% if user.profile.person_type == 'P5' or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+  {% if show_p5 and user.profile.person_type in 'P5,ADMIN' or show_p5 and user.is_superuser %}
   <!-- Job Work Section -->
   <div class="section-card" id="p5SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
@@ -425,7 +425,7 @@
   </div>
   {% endif %}
 
-  {% if user.profile.person_type == 'P6' or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+  {% if show_p6 and user.profile.person_type in 'P6,ADMIN' or show_p6 and user.is_superuser %}
   <!-- Finishing Report Section -->
   <div class="section-card" id="p6SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">

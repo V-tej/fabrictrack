@@ -16,6 +16,7 @@ urlpatterns = [
     path('users-reports/', views.users_reports_view, name='users_reports'),
     path('submissions/', views.submission_list_view, name='submission_list'),
     path('export/excel/', views.export_excel_view, name='export_excel'),
+    path('download-database/', views.download_database, name='download_database'),
     path('job-card/<int:pk>/', views.job_card_detail_view, name='job_card_detail'),
     path('job-card/<int:pk>/print/', views.job_card_print_view, name='job_card_print'),
 

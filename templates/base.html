@@ -99,6 +99,12 @@
     </a>
 
     {% if user.is_superuser %}
+    <a href="{% url 'download_database' %}" class="nav-item" id="nav-download-db">
+      <span class="nav-icon">💾</span> Download Database
+    </a>
+    {% endif %}
+
+    {% if user.is_superuser %}
     <a href="/admin/auth/user/" class="nav-item" id="nav-users">
       <span class="nav-icon">👥</span> Users
     </a>

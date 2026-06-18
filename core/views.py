@@ -527,6 +527,7 @@ def submission_list_view(request):
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
 
+    filter_param = request.GET.get('filter')
     return render(request, 'submission_list.html', {
         'reports': reports,
         'p2_reports': p2_reports,
@@ -535,6 +536,13 @@ def submission_list_view(request):
         'p5_reports': p5_reports,
         'p6_reports': p6_reports,
         'person_type': person_type,
+        'filter_param': filter_param,
+        'show_p1': not filter_param or filter_param == 'p1',
+        'show_p2': not filter_param or filter_param == 'p2',
+        'show_p3': not filter_param or filter_param == 'p3',
+        'show_p4': not filter_param or filter_param == 'p4',
+        'show_p5': not filter_param or filter_param == 'p5',
+        'show_p6': not filter_param or filter_param == 'p6',
     })
 
 
@@ -890,3 +898,20 @@ def delete_person6_report(request, pk):
         export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
+import os
+from django.conf import settings
+from django.http import FileResponse
+
+@login_required
+def download_database(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied("Only superusers can download the database backup.")
+    
+    db_path = settings.DATABASES['default']['NAME']
+    if os.path.exists(db_path):
+        response = FileResponse(open(db_path, 'rb'), as_attachment=True, filename='fabrictrack_backup.sqlite3')
+        return response
+    else:
+        messages.error(request, 'Database file not found.')
+        return redirect('dashboard')
