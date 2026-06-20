@@ -109,7 +109,7 @@
 
   <script>
     // Generate QR code for the specific URL
-    var qrUrl = "{{ qr_url }}";
+    var qrUrl = "{{ qr_url|escapejs }}";
     var qrcode = new QRCode(document.getElementById("qrcode"), {
       text: qrUrl,
       width: 200,

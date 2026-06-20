@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Export Excel{% endblock %}
+{% block page_title %}⬇️ Export Excel Data{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div class="form-card" style="max-width: 600px; margin: 0 auto;">
+    
+    <div class="form-card-header" style="text-align: center;">
+      <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">Download Excel Data</h2>
+      <p class="form-subtitle">Choose how much data you want to include in the Excel file.</p>
+    </div>
+
+    <div class="form-section" style="padding: 2rem;">
+      
+      <!-- Option 1: All Data -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+        <h3 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">1. All Historical Data</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--text-color-muted); font-size: 0.95rem;">
+          Download absolutely every record in the database from the beginning of time.
+        </p>
+        <a href="{% url 'export_excel' %}?type=all" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          Download All Data
+        </a>
+      </div>
+
+      <!-- Option 2: Since Last Download -->
+      <div style="padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+        <h3 style="margin: 0 0 0.5rem 0; color: #10b981;">2. Only New Data</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--text-color-muted); font-size: 0.95rem;">
+          Download only the records that have been created since the last time you downloaded the Excel file.
+        </p>
+        
+        {% if last_download_at %}
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🕒</span> Last download was on: <strong>{{ last_download_at|date:"d-M-Y h:i A" }}</strong>
+        </div>
+        <a href="{% url 'export_excel' %}?type=new" class="btn btn-success" style="width: 100%; justify-content: center;">
+          Download New Data Only
+        </a>
+        {% else %}
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>⚠️</span> No previous download history found.
+        </div>
+        <button class="btn btn-secondary" style="width: 100%; justify-content: center; opacity: 0.5; cursor: not-allowed;" disabled>
+          Download New Data Only
+        </button>
+        {% endif %}
+      </div>
+      
+    </div>
+
+    <div class="form-actions" style="justify-content: center; border-top: 1px solid var(--border-color);">
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">Go Back</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

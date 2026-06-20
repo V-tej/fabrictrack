@@ -70,14 +70,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function calcAverage() {
     if (!totalPcsEl || !totalWeightEl || !avgPerPcsEl) return;
-    const pcs    = parseFloat(totalPcsEl.value);
-    const weight = parseFloat(totalWeightEl.value);
+    const pcs    = parseFloat(totalPcsEl.value) || 0;
+    const weight = parseFloat(totalWeightEl.value) || 0;
     if (pcs > 0 && weight > 0) {
       const avg = (weight / pcs).toFixed(3);
       avgPerPcsEl.value = avg;
       if (autoCalcBadge) autoCalcBadge.style.display = 'inline-flex';
+    } else {
+      avgPerPcsEl.value = '';
     }
   }
+
+  // ── Auto-Calculate Total Pcs from Sizes ──────────────────────────
+  const sizeInputs = document.querySelectorAll('.size-input');
+  
+  function calcTotalSizes() {
+    if (!totalPcsEl || sizeInputs.length === 0) return;
+    let total = 0;
+    sizeInputs.forEach(input => {
+      const val = parseInt(input.value, 10);
+      if (!isNaN(val)) total += val;
+    });
+    totalPcsEl.value = total;
+    calcAverage(); // Trigger average update
+  }
+
+  sizeInputs.forEach(input => {
+    input.addEventListener('input', calcTotalSizes);
+  });
 
   if (totalPcsEl)    totalPcsEl.addEventListener('input', calcAverage);
   if (totalWeightEl) totalWeightEl.addEventListener('input', calcAverage);
@@ -117,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const masterEntrySelect = document.getElementById('id_master_entry');
   const jobCardNoEl       = document.getElementById('id_job_card_no');
 
-  if (masterEntrySelect && jobCardNoEl && window.IS_ADMIN && window.MASTER_ENTRIES) {
+  if (masterEntrySelect && jobCardNoEl && window.MASTER_ENTRIES) {
     const handleMasterChange = function () {
       const selectedId = this.value;
       if (selectedId && window.MASTER_ENTRIES[selectedId]) {
@@ -140,6 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const cuttingReportSelect = document.getElementById('id_cutting_report');
   // Form might have id_job_card_no (P2-P5) or id_lot_no (P6)
   const targetFieldEl = document.getElementById('id_job_card_no') || document.getElementById('id_lot_no');
+  const itemNameEl = document.getElementById('id_item_name');
   
   if (cuttingReportSelect && targetFieldEl && window.CUTTING_REPORTS) {
     const handleCuttingChange = function () {
@@ -147,16 +168,37 @@ document.addEventListener('DOMContentLoaded', function () {
       if (selectedId && window.CUTTING_REPORTS[selectedId]) {
         const data = window.CUTTING_REPORTS[selectedId];
         
-        // P6 form uses an object with {date, lot_no}, other forms use just a string
+        // Data is now usually an object {job_card_no: '...', item_name: '...'} or {date, lot_no}
         if (typeof data === 'object') {
-          targetFieldEl.value = data.lot_no || '';
+          targetFieldEl.value = data.lot_no || data.job_card_no || '';
+          
           const dateEl = document.getElementById('id_date');
-          if (dateEl) {
+          if (dateEl && data.date) {
             dateEl.value = data.date || '';
             dateEl.style.transition = 'border-color 0.3s';
             dateEl.style.borderColor = '#f59e0b';
             setTimeout(() => { dateEl.style.borderColor = ''; }, 1500);
           }
+          
+          if (itemNameEl && data.item_name) {
+            itemNameEl.value = data.item_name || '';
+            itemNameEl.style.transition = 'border-color 0.3s';
+            itemNameEl.style.borderColor = '#f59e0b';
+            setTimeout(() => { itemNameEl.style.borderColor = ''; }, 1500);
+          }
+          
+          const totalPcsEl = document.getElementById('id_total_pcs');
+          if (totalPcsEl && data.total_pcs !== undefined) {
+            // Only auto-fill if it's currently readonly AND there's no size grid (i.e. P4, P5, P6)
+            // This prevents auto-filling in P2/P3 where total_pcs is driven by size inputs.
+            if (totalPcsEl.hasAttribute('readonly') && !document.querySelector('.size-grid')) {
+              totalPcsEl.value = data.total_pcs || '';
+              totalPcsEl.style.transition = 'border-color 0.3s';
+              totalPcsEl.style.borderColor = '#f59e0b';
+              setTimeout(() => { totalPcsEl.style.borderColor = ''; }, 1500);
+            }
+          }
+          
         } else {
           targetFieldEl.value = data;
         }

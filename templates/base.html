@@ -48,7 +48,7 @@
     </a>
     {% endif %}
 
-    {% if user.profile.person_type == 'P1' or user.is_superuser %}
+    {% if user.profile.person_type in 'P1,P2,P3' and not user.is_superuser %}
     <a href="{% url 'cutting_report' %}" class="nav-item {% if request.resolver_match.url_name == 'cutting_report' %}active{% endif %}" id="nav-cutting">
       <span class="nav-icon">✂️</span> Cutting Report
     </a>
@@ -57,18 +57,6 @@
     {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
     <a href="{% url 'users_reports' %}" class="nav-item {% if request.resolver_match.url_name == 'users_reports' %}active{% endif %}" id="nav-users-reports">
       <span class="nav-icon">👥</span> Users Reports
-    </a>
-    {% endif %}
-
-    {% if user.profile.person_type == 'P2' %}
-    <a href="{% url 'person2_report' %}" class="nav-item {% if request.resolver_match.url_name == 'person2_report' %}active{% endif %}" id="nav-person2">
-      <span class="nav-icon">👔</span> CR Lakshay
-    </a>
-    {% endif %}
-
-    {% if user.profile.person_type == 'P3' %}
-    <a href="{% url 'person3_report' %}" class="nav-item {% if request.resolver_match.url_name == 'person3_report' %}active{% endif %}" id="nav-person3">
-      <span class="nav-icon">👔</span> CR Rahul
     </a>
     {% endif %}
 
@@ -94,9 +82,11 @@
       <span class="nav-icon">📊</span> Submissions
     </a>
 
-    <a href="{% url 'export_excel' %}" class="nav-item" id="nav-export">
+    {% if request.user.is_superuser %}
+    <a href="{% url 'export_options' %}" class="nav-item" id="nav-export">
       <span class="nav-icon">⬇️</span> Download Excel
     </a>
+    {% endif %}
 
     {% if user.is_superuser %}
     <a href="{% url 'download_database' %}" class="nav-item" id="nav-download-db">

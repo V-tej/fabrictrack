@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, MasterEntry, CuttingReport, CuttingReportPhoto, Person2Report, Person2ReportPhoto, Person3Report, Person3ReportPhoto, Person4Report, Person5Report, Person6Report, Person6ReportPhoto
+from .models import UserProfile, MasterEntry, CuttingReport, CuttingReportPhoto, Person4Report, Person5Report, Person6Report, Person6ReportPhoto
 
 
 @admin.register(UserProfile)
@@ -39,51 +39,6 @@ class CuttingReportAdmin(admin.ModelAdmin):
 class CuttingReportPhotoAdmin(admin.ModelAdmin):
     list_display = ['cutting_report', 'photo', 'uploaded_at']
 
-
-class Person2ReportPhotoInline(admin.TabularInline):
-    model = Person2ReportPhoto
-    extra = 0
-    readonly_fields = ['uploaded_at']
-
-
-@admin.register(Person2Report)
-class Person2ReportAdmin(admin.ModelAdmin):
-    list_display = [
-        'cutting_report', 'item_name', 'cutting_master_name',
-        'total_pcs', 'total_colours', 'created_by', 'created_at'
-    ]
-    list_filter = ['cutting_report__master_entry__date', 'created_by']
-    search_fields = ['item_name', 'job_card_no', 'cutting_master_name']
-    inlines = [Person2ReportPhotoInline]
-    readonly_fields = ['created_at']
-
-
-@admin.register(Person2ReportPhoto)
-class Person2ReportPhotoAdmin(admin.ModelAdmin):
-    list_display = ['person2_report', 'photo', 'uploaded_at']
-
-
-class Person3ReportPhotoInline(admin.TabularInline):
-    model = Person3ReportPhoto
-    extra = 0
-    readonly_fields = ['uploaded_at']
-
-
-@admin.register(Person3Report)
-class Person3ReportAdmin(admin.ModelAdmin):
-    list_display = [
-        'cutting_report', 'item_name', 'cutting_master_name',
-        'total_pcs', 'total_colours', 'created_by', 'created_at'
-    ]
-    list_filter = ['cutting_report__master_entry__date', 'created_by']
-    search_fields = ['item_name', 'job_card_no', 'cutting_master_name']
-    inlines = [Person3ReportPhotoInline]
-    readonly_fields = ['created_at']
-
-
-@admin.register(Person3ReportPhoto)
-class Person3ReportPhotoAdmin(admin.ModelAdmin):
-    list_display = ['person3_report', 'photo', 'uploaded_at']
 
 
 @admin.register(Person4Report)

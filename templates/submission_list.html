@@ -5,13 +5,17 @@
 {% block content %}
 <div class="fade-in">
 
-  {% if show_p1 and user.profile.person_type != 'P2' and user.profile.person_type != 'P3' and user.profile.person_type != 'P4' %}
+  {% if show_p1 and user.profile.person_type in 'P1,P2,P3,ADMIN' or show_p1 and user.is_superuser %}
   <div class="section-card" id="submissionsCard">
     <div class="section-header-row">
       <h2 class="section-title">Cutting Reports</h2>
       <div class="header-actions">
+        {% if request.user.profile.person_type in 'P1,P2,P3' %}
         <a href="{% url 'cutting_report' %}" class="btn btn-primary btn-sm" id="btnNewReport">+ New Report</a>
-        <a href="{% url 'export_excel' %}" class="btn btn-success btn-sm" id="btnExport">⬇ Excel</a>
+        {% endif %}
+        {% if request.user.is_superuser %}
+        <a href="{% url 'export_options' %}" class="btn btn-success btn-sm" id="btnExport">⬇ Excel</a>
+        {% endif %}
       </div>
     </div>
 
@@ -22,15 +26,14 @@
           <tr>
             <th>#</th>
             <th>Date &amp; Job Card No.</th>
+            <th>Type</th>
             <th>Item Name</th>
             <th>Cutting Master</th>
             <th>Rate</th>
             <th>Fabric</th>
             <th>Job Card</th>
             <th>Pcs</th>
-            <th>Colours</th>
-            <th>Weight/Mtr</th>
-            <th>Avg/Pcs</th>
+            <th>Fabric Codes</th>
             <th>Photos</th>
             <th>Signed</th>
             <th>By</th>
@@ -47,15 +50,14 @@
                 <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.master_entry }}</span>
               </a>
             </td>
+            <td><span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">{{ report.get_report_type_display }}</span></td>
             <td><strong>{{ report.item_name }}</strong></td>
             <td>{{ report.cutting_master_name|default:"—" }}</td>
             <td>{% if report.cutting_rate %}₹{{ report.cutting_rate }}{% else %}—{% endif %}</td>
             <td>{{ report.fabric_type_quality }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
             <td><strong>{{ report.total_pcs }}</strong></td>
-            <td>{{ report.total_colours }}</td>
-            <td>{{ report.total_weight_meter }}</td>
-            <td>{{ report.avg_per_pcs }}</td>
+            <td>{{ report.color_details.count }}</td>
             <td>
               <div class="photo-thumbs">
                 {% for photo in report.photos.all %}
@@ -93,181 +95,6 @@
   </div>
   {% endif %}
 
-  {% if show_p2 and user.profile.person_type in 'P2,ADMIN' or show_p2 and user.is_superuser %}
-  <!-- CR Lakshay Section -->
-  <div class="section-card" id="p2SubmissionsCard" style="margin-top: 2rem;">
-    <div class="section-header-row">
-      <h2 class="section-title">CR Lakshay</h2>
-      <div class="header-actions">
-        <a href="{% url 'person2_report' %}" class="btn btn-primary btn-sm" id="btnNewP2Report">+ New CR Lakshay</a>
-      </div>
-    </div>
-
-    {% if p2_reports %}
-    <div class="table-wrapper">
-      <table class="data-table" id="p2SubmissionsTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>P1 Date &amp; Job Card No.</th>
-            <th>Item Name</th>
-            <th>CR Lakshay Cutting Master</th>
-            <th>Rate</th>
-            <th>Fabric</th>
-            <th>Job Card</th>
-            <th>Pcs</th>
-            <th>Colours</th>
-            <th>Weight/Mtr</th>
-            <th>Avg/Pcs</th>
-            <th>Photos</th>
-            <th>Signed</th>
-            <th>By</th>
-            <th>Submitted</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for report in p2_reports %}
-          <tr class="table-row-hover">
-            <td>{{ forloop.counter }}</td>
-            <td>
-              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
-                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
-              </a>
-            </td>
-            <td><strong>{{ report.item_name }}</strong></td>
-            <td>{{ report.cutting_master_name|default:"—" }}</td>
-            <td>{% if report.cutting_rate %}₹{{ report.cutting_rate }}{% else %}—{% endif %}</td>
-            <td>{{ report.fabric_type_quality }}</td>
-            <td><code>{{ report.job_card_no }}</code></td>
-            <td><strong>{{ report.total_pcs }}</strong></td>
-            <td>{{ report.total_colours }}</td>
-            <td>{{ report.total_weight_meter }}</td>
-            <td>{{ report.avg_per_pcs }}</td>
-            <td>
-              <div class="photo-thumbs">
-                {% for photo in report.photos.all %}
-                <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{{ photo.photo.url }}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
-                </a>
-                {% endfor %}
-              </div>
-            </td>
-            <td style="text-align: center;">
-              {% if report.signature %}<span title="Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
-            </td>
-            <td>{{ report.created_by.username|default:"—" }}</td>
-            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
-            <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
-              <a href="{% url 'edit_person2_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_person2_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty-state" id="emptyP2Submissions">
-      <div class="empty-icon">📭</div>
-      <p>No CR Lakshay submissions yet.</p>
-      <a href="{% url 'person2_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  {% if show_p3 and user.profile.person_type in 'P3,ADMIN' or show_p3 and user.is_superuser %}
-  <!-- CR Rahul Section -->
-  <div class="section-card" id="p3SubmissionsCard" style="margin-top: 2rem;">
-    <div class="section-header-row">
-      <h2 class="section-title">CR Rahul</h2>
-      <div class="header-actions">
-        <a href="{% url 'person3_report' %}" class="btn btn-primary btn-sm" id="btnNewP3Report">+ New CR Rahul</a>
-      </div>
-    </div>
-
-    {% if p3_reports %}
-    <div class="table-wrapper">
-      <table class="data-table" id="p3SubmissionsTable">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>P1 Date &amp; Job Card No.</th>
-            <th>Item Name</th>
-            <th>CR Rahul Master</th>
-            <th>Rate</th>
-            <th>Fabric</th>
-            <th>Job Card</th>
-            <th>Pcs</th>
-            <th>Colours</th>
-            <th>Weight/Mtr</th>
-            <th>Avg/Pcs</th>
-            <th>Photos</th>
-            <th>Signed</th>
-            <th>By</th>
-            <th>Submitted</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for report in p3_reports %}
-          <tr class="table-row-hover">
-            <td>{{ forloop.counter }}</td>
-            <td>
-              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
-                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
-              </a>
-            </td>
-            <td><strong>{{ report.item_name }}</strong></td>
-            <td>{{ report.cutting_master_name|default:"—" }}</td>
-            <td>{% if report.cutting_rate %}₹{{ report.cutting_rate }}{% else %}—{% endif %}</td>
-            <td>{{ report.fabric_type_quality }}</td>
-            <td><code>{{ report.job_card_no }}</code></td>
-            <td><strong>{{ report.total_pcs }}</strong></td>
-            <td>{{ report.total_colours }}</td>
-            <td>{{ report.total_weight_meter }}</td>
-            <td>{{ report.avg_per_pcs }}</td>
-            <td>
-              <div class="photo-thumbs">
-                {% for photo in report.photos.all %}
-                <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{{ photo.photo.url }}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
-                </a>
-                {% endfor %}
-              </div>
-            </td>
-            <td style="text-align: center;">
-              {% if report.signature %}<span title="Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
-            </td>
-            <td>{{ report.created_by.username|default:"—" }}</td>
-            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
-            <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
-              <a href="{% url 'edit_person3_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_person3_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="empty-state" id="emptyP3Submissions">
-      <div class="empty-icon">📭</div>
-      <p>No CR Rahul submissions yet.</p>
-      <a href="{% url 'person3_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
-    </div>
-    {% endif %}
-  </div>
-  {% endif %}
 
   {% if show_p4 and user.profile.person_type in 'P4,ADMIN' or show_p4 and user.is_superuser %}
   <!-- Stitching Miya Ji Section -->

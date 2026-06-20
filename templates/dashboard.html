@@ -45,7 +45,7 @@
       </a>
       {% endif %}
 
-      {% if user.profile.person_type == 'P1' or user.is_superuser %}
+      {% if user.profile.person_type == 'P1' %}
       <a href="{% url 'cutting_report' %}" class="action-card primary" id="action-cutting">
         <div class="action-icon">✂️</div>
         <div class="action-label">Cutting Report</div>
@@ -59,11 +59,13 @@
         <div class="action-desc">Browse past entries</div>
       </a>
 
-      <a href="{% url 'export_excel' %}" class="action-card success" id="action-export">
+      {% if request.user.is_superuser %}
+      <a href="{% url 'export_options' %}" class="action-card success" id="action-export">
         <div class="action-icon">⬇️</div>
         <div class="action-label">Download Excel</div>
         <div class="action-desc">Export all data to .xlsx</div>
       </a>
+      {% endif %}
     </div>
   </div>
 
@@ -103,7 +105,7 @@
               {% elif person_type == 'P5' or person_type == 'P4' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.job_card_no }}</span>
               {% elif person_type == 'P2' or person_type == 'P3' %}
-                <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.cutting_report.master_entry.job_card_number }}</span>
+                <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.master_entry.job_card_number }}</span>
               {% else %}
                 <a href="{% url 'job_card_print' report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
                   <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.master_entry.job_card_number }}</span>

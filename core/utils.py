@@ -4,8 +4,7 @@ from django.conf import settings
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from .models import MasterEntry, CuttingReport, Person2Report
-
+from .models import MasterEntry, CuttingReport
 
 def get_exports_dir():
     exports_dir = Path(settings.BASE_DIR) / 'exports'
@@ -13,7 +12,7 @@ def get_exports_dir():
     return exports_dir
 
 
-def export_to_excel():
+def export_to_excel(since_date=None):
     """Generate/update the main FabricTrack Excel file with all data."""
     exports_dir = get_exports_dir()
     filepath = exports_dir / 'FabricTrack_Data.xlsx'
@@ -28,7 +27,10 @@ def export_to_excel():
     headers1 = ['#', 'Date', 'Job Card Number', 'Created By', 'Created At']
     _write_header_row(ws1, headers1)
 
-    for i, entry in enumerate(MasterEntry.objects.all().order_by('-date'), start=1):
+    me_qs = MasterEntry.objects.all()
+    if since_date:
+        me_qs = me_qs.filter(created_at__gt=since_date)
+    for i, entry in enumerate(me_qs.order_by('-date'), start=1):
         ws1.append([
             i,
             entry.date.strftime('%d-%b-%Y'),
@@ -39,116 +41,105 @@ def export_to_excel():
 
     _auto_width_and_style(ws1)
 
-    # ── Sheet 2: Cutting Reports ────────────────────────────────────────────
+    # ── Sheet 2: Consolidated Cutting Reports ───────────────────────────────
     ws2 = wb.create_sheet('Cutting Reports')
     _style_sheet(ws2)
 
     headers2 = [
-        '#', 'Date', 'Job Card Number', 'Cutting Master Name', 'Cutting Rate',
-        'Fabric Type & Quality', 'Item Name', 'Job Card No.',
-        'Total Pcs', 'Total Colours', 'Total Weight/Meter',
-        'Avg per Pcs', 'Photos', 'Submitted By', 'Submitted At'
+        '#', 'Date', 'Report Type', 'Job Card Number', 'Cutting Master Name', 'Cutting Rate',
+        'Fabric Type & Quality', 'Item Name', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
+        'Submitted By', 'Submitted At',
+        'Jobworker', 'Job Work In / Out', 'Purpose', 'Job Work Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
+        'Line in Date', 'Line out Date', 'Total Pcs', 'Darji Rate', 'Folding Rate', 'Overlock Rate', 'Total Rate', 'Option 1',
+        'Finishing Date', 'Finishing Total Pcs', 'Finishing Pcs Short', 'Finishing Pcs Packed', 'Finishing Green Tape', 'Finishing Red Tape', 'Finishing Blue Tape', 'Finishing Total Tape'
     ]
     _write_header_row(ws2, headers2)
 
-    for i, report in enumerate(CuttingReport.objects.select_related('master_entry', 'created_by').prefetch_related('photos').order_by('-created_at'), start=1):
-        photo_names = ' | '.join(
-            os.path.basename(p.photo.name) for p in report.photos.all()
-        )
+    
+    all_reports = CuttingReport.objects.select_related('master_entry', 'created_by').prefetch_related('photos', 'color_details').all()
+    if since_date:
+        all_reports = all_reports.filter(created_at__gt=since_date)
+        
+    all_reports = list(all_reports.order_by('-created_at'))
+
+    for i, report in enumerate(all_reports, start=1):
+        r_type_val = report.report_type
+        
+        if r_type_val == 'P2':
+            r_type = 'CR Lakshay (P2)'
+        elif r_type_val == 'P3':
+            r_type = 'CR Rahul (P3)'
+        else:
+            r_type = 'Cutting Report (P1)'
+
+        date_val = report.master_entry.date
+        job_work = report.person5_reports.first()
+        stitching = report.person4_reports.first()
+        finishing = report.person6_reports.first()
+            
+        if job_work:
+            jw_data = [
+                job_work.jobworker,
+                job_work.job_work_type,
+                job_work.purpose,
+                job_work.date.strftime('%d-%b-%Y') if job_work.date else '—',
+                job_work.total_pcs_short if job_work.total_pcs_short is not None else '—',
+                report.total_pcs if report.total_pcs is not None else '—',
+                job_work.any_other_problem,
+            ]
+        else:
+            jw_data = ['—', '—', '—', '—', '—', '—', '—']
+            
+        if stitching:
+            stitch_data = [
+                stitching.line_in_date.strftime('%d-%b-%Y') if stitching.line_in_date else '—',
+                stitching.line_out_date.strftime('%d-%b-%Y') if stitching.line_out_date else '—',
+                stitching.total_pcs if stitching.total_pcs is not None else '—',
+                float(stitching.darji_rate) if stitching.darji_rate else '—',
+                float(stitching.folding_rate) if stitching.folding_rate else '—',
+                float(stitching.overlock_rate) if stitching.overlock_rate else '—',
+                float(stitching.total_rate) if stitching.total_rate else '—',
+                stitching.option_1 or '—',
+            ]
+        else:
+            stitch_data = ['—'] * 8
+
+        if finishing:
+            finish_data = [
+                finishing.date.strftime('%d-%b-%Y') if finishing.date else '—',
+                finishing.total_pcs if finishing.total_pcs is not None else '—',
+                finishing.total_pcs_short if finishing.total_pcs_short is not None else '—',
+                finishing.total_pcs_packed if finishing.total_pcs_packed is not None else '—',
+                finishing.green_tape if finishing.green_tape is not None else '—',
+                finishing.red_tape if finishing.red_tape is not None else '—',
+                finishing.blue_tape if finishing.blue_tape is not None else '—',
+                finishing.total_tape if finishing.total_tape is not None else '—',
+            ]
+        else:
+            finish_data = ['—'] * 8
+
         ws2.append([
             i,
-            report.master_entry.date.strftime('%d-%b-%Y'),
-            report.master_entry.job_card_number,
+            date_val.strftime('%d-%b-%Y'),
+            r_type,
+            report.job_card_no,
             report.cutting_master_name or '—',
             float(report.cutting_rate) if report.cutting_rate else '—',
             report.fabric_type_quality,
             report.item_name,
-            report.job_card_no,
+            report.size_s,
+            report.size_m,
+            report.size_l,
+            report.size_xl,
+            report.size_2xl,
+            report.size_3xl,
+            report.size_4xl,
             report.total_pcs,
-            report.total_colours,
-            float(report.total_weight_meter),
-            float(report.avg_per_pcs),
-            photo_names or '—',
             report.created_by.username if report.created_by else '—',
             report.created_at.strftime('%d-%b-%Y %H:%M'),
-        ])
+        ] + jw_data + stitch_data + finish_data)
 
     _auto_width_and_style(ws2)
-
-    # ── Sheet 3: CR Lakshay ────────────────────────────────────────────
-    ws3 = wb.create_sheet('CR Lakshay')
-    _style_sheet(ws3)
-
-    headers3 = [
-        '#', 'Date', 'Job Card Number', 'P1 Cutting Master', 'CR Lakshay Master Name', 'CR Lakshay Rate',
-        'Fabric Type & Quality', 'Item Name', 'Job Card No.',
-        'Total Pcs', 'Total Colours', 'Total Weight/Meter',
-        'Avg per Pcs', 'Photos', 'Submitted By', 'Submitted At'
-    ]
-    _write_header_row(ws3, headers3)
-
-    for i, report in enumerate(Person2Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at'), start=1):
-        photo_names = ' | '.join(
-            os.path.basename(p.photo.name) for p in report.photos.all()
-        )
-        ws3.append([
-            i,
-            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
-            report.cutting_report.master_entry.job_card_number,
-            report.cutting_report.cutting_master_name or '—',
-            report.cutting_master_name or '—',
-            float(report.cutting_rate) if report.cutting_rate else '—',
-            report.fabric_type_quality,
-            report.item_name,
-            report.job_card_no,
-            report.total_pcs,
-            report.total_colours,
-            float(report.total_weight_meter),
-            float(report.avg_per_pcs),
-            photo_names or '—',
-            report.created_by.username if report.created_by else '—',
-            report.created_at.strftime('%d-%b-%Y %H:%M'),
-        ])
-
-    _auto_width_and_style(ws3)
-
-    # ── Sheet 4: CR Rahul ────────────────────────────────────────────
-    ws4 = wb.create_sheet('CR Rahul')
-    _style_sheet(ws4)
-
-    headers4 = [
-        '#', 'Date', 'Job Card Number', 'P1 Cutting Master', 'CR Rahul Master Name', 'CR Rahul Rate',
-        'Fabric Type & Quality', 'Item Name', 'Job Card No.',
-        'Total Pcs', 'Total Colours', 'Total Weight/Meter',
-        'Avg per Pcs', 'Photos', 'Submitted By', 'Submitted At'
-    ]
-    _write_header_row(ws4, headers4)
-
-    from .models import Person3Report
-    for i, report in enumerate(Person3Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at'), start=1):
-        photo_names = ' | '.join(
-            os.path.basename(p.photo.name) for p in report.photos.all()
-        )
-        ws4.append([
-            i,
-            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
-            report.cutting_report.master_entry.job_card_number,
-            report.cutting_report.cutting_master_name or '—',
-            report.cutting_master_name or '—',
-            float(report.cutting_rate) if report.cutting_rate else '—',
-            report.fabric_type_quality,
-            report.item_name,
-            report.job_card_no,
-            report.total_pcs,
-            report.total_colours,
-            float(report.total_weight_meter),
-            float(report.avg_per_pcs),
-            photo_names or '—',
-            report.created_by.username if report.created_by else '—',
-            report.created_at.strftime('%d-%b-%Y %H:%M'),
-        ])
-
-    _auto_width_and_style(ws4)
 
     # ── Sheet 5: Stitching Miya Ji ────────────────────────────────────────────
     ws5 = wb.create_sheet('Stitching Miya Ji')
@@ -162,7 +153,10 @@ def export_to_excel():
     _write_header_row(ws5, headers5)
 
     from .models import Person4Report
-    for i, report in enumerate(Person4Report.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at'), start=1):
+    p4_qs = Person4Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p4_qs = p4_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p4_qs.order_by('-created_at'), start=1):
         ws5.append([
             i,
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
@@ -194,7 +188,10 @@ def export_to_excel():
     _write_header_row(ws6, headers6)
 
     from .models import Person5Report
-    for i, report in enumerate(Person5Report.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at'), start=1):
+    p5_qs = Person5Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p5_qs = p5_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p5_qs.order_by('-created_at'), start=1):
         ws6.append([
             i,
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
@@ -218,16 +215,16 @@ def export_to_excel():
 
     headers7 = [
         '#', 'P1 Date', 'Lot No', 'Date', 'Total Pcs', 'Total Pcs Short',
-        'Total Pcs Packed', 'Green Tape', 'Red Tape', 'Blue Tape',
-        'Photos', 'Submitted By', 'Submitted At'
+        'Total Pcs Packed', 'Green Tape', 'Red Tape', 'Blue Tape', 'Total Tape',
+        'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws7, headers7)
 
     from .models import Person6Report
-    for i, report in enumerate(Person6Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at'), start=1):
-        photo_names = ' | '.join(
-            os.path.basename(p.photo.name) for p in report.photos.all()
-        )
+    p6_qs = Person6Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').all()
+    if since_date:
+        p6_qs = p6_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p6_qs.order_by('-created_at'), start=1):
         ws7.append([
             i,
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
@@ -239,7 +236,7 @@ def export_to_excel():
             report.green_tape if report.green_tape is not None else '—',
             report.red_tape if report.red_tape is not None else '—',
             report.blue_tape if report.blue_tape is not None else '—',
-            photo_names or '—',
+            report.total_tape if report.total_tape is not None else '—',
             report.created_by.username if report.created_by else '—',
             report.created_at.strftime('%d-%b-%Y %H:%M'),
         ])

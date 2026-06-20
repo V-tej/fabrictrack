@@ -1064,3 +1064,28 @@ select.form-control {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Size Grid */
+.size-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.size-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 60px;
+}
+.size-col label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 4px;
+  text-align: center;
+}
+.size-input {
+  text-align: center;
+  padding: 8px;
+}

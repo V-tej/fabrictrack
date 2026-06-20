@@ -1,5 +1,5 @@
 from django import forms
-from .models import MasterEntry, CuttingReport, Person2Report, Person3Report, Person4Report, Person5Report, Person6Report
+from .models import MasterEntry, CuttingReport, Person4Report, Person5Report, Person6Report
 
 
 class MasterEntryForm(forms.ModelForm):
@@ -16,32 +16,51 @@ class CuttingReportForm(forms.ModelForm):
     class Meta:
         model = CuttingReport
         fields = [
+            'report_type',
             'master_entry',
             'cutting_master_name',
             'cutting_rate',
             'fabric_type_quality',
             'item_name',
             'job_card_no',
+            'size_s',
+            'size_m',
+            'size_l',
+            'size_xl',
+            'size_2xl',
+            'size_3xl',
+            'size_4xl',
             'total_pcs',
             'total_colours',
             'total_weight_meter',
+            'unit',
             'avg_per_pcs',
             'signature',
         ]
         widgets = {
+            'report_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_report_type'}),
             'master_entry': forms.Select(attrs={'class': 'form-control', 'id': 'id_master_entry'}),
             'cutting_master_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cutting Master Name (optional)'}),
             'cutting_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
             'fabric_type_quality': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Cotton Poplin 40x40'}),
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Item Name'}),
             'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card Number'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_pcs', 'placeholder': '0'}),
+            'size_s': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_m': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_l': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_xl': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_2xl': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_3xl': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'size_4xl': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_pcs', 'placeholder': '0', 'readonly': 'readonly'}),
             'total_colours': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_weight_meter': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_weight', 'placeholder': '0.000', 'step': '0.001'}),
+            'unit': forms.Select(attrs={'class': 'form-control', 'style': 'max-width: 120px;'}),
             'avg_per_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_avg_per_pcs', 'placeholder': 'Auto-calculated', 'step': '0.001'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
         }
         labels = {
+            'report_type': 'Report Type (Who is this for?)',
             'master_entry': 'Date & Lot No.',
             'cutting_master_name': 'Cutting Master Name',
             'cutting_rate': 'Cutting Rate',
@@ -65,101 +84,7 @@ class CuttingReportForm(forms.ModelForm):
     # Django 5 does not allow multiple=True on any built-in FileInput widget.
 
 
-class Person2ReportForm(forms.ModelForm):
-    class Meta:
-        model = Person2Report
-        fields = [
-            'cutting_report',
-            'cutting_master_name',
-            'cutting_rate',
-            'fabric_type_quality',
-            'item_name',
-            'job_card_no',
-            'total_pcs',
-            'total_colours',
-            'total_weight_meter',
-            'avg_per_pcs',
-            'signature',
-        ]
-        widgets = {
-            'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
-            'cutting_master_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cutting Master Name (optional)'}),
-            'cutting_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
-            'fabric_type_quality': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Cotton Poplin 40x40'}),
-            'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Item Name'}),
-            'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card Number'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_pcs', 'placeholder': '0'}),
-            'total_colours': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_weight_meter': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_weight', 'placeholder': '0.000', 'step': '0.001'}),
-            'avg_per_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_avg_per_pcs', 'placeholder': 'Auto-calculated', 'step': '0.001'}),
-            'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
-        }
-        labels = {
-            'cutting_report': 'Select P1 Cutting Report',
-            'cutting_master_name': 'Cutting Master Name',
-            'cutting_rate': 'Cutting Rate',
-            'fabric_type_quality': 'Fabric Type and Quality',
-            'item_name': 'Item Name',
-            'job_card_no': 'Job Card No.',
-            'total_pcs': 'Total Pcs',
-            'total_colours': 'Total No. of Colours',
-            'total_weight_meter': 'Total Weight / Meter',
-            'avg_per_pcs': 'Average per Pcs (Weight / Meter)',
-        }
 
-    def clean_signature(self):
-        signature = self.cleaned_data.get('signature')
-        if not signature:
-            raise forms.ValidationError("Please provide a signature.")
-        return signature
-
-class Person3ReportForm(forms.ModelForm):
-    class Meta:
-        model = Person3Report
-        fields = [
-            'cutting_report',
-            'cutting_master_name',
-            'cutting_rate',
-            'fabric_type_quality',
-            'item_name',
-            'job_card_no',
-            'total_pcs',
-            'total_colours',
-            'total_weight_meter',
-            'avg_per_pcs',
-            'signature',
-        ]
-        widgets = {
-            'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
-            'cutting_master_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cutting Master Name (optional)'}),
-            'cutting_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
-            'fabric_type_quality': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Cotton Poplin 40x40'}),
-            'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Item Name'}),
-            'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card Number'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_pcs', 'placeholder': '0'}),
-            'total_colours': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_weight_meter': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_weight', 'placeholder': '0.000', 'step': '0.001'}),
-            'avg_per_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_avg_per_pcs', 'placeholder': 'Auto-calculated', 'step': '0.001'}),
-            'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
-        }
-        labels = {
-            'cutting_report': 'Select P1 Cutting Report',
-            'cutting_master_name': 'CR Rahul Master Name',
-            'cutting_rate': 'CR Rahul Rate',
-            'fabric_type_quality': 'Fabric Type and Quality',
-            'item_name': 'Item Name',
-            'job_card_no': 'Job Card No.',
-            'total_pcs': 'Total Pcs',
-            'total_colours': 'Total No. of Colours',
-            'total_weight_meter': 'Total Weight / Meter',
-            'avg_per_pcs': 'Average per Pcs (Weight / Meter)',
-        }
-
-    def clean_signature(self):
-        signature = self.cleaned_data.get('signature')
-        if not signature:
-            raise forms.ValidationError("Please provide a signature.")
-        return signature
 
 class Person4ReportForm(forms.ModelForm):
     class Meta:
@@ -182,7 +107,7 @@ class Person4ReportForm(forms.ModelForm):
             'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
             'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
             'line_in_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
             'line_out_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Item Name'}),
             'darji_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01', 'id': 'id_darji_rate'}),
@@ -236,7 +161,7 @@ class Person5ReportForm(forms.ModelForm):
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
         }
         labels = {
@@ -270,18 +195,20 @@ class Person6ReportForm(forms.ModelForm):
             'green_tape',
             'red_tape',
             'blue_tape',
+            'total_tape',
             'signature',
         ]
         widgets = {
             'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_date'}),
             'lot_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Lot No.', 'id': 'id_lot_no'}),
-            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_pcs_packed': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'green_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'red_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'blue_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_total_pcs_short'}),
+            'total_pcs_packed': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_total_pcs_packed', 'readonly': 'readonly'}),
+            'green_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_green_tape'}),
+            'red_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_red_tape'}),
+            'blue_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_blue_tape'}),
+            'total_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_total_tape', 'readonly': 'readonly'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
         }
         labels = {
@@ -294,6 +221,7 @@ class Person6ReportForm(forms.ModelForm):
             'green_tape': 'Green Tape',
             'red_tape': 'Red Tape',
             'blue_tape': 'Blue Tape',
+            'total_tape': 'Total Tape',
         }
 
     def clean_signature(self):

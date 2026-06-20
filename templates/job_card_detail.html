@@ -4,287 +4,584 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Job Card Details - {{ master_entry.job_card_number }}</title>
+  <title>Job Card – {{ master_entry.job_card_number }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg-color: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #263349;
+      --border: #334155;
       --primary: #3b82f6;
-      --border: #e2e8f0;
-      --radius: 12px;
+      --primary-light: rgba(59,130,246,0.12);
+      --success: #10b981;
+      --success-light: rgba(16,185,129,0.12);
+      --warning: #f59e0b;
+      --warning-light: rgba(245,158,11,0.12);
+      --purple: #8b5cf6;
+      --purple-light: rgba(139,92,246,0.12);
+      --pink: #ec4899;
+      --pink-light: rgba(236,72,153,0.12);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius: 14px;
     }
     body {
       font-family: 'Inter', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      margin: 0;
-      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
+
+    /* ── Header ─────────────────────────────── */
     .header {
-      background: var(--primary);
-      color: white;
-      padding: 1.5rem 1rem;
+      background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+      padding: 1.75rem 1.25rem 1.25rem;
       text-align: center;
-      border-bottom-left-radius: 20px;
-      border-bottom-right-radius: 20px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -30px; left: -30px;
+      width: 120px; height: 120px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: white;
+      margin-bottom: 0.75rem;
     }
     .header h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.5px;
+      position: relative;
     }
     .header p {
-      margin: 0.5rem 0 0 0;
-      font-size: 0.9rem;
-      opacity: 0.9;
+      margin-top: 0.35rem;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.75);
+      position: relative;
     }
+
+    /* ── Container ───────────────────────────── */
     .container {
       padding: 1rem;
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto;
     }
+
+    /* ── Section Card ────────────────────────── */
     .section {
-      background: var(--card-bg);
+      background: var(--card);
       border-radius: var(--radius);
-      padding: 1.25rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       border: 1px solid var(--border);
+      margin-bottom: 1rem;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     }
-    .section-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin: 0 0 1rem 0;
+    .section-header {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      color: var(--primary);
-      border-bottom: 2px solid #eff6ff;
-      padding-bottom: 0.5rem;
+      gap: 10px;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
     }
+    .section-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+    .section-status {
+      margin-left: auto;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .status-done { background: var(--success-light); color: var(--success); }
+    .status-missing { background: rgba(148,163,184,0.1); color: var(--text-muted); }
+    .section-body { padding: 1.25rem; }
+
+    /* ── Data Grid ───────────────────────────── */
     .data-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     }
-    .data-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+    .data-item { display: flex; flex-direction: column; gap: 4px; }
     .data-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
+      letter-spacing: 0.7px;
+      font-weight: 700;
+      color: var(--text-muted);
     }
     .data-value {
-      font-size: 0.95rem;
-      font-weight: 500;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
       word-break: break-word;
     }
-    .full-width {
-      grid-column: 1 / -1;
+    .full-width { grid-column: 1 / -1; }
+
+    /* ── Size Table ───────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-top: 0.75rem;
     }
+    .size-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: center;
+      min-width: 500px;
+    }
+    .size-table thead tr {
+      background: rgba(59,130,246,0.1);
+    }
+    .size-table th {
+      padding: 9px 8px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+    }
+    .size-table th:first-child { text-align: left; }
+    .size-table td {
+      padding: 9px 8px;
+      border-bottom: 1px solid rgba(51,65,85,0.6);
+      color: var(--text);
+    }
+    .size-table td:first-child { text-align: left; font-weight: 600; }
+    .size-table tbody tr:last-child td { border-bottom: none; }
+    .grand-total-row {
+      background: rgba(59,130,246,0.08) !important;
+      font-weight: 800 !important;
+    }
+    .grand-total-row td { color: var(--primary) !important; }
+
+    /* ── Divider ─────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.1rem 0;
+    }
+
+    /* ── Photos ──────────────────────────────── */
     .photo-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
       margin-top: 0.5rem;
     }
-    .photo-thumb {
-      width: 80px;
-      height: 80px;
+    .photo-grid a img {
+      width: 100%;
+      aspect-ratio: 1;
       object-fit: cover;
       border-radius: 8px;
       border: 1px solid var(--border);
+      display: block;
+      transition: transform 0.2s, opacity 0.2s;
     }
+    .photo-grid a img:hover { transform: scale(1.04); opacity: 0.9; }
+
+    /* ── Signature ───────────────────────────── */
+    .sig-wrap {
+      background: white;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
+    .sig-wrap img { max-height: 90px; max-width: 100%; display: block; }
+
+    /* ── Empty state ─────────────────────────── */
     .empty-state {
       text-align: center;
+      padding: 2rem 1rem;
       color: var(--text-muted);
-      padding: 1rem 0;
-      font-style: italic;
       font-size: 0.9rem;
+      font-style: italic;
     }
+
+    /* ── Tape badges ─────────────────────────── */
+    .tape-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.5rem; }
+    .tape-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+    }
+    .tape-green { background: rgba(16,185,129,0.15); color: #10b981; }
+    .tape-red   { background: rgba(239,68,68,0.15);  color: #ef4444; }
+    .tape-blue  { background: rgba(59,130,246,0.15); color: #3b82f6; }
+
+    /* ── Footer ──────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+    .footer span { color: var(--primary); font-weight: 600; }
   </style>
 </head>
 <body>
 
-  <header class="header">
-    <h1>Job Card: {{ master_entry.job_card_number }}</h1>
-    <p>Created on {{ master_entry.date|date:"d M Y" }}</p>
-  </header>
+<header class="header">
+  <div class="header-badge">📋 FabricTrack</div>
+  <h1>{{ master_entry.job_card_number }}</h1>
+  <p>Job Card · Created {{ master_entry.date|date:"d M Y" }}</p>
+</header>
 
-  <div class="container">
-    
-    <!-- Cutting Report (P1) -->
-    <div class="section">
-      <h2 class="section-title">✂️ Cutting Report (P1)</h2>
-      {% if cutting_report %}
+<div class="container">
+
+  <!-- ── Cutting Report (P1) ─────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: var(--primary-light);">
+      <div class="section-icon" style="background: var(--primary-light);">✂️</div>
+      <span class="section-title" style="color: var(--primary);">Cutting Master</span>
+      <span class="section-status {% if cutting_report %}status-done{% else %}status-missing{% endif %}">
+        {% if cutting_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if cutting_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Item Name</span>
           <span class="data-value">{{ cutting_report.item_name }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ cutting_report.total_pcs }}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Total Colours</span>
-          <span class="data-value">{{ cutting_report.total_colours }}</span>
-        </div>
-        <div class="data-item full-width">
-          <span class="data-label">Fabric Type & Quality</span>
+          <span class="data-label">Fabric Type</span>
           <span class="data-value">{{ cutting_report.fabric_type_quality }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Cutting Master</span>
           <span class="data-value">{{ cutting_report.cutting_master_name|default:"—" }}</span>
         </div>
-        {% if request.user.is_authenticated %}
-        {% if request.user.is_superuser or request.user.profile.person_type == 'ADMIN' %}
         <div class="data-item">
-          <span class="data-label">Rate</span>
-          <span class="data-value">{% if cutting_report.cutting_rate %}₹{{ cutting_report.cutting_rate }}{% else %}—{% endif %}</span>
+          <span class="data-label">Job Card No.</span>
+          <span class="data-value">{{ cutting_report.job_card_no }}</span>
         </div>
-        {% endif %}
-        {% endif %}
-        
-        {% if cutting_report.photos.all %}
-        <div class="data-item full-width">
-          <span class="data-label">Photos</span>
-          <div class="photo-grid">
-            {% for photo in cutting_report.photos.all %}
-            <a href="{{ photo.photo.url }}" target="_blank">
-              <img src="{{ photo.photo.url }}" class="photo-thumb" alt="P1 Photo">
-            </a>
-            {% endfor %}
-          </div>
+        <div class="data-item">
+          <span class="data-label">Grand Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: var(--primary);">{{ cutting_report.total_pcs }}</span>
         </div>
-        {% endif %}
-
-        {% if cutting_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ cutting_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
-        </div>
-        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No Cutting Report submitted yet.</div>
+
+      {% if cutting_report.color_details.all %}
+      <div class="divider"></div>
+      <div class="data-label" style="margin-bottom: 0.4rem;">Fabric Code Breakdown</div>
+      <div class="table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Fabric Code</th>
+              <th>S</th><th>M</th><th>L</th><th>XL</th>
+              <th>2XL</th><th>3XL</th><th>4XL</th>
+              <th>Weight/Mtr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for color in cutting_report.color_details.all %}
+            <tr>
+              <td>{{ color.color_name }}</td>
+              <td>{{ color.size_s }}</td>
+              <td>{{ color.size_m }}</td>
+              <td>{{ color.size_l }}</td>
+              <td>{{ color.size_xl }}</td>
+              <td>{{ color.size_2xl }}</td>
+              <td>{{ color.size_3xl }}</td>
+              <td>{{ color.size_4xl }}</td>
+              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+            <tr class="grand-total-row">
+              <td>Grand Total</td>
+              <td>{{ cutting_report.size_s }}</td>
+              <td>{{ cutting_report.size_m }}</td>
+              <td>{{ cutting_report.size_l }}</td>
+              <td>{{ cutting_report.size_xl }}</td>
+              <td>{{ cutting_report.size_2xl }}</td>
+              <td>{{ cutting_report.size_3xl }}</td>
+              <td>{{ cutting_report.size_4xl }}</td>
+              <td>{{ cutting_report.total_pcs }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if cutting_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in cutting_report.photos.all %}
+        <a href="{{ photo.photo.url }}" target="_blank">
+          <img src="{{ photo.photo.url }}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if cutting_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap">
+        <img src="{{ cutting_report.signature }}" alt="Signature">
+      </div>
       {% endif %}
     </div>
+    {% else %}
+    <div class="empty-state">No Cutting Report submitted yet.</div>
+    {% endif %}
+  </div>
 
-    <!-- CR Lakshay -->
-    <div class="section">
-      <h2 class="section-title">👔 CR Lakshay</h2>
-      {% if person2_report %}
+  <!-- ── CR Lakshay (P2) ────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: var(--success-light);">
+      <div class="section-icon" style="background: var(--success-light);">👔</div>
+      <span class="section-title" style="color: var(--success);">CR Lakshay</span>
+      <span class="section-status {% if person2_report %}status-done{% else %}status-missing{% endif %}">
+        {% if person2_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if person2_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Item Name</span>
           <span class="data-value">{{ person2_report.item_name }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ person2_report.total_pcs }}</span>
+          <span class="data-label">Fabric Type</span>
+          <span class="data-value">{{ person2_report.fabric_type_quality }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">CR Lakshay Master</span>
+          <span class="data-label">Cutting Master</span>
           <span class="data-value">{{ person2_report.cutting_master_name|default:"—" }}</span>
         </div>
-        
-        {% if person2_report.photos.all %}
-        <div class="data-item full-width">
-          <span class="data-label">Photos</span>
-          <div class="photo-grid">
-            {% for photo in person2_report.photos.all %}
-            <a href="{{ photo.photo.url }}" target="_blank">
-              <img src="{{ photo.photo.url }}" class="photo-thumb" alt="P2 Photo">
-            </a>
-            {% endfor %}
-          </div>
+        <div class="data-item">
+          <span class="data-label">Grand Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: var(--success);">{{ person2_report.total_pcs }}</span>
         </div>
-        {% endif %}
-
-        {% if person2_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ person2_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
-        </div>
-        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No CR Lakshay submitted yet.</div>
+
+      {% if person2_report.color_details.all %}
+      <div class="divider"></div>
+      <div class="data-label" style="margin-bottom: 0.4rem;">Fabric Code Breakdown</div>
+      <div class="table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Fabric Code</th>
+              <th>S</th><th>M</th><th>L</th><th>XL</th>
+              <th>2XL</th><th>3XL</th><th>4XL</th>
+              <th>Weight/Mtr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for color in person2_report.color_details.all %}
+            <tr>
+              <td>{{ color.color_name }}</td>
+              <td>{{ color.size_s }}</td>
+              <td>{{ color.size_m }}</td>
+              <td>{{ color.size_l }}</td>
+              <td>{{ color.size_xl }}</td>
+              <td>{{ color.size_2xl }}</td>
+              <td>{{ color.size_3xl }}</td>
+              <td>{{ color.size_4xl }}</td>
+              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+            <tr class="grand-total-row">
+              <td>Grand Total</td>
+              <td>{{ person2_report.size_s }}</td>
+              <td>{{ person2_report.size_m }}</td>
+              <td>{{ person2_report.size_l }}</td>
+              <td>{{ person2_report.size_xl }}</td>
+              <td>{{ person2_report.size_2xl }}</td>
+              <td>{{ person2_report.size_3xl }}</td>
+              <td>{{ person2_report.size_4xl }}</td>
+              <td>{{ person2_report.total_pcs }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if person2_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in person2_report.photos.all %}
+        <a href="{{ photo.photo.url }}" target="_blank"><img src="{{ photo.photo.url }}" alt="Photo"></a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if person2_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap"><img src="{{ person2_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
+    {% else %}
+    <div class="empty-state">No CR Lakshay submitted yet.</div>
+    {% endif %}
+  </div>
 
-    <!-- CR Rahul -->
-    <div class="section">
-      <h2 class="section-title">👔 CR Rahul</h2>
-      {% if person3_report %}
+  <!-- ── CR Rahul (P3) ───────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: var(--warning-light);">
+      <div class="section-icon" style="background: var(--warning-light);">🧶</div>
+      <span class="section-title" style="color: var(--warning);">CR Rahul</span>
+      <span class="section-status {% if person3_report %}status-done{% else %}status-missing{% endif %}">
+        {% if person3_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if person3_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Item Name</span>
           <span class="data-value">{{ person3_report.item_name }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ person3_report.total_pcs }}</span>
+          <span class="data-label">Fabric Type</span>
+          <span class="data-value">{{ person3_report.fabric_type_quality }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">CR Rahul Master</span>
+          <span class="data-label">Cutting Master</span>
           <span class="data-value">{{ person3_report.cutting_master_name|default:"—" }}</span>
         </div>
-        
-        {% if person3_report.photos.all %}
-        <div class="data-item full-width">
-          <span class="data-label">Photos ({{ person3_report.photos.count }})</span>
-          <div class="photo-gallery">
-            {% for photo in person3_report.photos.all %}
-            <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link">
-              <img src="{{ photo.photo.url }}" alt="Job Card Photo" class="photo-thumb">
-            </a>
-            {% endfor %}
-          </div>
+        <div class="data-item">
+          <span class="data-label">Grand Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: var(--warning);">{{ person3_report.total_pcs }}</span>
         </div>
-        {% endif %}
-
-        {% if person3_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ person3_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
-        </div>
-        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No CR Rahul submitted yet.</div>
+
+      {% if person3_report.color_details.all %}
+      <div class="divider"></div>
+      <div class="data-label" style="margin-bottom: 0.4rem;">Fabric Code Breakdown</div>
+      <div class="table-wrap">
+        <table class="size-table">
+          <thead>
+            <tr>
+              <th>Fabric Code</th>
+              <th>S</th><th>M</th><th>L</th><th>XL</th>
+              <th>2XL</th><th>3XL</th><th>4XL</th>
+              <th>Weight/Mtr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for color in person3_report.color_details.all %}
+            <tr>
+              <td>{{ color.color_name }}</td>
+              <td>{{ color.size_s }}</td>
+              <td>{{ color.size_m }}</td>
+              <td>{{ color.size_l }}</td>
+              <td>{{ color.size_xl }}</td>
+              <td>{{ color.size_2xl }}</td>
+              <td>{{ color.size_3xl }}</td>
+              <td>{{ color.size_4xl }}</td>
+              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+            <tr class="grand-total-row">
+              <td>Grand Total</td>
+              <td>{{ person3_report.size_s }}</td>
+              <td>{{ person3_report.size_m }}</td>
+              <td>{{ person3_report.size_l }}</td>
+              <td>{{ person3_report.size_xl }}</td>
+              <td>{{ person3_report.size_2xl }}</td>
+              <td>{{ person3_report.size_3xl }}</td>
+              <td>{{ person3_report.size_4xl }}</td>
+              <td>{{ person3_report.total_pcs }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if person3_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in person3_report.photos.all %}
+        <a href="{{ photo.photo.url }}" target="_blank"><img src="{{ photo.photo.url }}" alt="Photo"></a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if person3_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap"><img src="{{ person3_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
-    <!-- Stitching Miya Ji -->
-    <div class="section">
-      <h2 class="section-title">🧵 Stitching Miya Ji</h2>
-      {% if person4_report %}
+    {% else %}
+    <div class="empty-state">No CR Rahul submitted yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Stitching (P4) ─────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: var(--purple-light);">
+      <div class="section-icon" style="background: var(--purple-light);">🧵</div>
+      <span class="section-title" style="color: var(--purple);">Stitching Miya Ji</span>
+      <span class="section-status {% if person4_report %}status-done{% else %}status-missing{% endif %}">
+        {% if person4_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if person4_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Item Name</span>
           <span class="data-value">{{ person4_report.item_name }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Job Card No</span>
+          <span class="data-label">Job Card No.</span>
           <span class="data-value">{{ person4_report.job_card_no }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ person4_report.total_pcs }}</span>
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: var(--purple);">{{ person4_report.total_pcs|default:"—" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Line In Date</span>
@@ -294,8 +591,6 @@
           <span class="data-label">Line Out Date</span>
           <span class="data-value">{{ person4_report.line_out_date|date:"d M Y"|default:"—" }}</span>
         </div>
-        {% if request.user.is_authenticated %}
-        {% if request.user.is_superuser or request.user.profile.person_type == 'ADMIN' %}
         <div class="data-item">
           <span class="data-label">Darji Rate</span>
           <span class="data-value">{% if person4_report.darji_rate %}₹{{ person4_report.darji_rate }}{% else %}—{% endif %}</span>
@@ -310,145 +605,140 @@
         </div>
         <div class="data-item">
           <span class="data-label">Total Rate</span>
-          <span class="data-value" style="font-weight: 700; color: #10b981;">{% if person4_report.total_rate %}₹{{ person4_report.total_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value">{% if person4_report.total_rate %}₹{{ person4_report.total_rate }}{% else %}—{% endif %}</span>
         </div>
-        {% endif %}
-        {% endif %}
+        {% if person4_report.option_1 %}
         <div class="data-item full-width">
           <span class="data-label">Option 1</span>
-          <span class="data-value">{{ person4_report.option_1|default:"—" }}</span>
-        </div>
-        
-
-
-        {% if person4_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ person4_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
+          <span class="data-value">{{ person4_report.option_1 }}</span>
         </div>
         {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No Stitching Miya Ji submitted yet.</div>
+      {% if person4_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap"><img src="{{ person4_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
-
+    {% else %}
+    <div class="empty-state">No Stitching report submitted yet.</div>
+    {% endif %}
   </div>
 
-    <!-- Job Work -->
-    <div class="section">
-      <h2 class="section-title">👔 Job Work</h2>
-      {% if person5_report %}
+  <!-- ── Job Work (P5) ──────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(236,72,153,0.1);">
+      <div class="section-icon" style="background: rgba(236,72,153,0.1);">📦</div>
+      <span class="section-title" style="color: var(--pink);">Job Work</span>
+      <span class="section-status {% if person5_report %}status-done{% else %}status-missing{% endif %}">
+        {% if person5_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if person5_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
-          <span class="data-label">Jobworker</span>
+          <span class="data-label">Job Worker</span>
           <span class="data-value">{{ person5_report.jobworker }}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Job Card No</span>
-          <span class="data-value">{{ person5_report.job_card_no }}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Date</span>
-          <span class="data-value">{{ person5_report.date|date:"d M Y"|default:"—" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Type</span>
           <span class="data-value">{{ person5_report.job_work_type }}</span>
         </div>
         <div class="data-item">
+          <span class="data-label">Date</span>
+          <span class="data-value">{{ person5_report.date|date:"d M Y" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="color: var(--pink);">{{ person5_report.total_pcs }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Pcs Short</span>
+          <span class="data-value">{{ person5_report.total_pcs_short }}</span>
+        </div>
+        <div class="data-item full-width">
           <span class="data-label">Purpose</span>
           <span class="data-value">{{ person5_report.purpose }}</span>
         </div>
-        <div class="data-item">
-          <span class="data-label">Total Pcs Short</span>
-          <span class="data-value">{{ person5_report.total_pcs_short }}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ person5_report.total_pcs }}</span>
-        </div>
+        {% if person5_report.any_other_problem %}
         <div class="data-item full-width">
-          <span class="data-label">Any other Problem</span>
+          <span class="data-label">Other Problem</span>
           <span class="data-value">{{ person5_report.any_other_problem }}</span>
-        </div>
-        
-
-
-        {% if person5_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ person5_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
         </div>
         {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No Job Work submitted yet.</div>
+      {% if person5_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap"><img src="{{ person5_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
+    {% else %}
+    <div class="empty-state">No Job Work report submitted yet.</div>
+    {% endif %}
+  </div>
 
-    <!-- Finishing Report -->
-    <div class="section">
-      <h2 class="section-title">👔 Finishing Report</h2>
-      {% if person6_report %}
+  <!-- ── Finishing (P6) ─────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(251,191,36,0.1);">
+      <div class="section-icon" style="background: rgba(251,191,36,0.1);">✅</div>
+      <span class="section-title" style="color: #fbbf24;">Finishing</span>
+      <span class="section-status {% if person6_report %}status-done{% else %}status-missing{% endif %}">
+        {% if person6_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if person6_report %}
+    <div class="section-body">
       <div class="data-grid">
         <div class="data-item">
           <span class="data-label">Date</span>
           <span class="data-value">{{ person6_report.date|date:"d M Y" }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Lot No</span>
+          <span class="data-label">Lot No.</span>
           <span class="data-value">{{ person6_report.lot_no }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pieces</span>
-          <span class="data-value">{{ person6_report.total_pcs }}</span>
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="color: #fbbf24; font-size: 1.2rem;">{{ person6_report.total_pcs }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pcs Short</span>
+          <span class="data-label">Pcs Short</span>
           <span class="data-value">{{ person6_report.total_pcs_short }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Total Pcs Packed</span>
+          <span class="data-label">Pcs Packed</span>
           <span class="data-value">{{ person6_report.total_pcs_packed }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Green Tape</span>
-          <span class="data-value">{{ person6_report.green_tape }}</span>
+          <span class="data-label">Total Tape</span>
+          <span class="data-value">{{ person6_report.total_tape }}</span>
         </div>
-        <div class="data-item">
-          <span class="data-label">Red Tape</span>
-          <span class="data-value">{{ person6_report.red_tape }}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Blue Tape</span>
-          <span class="data-value">{{ person6_report.blue_tape }}</span>
-        </div>
-        
-        {% if person6_report.photos.all %}
-        <div class="data-item full-width">
-          <span class="data-label">Photos ({{ person6_report.photos.count }})</span>
-          <div class="photo-gallery">
-            {% for photo in person6_report.photos.all %}
-            <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link">
-              <img src="{{ photo.photo.url }}" alt="Job Card Photo" class="photo-thumb">
-            </a>
-            {% endfor %}
-          </div>
-        </div>
-        {% endif %}
-
-        {% if person6_report.signature %}
-        <div class="data-item full-width" style="margin-top: 1rem;">
-          <span class="data-label">Signature</span>
-          <img src="{{ person6_report.signature }}" alt="Signature" style="max-height: 100px; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: white;">
-        </div>
-        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">No Finishing Report submitted yet.</div>
+      <div class="divider"></div>
+      <div class="data-label" style="margin-bottom: 0.5rem;">Tape Details</div>
+      <div class="tape-badges">
+        <div class="tape-badge tape-green">🟢 Green: {{ person6_report.green_tape }}</div>
+        <div class="tape-badge tape-red">🔴 Red: {{ person6_report.red_tape }}</div>
+        <div class="tape-badge tape-blue">🔵 Blue: {{ person6_report.blue_tape }}</div>
+      </div>
+      {% if person6_report.signature %}
+      <div class="divider"></div>
+      <div class="data-label">Signature</div>
+      <div class="sig-wrap"><img src="{{ person6_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
+    {% else %}
+    <div class="empty-state">No Finishing report submitted yet.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<div class="footer">
+  Powered by <span>FabricTrack</span> · {{ master_entry.date|date:"Y" }}
+</div>
 
 </body>
 </html>

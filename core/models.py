@@ -29,6 +29,19 @@ class UserProfile(models.Model):
         return f"{self.user.username} ({self.get_person_type_display()})"
 
 
+class SystemSetting(models.Model):
+    last_excel_download_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class MasterEntry(models.Model):
     """Created by admin — acts as the Date + Lot No key that all persons link to."""
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -48,6 +61,12 @@ class MasterEntry(models.Model):
 
 class CuttingReport(models.Model):
     """Person 1 — Cutting Report form."""
+    REPORT_TYPE_CHOICES = [
+        ('P1', 'Cutting Master'),
+        ('P2', 'CR Lakshay'),
+        ('P3', 'CR Rahul'),
+    ]
+    report_type = models.CharField(max_length=2, choices=REPORT_TYPE_CHOICES, default='P1')
     master_entry = models.ForeignKey(
         MasterEntry,
         on_delete=models.CASCADE,
@@ -59,11 +78,33 @@ class CuttingReport(models.Model):
     fabric_type_quality = models.CharField(max_length=300)
     item_name = models.CharField(max_length=200)
     job_card_no = models.CharField(max_length=100)
-    total_pcs = models.PositiveIntegerField()
+    
+    size_s = models.PositiveIntegerField(default=0, verbose_name="S")
+    size_m = models.PositiveIntegerField(default=0, verbose_name="M")
+    size_l = models.PositiveIntegerField(default=0, verbose_name="L")
+    size_xl = models.PositiveIntegerField(default=0, verbose_name="XL")
+    size_2xl = models.PositiveIntegerField(default=0, verbose_name="2XL")
+    size_3xl = models.PositiveIntegerField(default=0, verbose_name="3XL")
+    size_4xl = models.PositiveIntegerField(default=0, verbose_name="4XL")
+    
+    total_pcs = models.PositiveIntegerField(default=0)
     total_colours = models.PositiveIntegerField()
+    UNIT_CHOICES = [
+        ('Weight', 'Weight'),
+        ('Meters', 'Meters')
+    ]
     total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3)
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Weight')
     avg_per_pcs = models.DecimalField(max_digits=10, decimal_places=3)
     signature = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.total_pcs = (
+            self.size_s + self.size_m + self.size_l + 
+            self.size_xl + self.size_2xl + self.size_3xl + self.size_4xl
+        )
+        super().save(*args, **kwargs)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -73,6 +114,35 @@ class CuttingReport(models.Model):
 
     def __str__(self):
         return f"Cutting Report — {self.master_entry} — {self.item_name}"
+
+class CuttingReportColorDetail(models.Model):
+    """Detailed size breakdown per color for a CuttingReport."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='color_details'
+    )
+    color_name = models.CharField(max_length=50)
+    size_s = models.PositiveIntegerField(default=0)
+    size_m = models.PositiveIntegerField(default=0)
+    size_l = models.PositiveIntegerField(default=0)
+    size_xl = models.PositiveIntegerField(default=0)
+    size_2xl = models.PositiveIntegerField(default=0)
+    size_3xl = models.PositiveIntegerField(default=0)
+    size_4xl = models.PositiveIntegerField(default=0)
+    
+    UNIT_CHOICES = [
+        ('Weight', 'Weight'),
+        ('Meters', 'Meters')
+    ]
+    total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Weight')
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.color_name} details for {self.cutting_report.job_card_no}"
+
 
 
 class CuttingReportPhoto(models.Model):
@@ -88,91 +158,6 @@ class CuttingReportPhoto(models.Model):
     def __str__(self):
         return f"Photo for {self.cutting_report}"
 
-
-class Person2Report(models.Model):
-    """CR Lakshay — Form based on P1's Cutting Report."""
-    cutting_report = models.ForeignKey(
-        CuttingReport,
-        on_delete=models.CASCADE,
-        related_name='person2_reports'
-    )
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    cutting_master_name = models.CharField(max_length=200, blank=True)
-    cutting_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    fabric_type_quality = models.CharField(max_length=300)
-    item_name = models.CharField(max_length=200)
-    job_card_no = models.CharField(max_length=100)
-    total_pcs = models.PositiveIntegerField()
-    total_colours = models.PositiveIntegerField()
-    total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3)
-    avg_per_pcs = models.DecimalField(max_digits=10, decimal_places=3)
-    signature = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'CR Lakshay'
-        verbose_name_plural = 'CR Lakshay'
-
-    def __str__(self):
-        return f"CR Lakshay — {self.cutting_report.master_entry} — {self.item_name}"
-
-
-class Person2ReportPhoto(models.Model):
-    """Up to 5 job card photos per Person2Report."""
-    person2_report = models.ForeignKey(
-        Person2Report,
-        on_delete=models.CASCADE,
-        related_name='photos'
-    )
-    photo = models.ImageField(upload_to='person2_reports/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Photo for {self.person2_report}"
-
-
-class Person3Report(models.Model):
-    """CR Rahul — Form based on P1's Cutting Report."""
-    cutting_report = models.ForeignKey(
-        CuttingReport,
-        on_delete=models.CASCADE,
-        related_name='person3_reports'
-    )
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    cutting_master_name = models.CharField(max_length=200, blank=True)
-    cutting_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    fabric_type_quality = models.CharField(max_length=300)
-    item_name = models.CharField(max_length=200)
-    job_card_no = models.CharField(max_length=100)
-    total_pcs = models.PositiveIntegerField()
-    total_colours = models.PositiveIntegerField()
-    total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3)
-    avg_per_pcs = models.DecimalField(max_digits=10, decimal_places=3)
-    signature = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'CR Rahul'
-        verbose_name_plural = 'CR Rahul'
-
-    def __str__(self):
-        return f"CR Rahul — {self.cutting_report.master_entry} — {self.item_name}"
-
-
-class Person3ReportPhoto(models.Model):
-    """Up to 5 job card photos per Person3Report."""
-    person3_report = models.ForeignKey(
-        Person3Report,
-        on_delete=models.CASCADE,
-        related_name='photos'
-    )
-    photo = models.ImageField(upload_to='person3_reports/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Photo for {self.person3_report}"
 
 
 class Person4Report(models.Model):
@@ -260,6 +245,7 @@ class Person6Report(models.Model):
     green_tape = models.PositiveIntegerField()
     red_tape = models.PositiveIntegerField()
     blue_tape = models.PositiveIntegerField()
+    total_tape = models.PositiveIntegerField()
     
     signature = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

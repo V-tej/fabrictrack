@@ -24,6 +24,17 @@
       <div class="form-section">
         <div class="form-section-title">📋 Production Entry</div>
         <div class="form-row">
+          {% if is_admin %}
+          <div class="form-group full-width">
+            <label for="id_report_type" class="form-label">Report Type (Who is this for?) <span class="required-star">*</span></label>
+            {{ form.report_type }}
+            {% if form.report_type.errors %}
+            <span class="field-error">{{ form.report_type.errors.0 }}</span>
+            {% endif %}
+          </div>
+          {% else %}
+            <div style="display:none;">{{ form.report_type }}</div>
+          {% endif %}
           <div class="form-group full-width">
             <label for="id_master_entry" class="form-label">Date &amp; Lot No. <span class="required-star">*</span></label>
             {{ form.master_entry }}
@@ -84,27 +95,81 @@
       <div class="form-section">
         <div class="form-section-title">📦 Quantities &amp; Weight</div>
 
+        <!-- Fabric Code Selection Row -->
         <div class="form-row three-col">
           <div class="form-group">
-            <label for="id_total_pcs" class="form-label">Total Pcs <span class="required-star">*</span></label>
+            <label for="id_total_pcs" class="form-label">Grand Total Pcs</label>
             {{ form.total_pcs }}
             {% if form.total_pcs.errors %}
             <span class="field-error">{{ form.total_pcs.errors.0 }}</span>
             {% endif %}
           </div>
           <div class="form-group">
-            <label for="id_total_colours" class="form-label">Total No. of Colours <span class="required-star">*</span></label>
-            {{ form.total_colours }}
+            <label class="form-label">Total No. of Fabric Codes <span class="required-star">*</span></label>
+            <select id="ui_num_fabric_codes" class="form-control">
+               <option value="0">Select...</option>
+               <option value="1">1</option>
+               <option value="2">2</option>
+               <option value="3">3</option>
+               <option value="4">4</option>
+               <option value="5">5</option>
+            </select>
+            <div style="display: none;">
+              {{ form.total_colours }}
+            </div>
             {% if form.total_colours.errors %}
             <span class="field-error">{{ form.total_colours.errors.0 }}</span>
             {% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_total_weight" class="form-label">Total Weight / Meter <span class="required-star">*</span></label>
-            {{ form.total_weight_meter }}
-            {% if form.total_weight_meter.errors %}
-            <span class="field-error">{{ form.total_weight_meter.errors.0 }}</span>
-            {% endif %}
+          <div class="form-group" style="display: flex; flex-direction: column; justify-content: flex-end;">
+            <div style="display: none;">
+              {{ form.total_weight_meter }}
+              {{ form.unit }}
+            </div>
+            <div id="dynamic-weight-sums" style="margin-top: 8px; font-size: 0.85rem; color: #60a5fa; font-weight: 600; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; display: inline-block;">
+              Total Weight: <span id="sum-weight-display">0.000</span> kg &nbsp;|&nbsp; Total Meters: <span id="sum-meters-display">0.000</span> m
+            </div>
+          </div>
+        </div>
+        <div id="fabric-codes-config-container" class="form-row" style="display: none; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: flex-end;"></div>
+
+        <!-- Dynamic Colors Container (rows added by JS) -->
+        <div id="dynamic-colors-container"></div>
+
+        <!-- Grand Total Size Breakdown -->
+        <div class="form-row">
+          <div class="form-group size-grid-group">
+            <label class="form-label">Grand Total Size Breakdown <span class="required-star">*</span></label>
+            <div class="size-grid">
+              <div class="size-col">
+                <label>S</label>
+                {{ form.size_s }}
+              </div>
+              <div class="size-col">
+                <label>M</label>
+                {{ form.size_m }}
+              </div>
+              <div class="size-col">
+                <label>L</label>
+                {{ form.size_l }}
+              </div>
+              <div class="size-col">
+                <label>XL</label>
+                {{ form.size_xl }}
+              </div>
+              <div class="size-col">
+                <label>2XL</label>
+                {{ form.size_2xl }}
+              </div>
+              <div class="size-col">
+                <label>3XL</label>
+                {{ form.size_3xl }}
+              </div>
+              <div class="size-col">
+                <label>4XL</label>
+                {{ form.size_4xl }}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -176,4 +241,193 @@
     </form>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const totalColoursInput = document.getElementById('id_total_colours');
+    const container = document.getElementById('dynamic-colors-container');
+    const grandTotals = {
+      'S': document.getElementById('id_size_s'),
+      'M': document.getElementById('id_size_m'),
+      'L': document.getElementById('id_size_l'),
+      'XL': document.getElementById('id_size_xl'),
+      '2XL': document.getElementById('id_size_2xl'),
+      '3XL': document.getElementById('id_size_3xl'),
+      '4XL': document.getElementById('id_size_4xl'),
+    };
+    const totalPcsEl = document.getElementById('id_total_pcs');
+    const totalWeightEl = document.getElementById('id_total_weight');
+    
+    // Check if we are editing and have existing colors
+    const existingColors = {{ colors_json|default:"[]"|safe }};
+    const fcConfigContainer = document.getElementById('fabric-codes-config-container');
+    const fcSelect = document.getElementById('ui_num_fabric_codes');
+    
+    if (fcSelect) {
+      fcSelect.addEventListener('change', function() {
+         const numFc = parseInt(this.value) || 0;
+         generateFcInputs(numFc);
+      });
+    }
+
+    function generateFcInputs(numFc, initialCounts = {}) {
+       if (!fcConfigContainer) return;
+       fcConfigContainer.innerHTML = '';
+       if (numFc > 0) {
+          fcConfigContainer.style.display = 'flex';
+          for(let i=1; i<=numFc; i++) {
+              const count = initialCounts[i] || 1;
+              fcConfigContainer.insertAdjacentHTML('beforeend', `
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 110px; max-width: 150px;">
+                  <label style="font-size: 0.78em; color: var(--text-muted); font-weight: 600; white-space: nowrap;">FC ${i} Colors</label>
+                  <input type="number" class="form-control fc-color-input" data-fc="${i}" min="1" max="15" value="${count}" style="width: 100%; text-align: center;">
+                </div>
+              `);
+          }
+          document.querySelectorAll('.fc-color-input').forEach(inp => {
+             inp.addEventListener('input', renderColors);
+          });
+       } else {
+          fcConfigContainer.style.display = 'none';
+       }
+       renderColors();
+    }
+    
+    function renderColors() {
+      container.innerHTML = '';
+      const fcInputs = document.querySelectorAll('.fc-color-input');
+      let globalIndex = 1;
+      
+      fcInputs.forEach(input => {
+         const fcNum = input.getAttribute('data-fc');
+         const numColors = parseInt(input.value) || 0;
+         
+         for(let c = 1; c <= numColors; c++) {
+            let existing = existingColors[globalIndex-1] || {};
+            let defaultName = numColors === 1 ? `Fabric Code ${fcNum}` : `Fabric Code ${fcNum} - Color ${c}`;
+            
+            const html = `
+              <div class="form-row">
+                <div class="form-group size-grid-group color-row-group">
+                  <div class="color-row-header">
+                    <label class="form-label" style="font-size: 1.1em; margin-bottom: 15px; display: block; color: var(--text-primary); font-weight: 600;">${existing.color_name || defaultName}</label>
+                    <input type="hidden" name="color_name_${globalIndex}" value="${existing.color_name || defaultName}">
+                  </div>
+                  <div class="size-grid">
+                    <div class="size-col"><label>S</label><input type="number" name="color_s_${globalIndex}" class="form-control dynamic-size" data-size="S" min="0" value="${existing.size_s || 0}"></div>
+                    <div class="size-col"><label>M</label><input type="number" name="color_m_${globalIndex}" class="form-control dynamic-size" data-size="M" min="0" value="${existing.size_m || 0}"></div>
+                    <div class="size-col"><label>L</label><input type="number" name="color_l_${globalIndex}" class="form-control dynamic-size" data-size="L" min="0" value="${existing.size_l || 0}"></div>
+                    <div class="size-col"><label>XL</label><input type="number" name="color_xl_${globalIndex}" class="form-control dynamic-size" data-size="XL" min="0" value="${existing.size_xl || 0}"></div>
+                    <div class="size-col"><label>2XL</label><input type="number" name="color_2xl_${globalIndex}" class="form-control dynamic-size" data-size="2XL" min="0" value="${existing.size_2xl || 0}"></div>
+                    <div class="size-col"><label>3XL</label><input type="number" name="color_3xl_${globalIndex}" class="form-control dynamic-size" data-size="3XL" min="0" value="${existing.size_3xl || 0}"></div>
+                    <div class="size-col"><label>4XL</label><input type="number" name="color_4xl_${globalIndex}" class="form-control dynamic-size" data-size="4XL" min="0" value="${existing.size_4xl || 0}"></div>
+                  </div>
+                  <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px;">
+                    <label style="margin: 0; font-weight: 500; font-size: 0.9em; color: var(--text-muted);">Total Weight / Meters <span class="required-star">*</span></label>
+                    <input type="number" name="color_weight_${globalIndex}" class="form-control" placeholder="0.000" step="0.001" style="max-width: 120px;" value="${existing.total_weight_meter || ''}" required>
+                    <select name="color_unit_${globalIndex}" class="form-control" style="max-width: 100px;">
+                      <option value="Weight" ${existing.unit === 'Meters' ? '' : 'selected'}>Weight</option>
+                      <option value="Meters" ${existing.unit === 'Meters' ? 'selected' : ''}>Meters</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+            globalIndex++;
+         }
+      });
+      
+      if(totalColoursInput) {
+          totalColoursInput.value = globalIndex - 1;
+      }
+      
+      bindDynamicEvents();
+      calculateTotals();
+    }
+    
+    function bindDynamicEvents() {
+      document.querySelectorAll('.dynamic-size').forEach(input => {
+        input.addEventListener('input', calculateTotals);
+      });
+      document.querySelectorAll('input[name^="color_weight_"], select[name^="color_unit_"]').forEach(el => {
+        el.addEventListener('input', calculateTotals);
+      });
+    }
+
+    function calculateTotals() {
+      const hasDynamicRows = document.querySelectorAll('.dynamic-size').length > 0;
+      if(!hasDynamicRows) return;
+      let totals = { 'S':0, 'M':0, 'L':0, 'XL':0, '2XL':0, '3XL':0, '4XL':0 };
+      let sum = 0;
+      document.querySelectorAll('.dynamic-size').forEach(input => {
+        const size = input.getAttribute('data-size');
+        const val = parseInt(input.value) || 0;
+        totals[size] += val;
+        sum += val;
+      });
+      
+      for(let size in totals) {
+        if(grandTotals[size]) grandTotals[size].value = totals[size];
+      }
+      
+      let sumWeight = 0;
+      let sumMeters = 0;
+      let numColors = parseInt(totalColoursInput.value);
+      for(let i=1; i<=numColors; i++) {
+         let wInput = document.querySelector(`input[name="color_weight_${i}"]`);
+         let uSelect = document.querySelector(`select[name="color_unit_${i}"]`);
+         if(wInput && uSelect) {
+             let val = parseFloat(wInput.value) || 0;
+             if(uSelect.value === 'Weight') sumWeight += val;
+             else sumMeters += val;
+         }
+      }
+      
+      const wDisplay = document.getElementById('sum-weight-display');
+      const mDisplay = document.getElementById('sum-meters-display');
+      if (wDisplay) wDisplay.innerText = sumWeight.toFixed(3);
+      if (mDisplay) mDisplay.innerText = sumMeters.toFixed(3);
+      
+      if(totalPcsEl) {
+        totalPcsEl.value = sum;
+        
+        // Auto-fill overarching Total Weight so Average per Pcs computes automatically
+        if (totalWeightEl && (sumWeight > 0 || sumMeters > 0)) {
+            totalWeightEl.value = (sumWeight + sumMeters).toFixed(3);
+            totalWeightEl.dispatchEvent(new Event('input', {bubbles:true}));
+        }
+        
+        // Trigger average calc in app.js
+        totalPcsEl.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+    }
+
+    if(fcSelect) {
+      // Initial render if editing
+      if(existingColors.length > 0) {
+          let fcCounts = {};
+          let maxFc = 0;
+          existingColors.forEach(ec => {
+              let match = ec.color_name.match(/Fabric Code (\d+)/i);
+              if (match) {
+                 let fc = parseInt(match[1]);
+                 fcCounts[fc] = (fcCounts[fc] || 0) + 1;
+                 if(fc > maxFc) maxFc = fc;
+              } else {
+                 fcCounts[1] = (fcCounts[1] || 0) + 1;
+                 if(1 > maxFc) maxFc = 1;
+              }
+          });
+          if(maxFc < 1) maxFc = 1;
+          fcSelect.value = maxFc;
+          generateFcInputs(maxFc, fcCounts);
+      } else {
+          // If no existing, maybe default to 0
+          fcSelect.value = "0";
+      }
+    }
+  });
+</script>
+
 {% endblock %}
