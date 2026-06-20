@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
+    'cloudinary_storage',
     'core',
 ]
 
@@ -84,6 +86,15 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+if os.getenv('CLOUDINARY_URL'):
+    import cloudinary
+    import cloudinary_storage
+    
+    CLOUDINARY_STORAGE = {
+        'CLOUDINARY_URL': os.getenv('CLOUDINARY_URL')
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Exports directory
 EXPORTS_DIR = BASE_DIR / 'exports'
