@@ -7,8 +7,5 @@ pip install -r requirements.txt
 python manage.py collectstatic --no-input
 python manage.py migrate
 
-# Auto-create the 6 app users (skips if already exist)
+# Auto-create all 7 users including admin (skips if already exist)
 python manage.py create_initial_users
-
-# Auto-create superuser from environment variables (skips if already exists)
-python manage.py createsuperuser --no-input || true
