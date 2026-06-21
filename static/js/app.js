@@ -353,7 +353,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // otherwise the mouse mapping will be wrong. We'll do this on first interact or load.
     function resizeCanvas() {
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width;
+      const parentWidth = rect.width || canvas.parentElement.clientWidth || 500;
+      canvas.width = parentWidth > 0 ? parentWidth : 500;
       // Fixed height of 200px (matches CSS)
       canvas.height = 200;
       
@@ -363,11 +364,27 @@ document.addEventListener('DOMContentLoaded', function () {
       ctx.lineWidth = 3;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
+      
+      // Load and draw existing signature if present
+      if (signatureInput.value) {
+        const img = new Image();
+        img.onload = function() {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = signatureInput.value;
+      }
     }
     
     // Initialize size
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    
+    // Run on window load to ensure stylesheets are applied and parentWidth is resolved correctly
+    if (document.readyState === 'complete') {
+      resizeCanvas();
+    } else {
+      window.addEventListener('load', resizeCanvas);
+    }
 
     function getCoordinates(e) {
       const rect = canvas.getBoundingClientRect();

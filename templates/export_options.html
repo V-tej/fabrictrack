@@ -47,6 +47,28 @@
         </button>
         {% endif %}
       </div>
+
+      <!-- Option 3: Full Backup (Excel + Photos) -->
+      <div style="margin-top: 2rem; margin-bottom: 2rem; padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+        <h3 style="margin: 0 0 0.5rem 0; color: #8b5cf6;">3. Complete Backup (ZIP Archive)</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--text-color-muted); font-size: 0.95rem;">
+          Download a single ZIP containing the Excel spreadsheet **AND all submitted images** extracted from the database. Use this to save your records before wiping the database.
+        </p>
+        <a href="{% url 'download_database' %}" class="btn" style="width: 100%; justify-content: center; background-color: #8b5cf6; color: white;">
+          📦 Download Complete ZIP Backup
+        </a>
+      </div>
+
+      <!-- Danger Zone: Reset Database -->
+      <div style="margin-top: 2rem; padding: 1.5rem; border: 1px solid #ef4444; border-radius: 12px; background: rgba(239, 68, 68, 0.05);">
+        <h3 style="margin: 0 0 0.5rem 0; color: #ef4444;">⚠️ Danger Zone: Reset Database</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--text-color-muted); font-size: 0.95rem;">
+          Permanently erase all submissions (master entries, reports, colors, and photos) from the database. User accounts will not be deleted. **Make sure you have downloaded a backup ZIP first.**
+        </p>
+        <a href="{% url 'reset_database' %}" class="btn" style="width: 100%; justify-content: center; background-color: #ef4444; color: white;">
+          🗑️ Clear / Reset All Data
+        </a>
+      </div>
       
     </div>
 

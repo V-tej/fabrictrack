@@ -16,6 +16,8 @@ urlpatterns = [
     path('export/options/', views.export_options_view, name='export_options'),
     path('export/excel/', views.export_excel_view, name='export_excel'),
     path('download-database/', views.download_database, name='download_database'),
+    path('db-image/<str:model_name>/<int:photo_id>/', views.serve_db_image, name='serve_db_image'),
+    path('reset-database/', views.reset_database_view, name='reset_database'),
     path('job-card/<int:pk>/', views.job_card_detail_view, name='job_card_detail'),
     path('job-card/<int:pk>/print/', views.job_card_print_view, name='job_card_print'),
 

@@ -37,7 +37,7 @@ class CuttingReportAdmin(admin.ModelAdmin):
 
 @admin.register(CuttingReportPhoto)
 class CuttingReportPhotoAdmin(admin.ModelAdmin):
-    list_display = ['cutting_report', 'photo', 'uploaded_at']
+    list_display = ['cutting_report', 'photo_name', 'uploaded_at']
 
 
 
@@ -83,4 +83,4 @@ class Person6ReportAdmin(admin.ModelAdmin):
 
 @admin.register(Person6ReportPhoto)
 class Person6ReportPhotoAdmin(admin.ModelAdmin):
-    list_display = ['person6_report', 'photo', 'uploaded_at']
+    list_display = ['person6_report', 'photo_name', 'uploaded_at']

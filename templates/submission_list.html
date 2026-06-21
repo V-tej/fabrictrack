@@ -61,8 +61,8 @@
             <td>
               <div class="photo-thumbs">
                 {% for photo in report.photos.all %}
-                <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{{ photo.photo.url }}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
+                <a href="{% url 'serve_db_image' 'cutting' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
                 </a>
                 {% endfor %}
               </div>
@@ -304,8 +304,8 @@
             <td>
               <div class="photo-thumbs">
                 {% for photo in report.photos.all %}
-                <a href="{{ photo.photo.url }}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{{ photo.photo.url }}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
+                <a href="{% url 'serve_db_image' 'finishing' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'finishing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
                 </a>
                 {% endfor %}
               </div>

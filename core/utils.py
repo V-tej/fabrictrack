@@ -4,7 +4,9 @@ from django.conf import settings
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from .models import MasterEntry, CuttingReport
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, Person6ReportPhoto
+import io
+import zipfile
 
 def get_exports_dir():
     exports_dir = Path(settings.BASE_DIR) / 'exports'
@@ -297,3 +299,37 @@ def _auto_width_and_style(ws):
             except Exception:
                 pass
         ws.column_dimensions[col_letter].width = min(max_len + 4, 50)
+
+
+def generate_backup_zip():
+    """Create a ZIP containing the data Excel spreadsheet and all uploaded photos."""
+    excel_path = export_to_excel()
+    
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add Excel sheet
+        if os.path.exists(excel_path):
+            zip_file.write(excel_path, arcname=excel_path.name)
+            
+        # Add Cutting Report Photos
+        for photo in CuttingReportPhoto.objects.select_related('cutting_report').all():
+            job_card = photo.cutting_report.job_card_no or "unknown"
+            # Sanitize job card number for filename
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Cutting/cutting_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+            
+        # Add Finishing Report Photos
+        for photo in Person6ReportPhoto.objects.select_related('person6_report').all():
+            lot_no = photo.person6_report.lot_no or "unknown"
+            lot_no_safe = "".join([c for c in lot_no if c.isalnum() or c in (' ', '-', '_')]).strip()
+            lot_no_safe = lot_no_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Finishing/finishing_photo_{photo.id}_lot_{lot_no_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+            
+    zip_buffer.seek(0)
+    return zip_buffer
+

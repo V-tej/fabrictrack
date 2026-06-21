@@ -130,6 +130,20 @@
             <span class="file-count-badge">Up to 5 files • Max 100 MB each</span>
           </label>
 
+          {% if is_edit and report.photos.all %}
+          <div class="existing-photos" style="margin-bottom: 1.5rem;">
+            <label class="form-label" style="font-weight:600; font-size: 0.95rem; margin-bottom: 0.75rem; display:block;">Current Photos (Click red cross to delete):</label>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              {% for photo in report.photos.all %}
+                <div style="position: relative; width: 90px; height: 90px;">
+                  <img src="{% url 'serve_db_image' 'finishing' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
+                  <a href="?delete_photo={{ photo.id }}" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);" title="Delete Photo">×</a>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
           <div class="file-upload-zone" id="fileUploadZone">
             <div class="file-upload-inner">
               <div class="upload-icon">📸</div>

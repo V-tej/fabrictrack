@@ -32,8 +32,8 @@ class CuttingReportForm(forms.ModelForm):
             'size_4xl',
             'total_pcs',
             'total_colours',
-            'total_weight_meter',
-            'unit',
+            'total_weight',
+            'total_meters',
             'avg_per_pcs',
             'signature',
         ]
@@ -54,8 +54,8 @@ class CuttingReportForm(forms.ModelForm):
             'size_4xl': forms.NumberInput(attrs={'class': 'form-control size-input', 'min': '0', 'readonly': 'readonly'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_pcs', 'placeholder': '0', 'readonly': 'readonly'}),
             'total_colours': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'total_weight_meter': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_weight', 'placeholder': '0.000', 'step': '0.001'}),
-            'unit': forms.Select(attrs={'class': 'form-control', 'style': 'max-width: 120px;'}),
+            'total_weight': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_weight', 'placeholder': '0.000', 'step': '0.001'}),
+            'total_meters': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_meters', 'placeholder': '0.000', 'step': '0.001'}),
             'avg_per_pcs': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_avg_per_pcs', 'placeholder': 'Auto-calculated', 'step': '0.001'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
         }
@@ -69,7 +69,8 @@ class CuttingReportForm(forms.ModelForm):
             'job_card_no': 'Job Card No.',
             'total_pcs': 'Total Pcs',
             'total_colours': 'Total No. of Colours',
-            'total_weight_meter': 'Total Weight / Meter',
+            'total_weight': 'Total Weight (kg)',
+            'total_meters': 'Total Meters (m)',
             'avg_per_pcs': 'Average per Pcs (Weight / Meter)',
         }
 

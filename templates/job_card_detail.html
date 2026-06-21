@@ -303,6 +303,14 @@
           <span class="data-label">Grand Total Pcs</span>
           <span class="data-value" style="font-size:1.2rem; color: var(--primary);">{{ cutting_report.total_pcs }}</span>
         </div>
+        <div class="data-item">
+          <span class="data-label">Total Weight</span>
+          <span class="data-value">{{ cutting_report.total_weight }} kg</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Meters</span>
+          <span class="data-value">{{ cutting_report.total_meters }} m</span>
+        </div>
       </div>
 
       {% if cutting_report.color_details.all %}
@@ -329,7 +337,12 @@
               <td>{{ color.size_2xl }}</td>
               <td>{{ color.size_3xl }}</td>
               <td>{{ color.size_4xl }}</td>
-              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+              <td>
+                {% if color.total_weight %}{{ color.total_weight }} kg{% endif %}
+                {% if color.total_weight and color.total_meters %}<br>{% endif %}
+                {% if color.total_meters %}{{ color.total_meters }} m{% endif %}
+                {% if not color.total_weight and not color.total_meters %}—{% endif %}
+              </td>
             </tr>
             {% endfor %}
             <tr class="grand-total-row">
@@ -353,8 +366,8 @@
       <div class="data-label">Photos</div>
       <div class="photo-grid">
         {% for photo in cutting_report.photos.all %}
-        <a href="{{ photo.photo.url }}" target="_blank">
-          <img src="{{ photo.photo.url }}" alt="Photo">
+        <a href="{% url 'serve_db_image' 'cutting' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Photo">
         </a>
         {% endfor %}
       </div>
@@ -401,6 +414,14 @@
           <span class="data-label">Grand Total Pcs</span>
           <span class="data-value" style="font-size:1.2rem; color: var(--success);">{{ person2_report.total_pcs }}</span>
         </div>
+        <div class="data-item">
+          <span class="data-label">Total Weight</span>
+          <span class="data-value">{{ person2_report.total_weight }} kg</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Meters</span>
+          <span class="data-value">{{ person2_report.total_meters }} m</span>
+        </div>
       </div>
 
       {% if person2_report.color_details.all %}
@@ -427,7 +448,12 @@
               <td>{{ color.size_2xl }}</td>
               <td>{{ color.size_3xl }}</td>
               <td>{{ color.size_4xl }}</td>
-              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+              <td>
+                {% if color.total_weight %}{{ color.total_weight }} kg{% endif %}
+                {% if color.total_weight and color.total_meters %}<br>{% endif %}
+                {% if color.total_meters %}{{ color.total_meters }} m{% endif %}
+                {% if not color.total_weight and not color.total_meters %}—{% endif %}
+              </td>
             </tr>
             {% endfor %}
             <tr class="grand-total-row">
@@ -451,7 +477,7 @@
       <div class="data-label">Photos</div>
       <div class="photo-grid">
         {% for photo in person2_report.photos.all %}
-        <a href="{{ photo.photo.url }}" target="_blank"><img src="{{ photo.photo.url }}" alt="Photo"></a>
+        <a href="{% url 'serve_db_image' 'cutting' photo.id %}" target="_blank"><img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Photo"></a>
         {% endfor %}
       </div>
       {% endif %}
@@ -494,6 +520,14 @@
           <span class="data-label">Grand Total Pcs</span>
           <span class="data-value" style="font-size:1.2rem; color: var(--warning);">{{ person3_report.total_pcs }}</span>
         </div>
+        <div class="data-item">
+          <span class="data-label">Total Weight</span>
+          <span class="data-value">{{ person3_report.total_weight }} kg</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Meters</span>
+          <span class="data-value">{{ person3_report.total_meters }} m</span>
+        </div>
       </div>
 
       {% if person3_report.color_details.all %}
@@ -520,7 +554,12 @@
               <td>{{ color.size_2xl }}</td>
               <td>{{ color.size_3xl }}</td>
               <td>{{ color.size_4xl }}</td>
-              <td>{% if color.total_weight_meter %}{{ color.total_weight_meter }} {{ color.unit }}{% else %}—{% endif %}</td>
+              <td>
+                {% if color.total_weight %}{{ color.total_weight }} kg{% endif %}
+                {% if color.total_weight and color.total_meters %}<br>{% endif %}
+                {% if color.total_meters %}{{ color.total_meters }} m{% endif %}
+                {% if not color.total_weight and not color.total_meters %}—{% endif %}
+              </td>
             </tr>
             {% endfor %}
             <tr class="grand-total-row">
@@ -544,7 +583,7 @@
       <div class="data-label">Photos</div>
       <div class="photo-grid">
         {% for photo in person3_report.photos.all %}
-        <a href="{{ photo.photo.url }}" target="_blank"><img src="{{ photo.photo.url }}" alt="Photo"></a>
+        <a href="{% url 'serve_db_image' 'cutting' photo.id %}" target="_blank"><img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Photo"></a>
         {% endfor %}
       </div>
       {% endif %}
@@ -723,6 +762,17 @@
         <div class="tape-badge tape-red">🔴 Red: {{ person6_report.red_tape }}</div>
         <div class="tape-badge tape-blue">🔵 Blue: {{ person6_report.blue_tape }}</div>
       </div>
+      {% if person6_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in person6_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'finishing' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'finishing' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% if person6_report.signature %}
       <div class="divider"></div>
       <div class="data-label">Signature</div>

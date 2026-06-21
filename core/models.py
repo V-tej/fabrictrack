@@ -89,12 +89,8 @@ class CuttingReport(models.Model):
     
     total_pcs = models.PositiveIntegerField(default=0)
     total_colours = models.PositiveIntegerField()
-    UNIT_CHOICES = [
-        ('Weight', 'Weight'),
-        ('Meters', 'Meters')
-    ]
-    total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3)
-    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Weight')
+    total_weight = models.DecimalField(max_digits=10, decimal_places=3, default=0.0)
+    total_meters = models.DecimalField(max_digits=10, decimal_places=3, default=0.0)
     avg_per_pcs = models.DecimalField(max_digits=10, decimal_places=3)
     signature = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -131,12 +127,8 @@ class CuttingReportColorDetail(models.Model):
     size_3xl = models.PositiveIntegerField(default=0)
     size_4xl = models.PositiveIntegerField(default=0)
     
-    UNIT_CHOICES = [
-        ('Weight', 'Weight'),
-        ('Meters', 'Meters')
-    ]
-    total_weight_meter = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
-    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='Weight')
+    total_weight = models.DecimalField(max_digits=10, decimal_places=3, default=0.0)
+    total_meters = models.DecimalField(max_digits=10, decimal_places=3, default=0.0)
     class Meta:
         ordering = ['id']
 
@@ -152,7 +144,9 @@ class CuttingReportPhoto(models.Model):
         on_delete=models.CASCADE,
         related_name='photos'
     )
-    photo = models.ImageField(upload_to='cutting_reports/')
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -265,7 +259,9 @@ class Person6ReportPhoto(models.Model):
         on_delete=models.CASCADE,
         related_name='photos'
     )
-    photo = models.ImageField(upload_to='person6_reports/')
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

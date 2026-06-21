@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Confirm Reset Database{% endblock %}
+{% block page_title %}🚨 Confirm Database Reset{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div class="form-card" style="max-width: 600px; margin: 0 auto; text-align: center; padding: 2.5rem 2rem;">
+    <div style="font-size: 4.5rem; margin-bottom: 1.5rem; animation: pulse 2s infinite;">🚨</div>
+    <h2 style="color: #ef4444; margin-bottom: 1.25rem; font-size: 1.8rem; font-weight: 800;">WARNING: Irreversible Data Loss!</h2>
+    
+    <p style="color: var(--text-color); margin-bottom: 1.5rem; font-size: 1.1rem; line-height: 1.6;">
+      You are about to delete <strong>EVERY SINGLE SUBMISSION</strong> from the database.
+    </p>
+
+    <div style="text-align: left; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(23ef, 68, 68, 0.2); padding: 1.25rem; border-radius: 12px; margin-bottom: 2rem;">
+      <h4 style="color: #ef4444; margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700;">What will be permanently deleted:</h4>
+      <ul style="color: var(--text-color-muted); margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
+        <li>All Master Entries (Lot Numbers &amp; Dates)</li>
+        <li>All Cutting, Stitching, Job Work, and Finishing Reports</li>
+        <li>All Fabric Code Size Breakdowns</li>
+        <li>All Job Card Photos stored in the database</li>
+      </ul>
+      <h4 style="color: var(--success); margin: 1rem 0 0.5rem 0; font-size: 1rem; font-weight: 700;">What will be preserved:</h4>
+      <ul style="color: var(--text-color-muted); margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
+        <li>All worker/admin accounts and login passwords</li>
+        <li>The system infrastructure and databases tables</li>
+      </ul>
+    </div>
+    
+    <p style="color: var(--text-color-muted); font-size: 0.95rem; margin-bottom: 2rem;">
+      <strong>Please make sure you have downloaded the complete ZIP backup before proceeding.</strong>
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'export_options' %}" class="btn btn-secondary" style="min-width: 150px; justify-content: center;">Cancel</a>
+        <button type="submit" class="btn" style="background-color: #ef4444; color: white; min-width: 200px; justify-content: center; font-weight: 700; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+          Yes, Delete Everything
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+</style>
+{% endblock %}

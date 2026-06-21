@@ -4,13 +4,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.http import require_POST
 import json
 
 from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, Person4Report, Person5Report, Person6Report, Person6ReportPhoto, UserProfile, SystemSetting
 from .forms import MasterEntryForm, CuttingReportForm, Person4ReportForm, Person5ReportForm, Person6ReportForm
-from .utils import export_to_excel
+from .utils import export_to_excel, generate_backup_zip
 
 
 # ── Auth Views ──────────────────────────────────────────────────────────────
@@ -49,19 +49,13 @@ def dashboard_view(request):
     }
 
     # Fetch recent reports based on role
-    if person_type == 'P1' or person_type == 'ADMIN' or request.user.is_superuser:
+    if person_type == 'ADMIN' or request.user.is_superuser:
         context['recent_reports'] = CuttingReport.objects.select_related(
             'master_entry', 'created_by'
         ).prefetch_related('photos')[:5]
         context['user_submissions_count'] = CuttingReport.objects.filter(created_by=request.user).count()
 
-    elif person_type == 'P2':
-        context['recent_reports'] = CuttingReport.objects.filter(created_by=request.user).select_related(
-            'master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
-        context['user_submissions_count'] = CuttingReport.objects.filter(created_by=request.user).count()
-
-    elif person_type == 'P3':
+    elif person_type in ['P1', 'P2', 'P3']:
         context['recent_reports'] = CuttingReport.objects.filter(created_by=request.user).select_related(
             'master_entry', 'created_by'
         ).prefetch_related('photos')[:5]
@@ -190,20 +184,22 @@ def cutting_report_view(request):
                     c_2xl = int(request.POST.get(f'color_2xl_{i}') or 0)
                     c_3xl = int(request.POST.get(f'color_3xl_{i}') or 0)
                     c_4xl = int(request.POST.get(f'color_4xl_{i}') or 0)
-                    c_weight = request.POST.get(f'color_weight_{i}') or None
-                    c_unit = request.POST.get(f'color_unit_{i}') or 'Weight'
+                    c_weight = request.POST.get(f'color_weight_{i}') or 0.0
+                    c_meters = request.POST.get(f'color_meters_{i}') or 0.0
                     CuttingReportColorDetail.objects.create(
                         cutting_report=report, color_name=c_name,
                         size_s=c_s, size_m=c_m, size_l=c_l, size_xl=c_xl,
                         size_2xl=c_2xl, size_3xl=c_3xl, size_4xl=c_4xl,
-                        total_weight_meter=c_weight, unit=c_unit
+                        total_weight=c_weight, total_meters=c_meters
                     )
 
-            # Save each photo
+            # Save each photo to database
             for photo_file in photos:
                 CuttingReportPhoto.objects.create(
                     cutting_report=report,
-                    photo=photo_file,
+                    photo_data=photo_file.read(),
+                    photo_name=photo_file.name,
+                    photo_content_type=photo_file.content_type
                 )
 
             # Update Excel export
@@ -376,7 +372,9 @@ def person6_report_view(request):
             for photo_file in photos:
                 Person6ReportPhoto.objects.create(
                     person6_report=report,
-                    photo=photo_file,
+                    photo_data=photo_file.read(),
+                    photo_name=photo_file.name,
+                    photo_content_type=photo_file.content_type
                 )
 
             try:
@@ -613,7 +611,9 @@ def edit_master_entry(request, pk):
     if request.method == 'POST':
         form = MasterEntryForm(request.POST, instance=entry)
         if form.is_valid():
-            form.save()
+            entry = form.save(commit=False)
+            entry.created_at = timezone.now()
+            entry.save()
             messages.success(request, 'Master entry updated.')
             export_to_excel()
             return redirect('dashboard')
@@ -636,6 +636,15 @@ def delete_master_entry(request, pk):
 def edit_cutting_report(request, pk):
     report = get_object_or_404(CuttingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
+    
+    # Handle photo deletion if requested via URL param
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(CuttingReportPhoto, pk=delete_photo_id, cutting_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect(request.path)
+
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
     master_entries_qs = MasterEntry.objects.filter(Q(cutting_reports__isnull=True) | Q(id=report.master_entry_id)).distinct().order_by('-date')
     master_entries_json = json.dumps({str(e.id): e.job_card_number for e in master_entries_qs})
@@ -645,15 +654,17 @@ def edit_cutting_report(request, pk):
             'color_name': c.color_name,
             'size_s': c.size_s, 'size_m': c.size_m, 'size_l': c.size_l, 'size_xl': c.size_xl,
             'size_2xl': c.size_2xl, 'size_3xl': c.size_3xl, 'size_4xl': c.size_4xl,
-            'total_weight_meter': float(c.total_weight_meter) if c.total_weight_meter is not None else None,
-            'unit': c.unit
+            'total_weight': float(c.total_weight) if c.total_weight is not None else 0.0,
+            'total_meters': float(c.total_meters) if c.total_meters is not None else 0.0,
         } for c in colors_qs
     ])
     
     if request.method == 'POST':
         form = CuttingReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
-            form.save()
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
             
             # Re-save dynamic color size breakdown
             report.color_details.all().delete()
@@ -668,18 +679,23 @@ def edit_cutting_report(request, pk):
                     c_2xl = int(request.POST.get(f'color_2xl_{i}') or 0)
                     c_3xl = int(request.POST.get(f'color_3xl_{i}') or 0)
                     c_4xl = int(request.POST.get(f'color_4xl_{i}') or 0)
-                    c_weight = request.POST.get(f'color_weight_{i}') or None
-                    c_unit = request.POST.get(f'color_unit_{i}') or 'Weight'
+                    c_weight = request.POST.get(f'color_weight_{i}') or 0.0
+                    c_meters = request.POST.get(f'color_meters_{i}') or 0.0
                     CuttingReportColorDetail.objects.create(
                         cutting_report=report, color_name=c_name,
                         size_s=c_s, size_m=c_m, size_l=c_l, size_xl=c_xl,
                         size_2xl=c_2xl, size_3xl=c_3xl, size_4xl=c_4xl,
-                        total_weight_meter=c_weight, unit=c_unit
+                        total_weight=c_weight, total_meters=c_meters
                     )
             photos = request.FILES.getlist('photos')
             for photo_file in photos:
                 if report.photos.count() < 5:
-                    CuttingReportPhoto.objects.create(cutting_report=report, photo=photo_file)
+                    CuttingReportPhoto.objects.create(
+                        cutting_report=report,
+                        photo_data=photo_file.read(),
+                        photo_name=photo_file.name,
+                        photo_content_type=photo_file.content_type
+                    )
             messages.success(request, 'Cutting Report updated.')
             export_to_excel()
             return redirect('submission_list')
@@ -719,11 +735,9 @@ def edit_person4_report(request, pk):
         form = Person4ReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
-            form.save()
-            photos = request.FILES.getlist('photos')
-            for photo_file in photos:
-                if report.photos.count() < 5:
-                    Person4ReportPhoto.objects.create(person4_report=report, photo=photo_file)
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
             messages.success(request, 'Stitching Miya Ji updated.')
             export_to_excel()
             return redirect('submission_list')
@@ -763,11 +777,9 @@ def edit_person5_report(request, pk):
         form = Person5ReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
-            form.save()
-            photos = request.FILES.getlist('photos')
-            for photo_file in photos:
-                if report.photos.count() < 5:
-                    Person5ReportPhoto.objects.create(person5_report=report, photo=photo_file)
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
             messages.success(request, 'Job Work updated.')
             export_to_excel()
             return redirect('submission_list')
@@ -794,6 +806,15 @@ def delete_person5_report(request, pk):
 def edit_person6_report(request, pk):
     report = get_object_or_404(Person6Report, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
+    
+    # Handle photo deletion if requested via URL param
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(Person6ReportPhoto, pk=delete_photo_id, person6_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect(request.path)
+
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
     cutting_reports_qs = CuttingReport.objects.filter(Q(person6_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
     cutting_reports_json = json.dumps({
@@ -807,11 +828,18 @@ def edit_person6_report(request, pk):
         form = Person6ReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
-            form.save()
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
             photos = request.FILES.getlist('photos')
             for photo_file in photos:
                 if report.photos.count() < 5:
-                    Person6ReportPhoto.objects.create(person6_report=report, photo=photo_file)
+                    Person6ReportPhoto.objects.create(
+                        person6_report=report,
+                        photo_data=photo_file.read(),
+                        photo_name=photo_file.name,
+                        photo_content_type=photo_file.content_type
+                    )
             messages.success(request, 'Finishing Report updated.')
             export_to_excel()
             return redirect('submission_list')
@@ -834,19 +862,62 @@ def delete_person6_report(request, pk):
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
-import os
-from django.conf import settings
-from django.http import FileResponse
+from django.utils import timezone
 
 @login_required
 def download_database(request):
     if not request.user.is_superuser:
         raise PermissionDenied("Only superusers can download the database backup.")
     
-    db_path = settings.DATABASES['default']['NAME']
-    if os.path.exists(db_path):
-        response = FileResponse(open(db_path, 'rb'), as_attachment=True, filename='fabrictrack_backup.sqlite3')
+    try:
+        zip_buffer = generate_backup_zip()
+        
+        # Update last downloaded time
+        system_settings = SystemSetting.get_settings()
+        system_settings.last_excel_download_at = timezone.now()
+        system_settings.save()
+        
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="FabricTrack_Backup.zip"'
         return response
-    else:
-        messages.error(request, 'Database file not found.')
+    except Exception as e:
+        messages.error(request, f'Backup failed: {e}')
         return redirect('dashboard')
+
+
+def serve_db_image(request, model_name, photo_id):
+    if model_name == 'cutting':
+        photo = get_object_or_404(CuttingReportPhoto, pk=photo_id)
+    elif model_name == 'finishing':
+        photo = get_object_or_404(Person6ReportPhoto, pk=photo_id)
+    else:
+        raise Http404("Invalid photo model")
+    
+    response = HttpResponse(photo.photo_data, content_type=photo.photo_content_type)
+    response['Content-Disposition'] = f'inline; filename="{photo.photo_name}"'
+    return response
+
+
+@login_required
+def reset_database_view(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied("Only superusers can reset the database.")
+    
+    if request.method == 'POST':
+        # Delete MasterEntry (cascades to all other data including reports, colors, photos)
+        MasterEntry.objects.all().delete()
+        
+        # Reset last downloaded time
+        system_settings = SystemSetting.get_settings()
+        system_settings.last_excel_download_at = None
+        system_settings.save()
+        
+        try:
+            export_to_excel()
+        except Exception:
+            pass
+            
+        messages.success(request, 'Database successfully reset! All master entries, reports, and photos have been permanently deleted.')
+        return redirect('dashboard')
+        
+    return render(request, 'confirm_reset.html')
