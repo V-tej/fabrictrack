@@ -1,13 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Stitching Miya Ji{% endblock %}
-{% block page_title %}🧵 Stitching Miya Ji{% endblock %}
+{% block title %}Stitching
+{% endblock %}
+{% block page_title %}🧵 Stitching
+{% endblock %}
 
 {% block content %}
 <div class="form-page fade-in">
   <div class="form-card" id="cuttingReportCard">
 
     <div class="form-card-header">
-      <h2>Submit Stitching Miya Ji</h2>
+      <h2>Submit Stitching</h2>
       <p class="form-subtitle">Fill in all required fields marked with <span class="required-star">*</span></p>
     </div>
 
@@ -20,6 +22,21 @@
     <form method="post" enctype="multipart/form-data" id="cuttingReportForm" novalidate>
       {% csrf_token %}
 
+      <!-- ── Section: Master Name ────────────────────────────── -->
+      <div class="form-section" style="background: rgba(245, 158, 11, 0.05); border: 1px solid #f59e0b; padding-bottom: 1rem;">
+        <div class="form-section-title" style="color: #d97706;">👤 Select Your Name First</div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Select Master <span class="required-star">*</span></label>
+            {{ form.master_name }}
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_stitching_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
+            {{ form.stitching_master_name }}
+          </div>
+        </div>
+      </div>
+
       <!-- ── Section: Link to P1 Report ───────────────────────── -->
       <div class="form-section">
         <div class="form-section-title">📋 Select Cutting Report</div>
@@ -27,7 +44,10 @@
           <div class="form-group full-width">
             <label for="id_cutting_report" class="form-label">Select Cutting Report <span
                 class="required-star">*</span></label>
-            {{ form.cutting_report }}
+            <div style="display: flex; gap: 10px; align-items: center;">
+              {{ form.cutting_report }}
+              <button type="button" class="btn btn-secondary btn-scan-qr" style="white-space: nowrap; padding: 0.5rem 1rem;">📷 Scan QR</button>
+            </div>
             {% if form.cutting_report.errors %}
             <span class="field-error">{{ form.cutting_report.errors.0 }}</span>
             {% endif %}
@@ -131,23 +151,76 @@
         </div>
       </div>
 
-
-
-      <!-- ── Section: Signature ──────────────────────────────────── -->
+      <!-- ── Section: Photos ─────────────────────────────────────── -->
       <div class="form-section">
-        <div class="form-section-title">✍️ Signature <span class="required-star">*</span></div>
+        <div class="form-section-title">📷 Job Card Photos</div>
+
         <div class="form-group">
-          <label class="form-label">Sign Here <span class="required-star">*</span></label>
-          {{ form.signature }}
-          <div class="signature-wrapper">
-            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
-            <div class="signature-actions">
-              <button type="button" class="btn-clear-sig" id="btnClearSig">Clear Signature</button>
+          <label for="id_photos" class="form-label">
+            Job Card Photos <span class="required-star">*</span>
+            <span class="file-count-badge">Up to 5 files • Max 100 MB each</span>
+          </label>
+
+          {% if is_edit and report.photos.all %}
+          <div class="existing-photos" style="margin-bottom: 1.5rem;">
+            <label class="form-label" style="font-weight:600; font-size: 0.95rem; margin-bottom: 0.75rem; display:block;">Current Photos (Click red cross to delete):</label>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              {% for photo in report.photos.all %}
+                <div style="position: relative; width: 90px; height: 90px;">
+                  <img src="{% url 'serve_db_image' 'p4' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
+                  <a href="?delete_photo={{ photo.id }}" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);" title="Delete Photo">×</a>
+                </div>
+              {% endfor %}
             </div>
           </div>
-          {% if form.signature.errors %}
-          <span class="field-error">{{ form.signature.errors.0 }}</span>
           {% endif %}
+
+          <div class="file-upload-zone" id="fileUploadZone">
+            <div class="file-upload-inner">
+              <div class="upload-icon">📸</div>
+              <p class="upload-text">Click to select photos or drag &amp; drop here</p>
+              <p class="upload-hint">JPG, PNG, HEIC supported • Up to 5 photos</p>
+              <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
+            </div>
+          </div>
+
+          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+          <div class="photo-count-display" id="photoCountDisplay"></div>
+        </div>
+      </div>
+      <!-- ── Section: Signatures ──────────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">✍️ Signatures <span class="required-star">*</span></div>
+        <div class="form-row two-col" style="gap: 24px; display: grid; grid-template-columns: 1fr 1fr;">
+          <!-- Signature 1 -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Worker Signature <span class="required-star">*</span></label>
+            {{ form.signature }}
+            <div class="signature-wrapper">
+              <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+              <div class="signature-actions">
+                <button type="button" class="btn-clear-sig" id="btnClearSig">Clear Signature</button>
+              </div>
+            </div>
+            {% if form.signature.errors %}
+            <span class="field-error">{{ form.signature.errors.0 }}</span>
+            {% endif %}
+          </div>
+          
+          <!-- Signature 2 -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Master/Manager Signature <span class="required-star">*</span></label>
+            {{ form.signature_2 }}
+            <div class="signature-wrapper">
+              <canvas id="signatureCanvas2" class="signature-canvas"></canvas>
+              <div class="signature-actions">
+                <button type="button" class="btn-clear-sig" id="btnClearSig2">Clear Signature</button>
+              </div>
+            </div>
+            {% if form.signature_2.errors %}
+            <span class="field-error">{{ form.signature_2.errors.0 }}</span>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -163,4 +236,5 @@
     </form>
   </div>
 </div>
+
 {% endblock %}

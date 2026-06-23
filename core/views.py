@@ -8,8 +8,8 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.http import require_POST
 import json
 
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, Person4Report, Person5Report, Person6Report, Person6ReportPhoto, UserProfile, SystemSetting
-from .forms import MasterEntryForm, CuttingReportForm, Person4ReportForm, Person5ReportForm, Person6ReportForm
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement
+from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm
 from .utils import export_to_excel, generate_backup_zip
 
 
@@ -62,28 +62,89 @@ def dashboard_view(request):
         context['user_submissions_count'] = CuttingReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P4':
-        context['recent_reports'] = Person4Report.objects.filter(created_by=request.user).select_related(
+        context['recent_reports'] = StitchingReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
         )[:5]
-        context['user_submissions_count'] = Person4Report.objects.filter(created_by=request.user).count()
+        context['user_submissions_count'] = StitchingReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P5':
-        context['recent_reports'] = Person5Report.objects.filter(created_by=request.user).select_related(
+        context['recent_reports'] = JobWorkReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
         )[:5]
-        context['user_submissions_count'] = Person5Report.objects.filter(created_by=request.user).count()
+        context['user_submissions_count'] = JobWorkReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P6':
-        context['recent_reports'] = Person6Report.objects.filter(created_by=request.user).select_related(
+        context['recent_reports'] = FinishingReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos')[:5]
-        context['user_submissions_count'] = Person6Report.objects.filter(created_by=request.user).count()
+        context['user_submissions_count'] = FinishingReport.objects.filter(created_by=request.user).count()
+
+    # Fetch pending tasks
+    if person_type == 'ADMIN' or request.user.is_superuser:
+        context['pending_tasks'] = JobCardRequirement.objects.filter(
+            Q(requires_cutting=True, is_cutting_done=False) |
+            Q(requires_jobwork=True, is_jobwork_done=False) |
+            Q(requires_stitching=True, is_stitching_done=False) |
+            Q(requires_finishing=True, is_finishing_done=False)
+        )
+    elif person_type in ['P1', 'P2', 'P3']:
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_cutting=True, is_cutting_done=False)
+    elif person_type == 'P4':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_stitching=True, is_stitching_done=False)
+    elif person_type == 'P5':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_jobwork=True, is_jobwork_done=False)
+    elif person_type == 'P6':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_finishing=True, is_finishing_done=False)
+    else:
+        context['pending_tasks'] = []
 
     if person_type == 'ADMIN' or request.user.is_superuser:
         context['master_form'] = MasterEntryForm()
 
     return render(request, 'dashboard.html', context)
 
+
+
+# ── Manage Masters (Admin Only) ──────────────────────────────────────────────
+
+@login_required
+def manage_masters(request):
+    try:
+        person_type = request.user.profile.person_type
+    except Exception:
+        person_type = 'ADMIN'
+        
+    if person_type != 'ADMIN' and not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        if 'add_master' in request.POST:
+            name = request.POST.get('name')
+            department = request.POST.get('department')
+            if name and department:
+                from .models import MasterName
+                MasterName.objects.get_or_create(name=name.strip(), department=department)
+                messages.success(request, f'Successfully added {name} to {department}!')
+            return redirect('manage_masters')
+            
+        elif 'delete_master' in request.POST:
+            master_id = request.POST.get('master_id')
+            if master_id:
+                from .models import MasterName
+                master = MasterName.objects.filter(id=master_id).first()
+                if master:
+                    master.delete()
+                    messages.success(request, 'Master name deleted successfully.')
+            return redirect('manage_masters')
+
+    from .models import MasterName
+    masters = MasterName.objects.all().order_by('department', 'name')
+    context = {
+        'masters': masters,
+        'person_type': person_type
+    }
+    return render(request, 'manage_masters.html', context)
 
 # ── Master Entry (Admin) ─────────────────────────────────────────────────────
 
@@ -95,6 +156,19 @@ def create_master_entry(request):
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.save()
+
+            # Also create/update JobCardRequirement based on the new boolean fields
+            JobCardRequirement.objects.update_or_create(
+                job_card_no=entry.job_card_number,
+                defaults={
+                    'date': entry.date,
+                    'requires_cutting': form.cleaned_data.get('requires_cutting', True),
+                    'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
+                    'requires_stitching': form.cleaned_data.get('requires_stitching', True),
+                    'requires_finishing': form.cleaned_data.get('requires_finishing', True),
+                }
+            )
+
             messages.success(request, f'Master entry "{entry}" created successfully.')
             return redirect('dashboard')
         else:
@@ -161,14 +235,7 @@ def cutting_report_view(request):
                 if ptype in ['P1', 'P2', 'P3']:
                     report.report_type = ptype
 
-            # Auto-fill cutting_master_name if empty
-            if not report.cutting_master_name:
-                if report.report_type == 'P1':
-                    report.cutting_master_name = 'Cutting Master'
-                elif report.report_type == 'P2':
-                    report.cutting_master_name = 'CR Lakshay'
-                elif report.report_type == 'P3':
-                    report.cutting_master_name = 'CR Rahul'
+            
             
             report.save()
 
@@ -208,6 +275,9 @@ def cutting_report_view(request):
             except Exception as e:
                 messages.warning(request, f'Report saved but Excel export failed: {e}')
 
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=True)
+
             messages.success(request, 'Cutting Report submitted successfully!')
             return redirect('submission_list')
         else:
@@ -224,18 +294,22 @@ def cutting_report_view(request):
     })
 
 
-# ── P4: Stitching Miya Ji Report ───────────────────────────────────────────────
+# ── P4: Stitching Report ───────────────────────────────────────────────
 
 @login_required
-def person4_report_view(request):
+def stitching_report_view(request):
     is_admin = request.user.is_superuser or (
         hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
     )
 
-    cutting_reports_qs = CuttingReport.objects.filter(person4_reports__isnull=True).select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(
+        stitching_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_stitching=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'job_card_no': cr.job_card_no,
             'item_name': cr.item_name,
             'total_pcs': cr.total_pcs
@@ -243,28 +317,44 @@ def person4_report_view(request):
     })
 
     if request.method == 'POST':
-        form = Person4ReportForm(request.POST, request.FILES)
+        form = StitchingReportForm(request.POST, request.FILES)
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
         if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('stitching_report')
+
             report = form.save(commit=False)
             report.created_by = request.user
             report.save()
+
+            for p in photos[:5]:
+                StitchingReportPhoto.objects.create(
+                    stitching_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
 
             try:
                 export_to_excel()
             except Exception as e:
                 messages.warning(request, f'Report saved but Excel export failed: {e}')
 
-            messages.success(request, 'Stitching Miya Ji submitted successfully!')
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=True)
+
+            messages.success(request, 'Stitching submitted successfully!')
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
     else:
-        form = Person4ReportForm()
+        form = StitchingReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
-    return render(request, 'person4_form.html', {
+    return render(request, 'stitching_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
@@ -275,15 +365,19 @@ def person4_report_view(request):
 # ── P5: Job Work Report ───────────────────────────────────────────────
 
 @login_required
-def person5_report_view(request):
+def jobwork_report_view(request):
     is_admin = request.user.is_superuser or (
         hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
     )
 
-    cutting_reports_qs = CuttingReport.objects.filter(person5_reports__isnull=True).select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(
+        jobwork_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_jobwork=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'job_card_no': cr.job_card_no,
             'item_name': cr.item_name,
             'total_pcs': cr.total_pcs
@@ -291,7 +385,7 @@ def person5_report_view(request):
     })
 
     if request.method == 'POST':
-        form = Person5ReportForm(request.POST, request.FILES)
+        form = JobWorkReportForm(request.POST, request.FILES)
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
         if form.is_valid():
@@ -304,15 +398,18 @@ def person5_report_view(request):
             except Exception as e:
                 messages.warning(request, f'Report saved but Excel export failed: {e}')
 
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=True)
+
             messages.success(request, 'Job Work submitted successfully!')
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
     else:
-        form = Person5ReportForm()
+        form = JobWorkReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
-    return render(request, 'person5_form.html', {
+    return render(request, 'jobwork_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
@@ -323,18 +420,22 @@ def person5_report_view(request):
 # ── P6: Finishing Report ───────────────────────────────────────────────
 
 @login_required
-def person6_report_view(request):
+def finishing_report_view(request):
     is_admin = request.user.is_superuser or (
         hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
     )
 
-    cutting_reports_qs = CuttingReport.objects.filter(person6_reports__isnull=True).select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(
+        finishing_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_finishing=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
 
     # Build JSON map for auto-fill based on Cutting Report selection
     # We want to fill Date (from master_entry) and Lot No (from master_entry.job_card_number or cutting_report.job_card_no)
     # Since the user requested it comes from the cutting report, we'll map both:
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'date': cr.master_entry.date.strftime('%Y-%m-%d'),
             'lot_no': cr.job_card_no,
             'total_pcs': cr.total_pcs
@@ -342,13 +443,13 @@ def person6_report_view(request):
     })
 
     if request.method == 'POST':
-        form = Person6ReportForm(request.POST, request.FILES)
+        form = FinishingReportForm(request.POST, request.FILES)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
 
         if len(photos) > 5:
             messages.error(request, 'You can upload a maximum of 5 photos.')
-            return render(request, 'person6_form.html', {
+            return render(request, 'finishing_form.html', {
                 'form': form,
                 'cutting_reports': cutting_reports_qs,
                 'cutting_reports_json': cutting_reports_json,
@@ -357,7 +458,7 @@ def person6_report_view(request):
 
         if len(photos) == 0:
             messages.error(request, 'Please upload at least one Job Card Photo.')
-            return render(request, 'person6_form.html', {
+            return render(request, 'finishing_form.html', {
                 'form': form,
                 'cutting_reports': cutting_reports_qs,
                 'cutting_reports_json': cutting_reports_json,
@@ -370,8 +471,8 @@ def person6_report_view(request):
             report.save()
 
             for photo_file in photos:
-                Person6ReportPhoto.objects.create(
-                    person6_report=report,
+                FinishingReportPhoto.objects.create(
+                    finishing_report=report,
                     photo_data=photo_file.read(),
                     photo_name=photo_file.name,
                     photo_content_type=photo_file.content_type
@@ -382,15 +483,18 @@ def person6_report_view(request):
             except Exception as e:
                 messages.warning(request, f'Report saved but Excel export failed: {e}')
 
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_finishing_done=True)
+
             messages.success(request, 'Finishing Report submitted successfully!')
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
     else:
-        form = Person6ReportForm()
+        form = FinishingReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
-    return render(request, 'person6_form.html', {
+    return render(request, 'finishing_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
@@ -415,35 +519,41 @@ def submission_list_view(request):
             created_by=request.user
         ).select_related('master_entry').prefetch_related('photos').order_by('-created_at')
     elif person_type == 'P4' and not request.user.is_superuser:
-        p4_reports = Person4Report.objects.filter(
+        p4_reports = StitchingReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').order_by('-created_at')
     elif person_type == 'P5' and not request.user.is_superuser:
-        p5_reports = Person5Report.objects.filter(
+        p5_reports = JobWorkReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').order_by('-created_at')
     elif person_type == 'P6' and not request.user.is_superuser:
-        p6_reports = Person6Report.objects.filter(
+        p6_reports = FinishingReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
     else:
         reports = CuttingReport.objects.select_related(
             'master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
-        p4_reports = Person4Report.objects.select_related(
+        p4_reports = StitchingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).order_by('-created_at')
-        p5_reports = Person5Report.objects.select_related(
+        p5_reports = JobWorkReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).order_by('-created_at')
-        p6_reports = Person6Report.objects.select_related(
+        p6_reports = FinishingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
 
     filter_param = request.GET.get('filter')
+    
+    # Split P4 reports into in_progress and completed
+    p4_in_progress = [r for r in p4_reports if not r.line_out_date]
+    p4_completed = [r for r in p4_reports if r.line_out_date]
+
     return render(request, 'submission_list.html', {
         'reports': reports,
-        'p4_reports': p4_reports,
+        'p4_in_progress': p4_in_progress,
+        'p4_completed': p4_completed,
         'p5_reports': p5_reports,
         'p6_reports': p6_reports,
         'person_type': person_type,
@@ -466,9 +576,9 @@ def users_reports_view(request):
 
     query = request.GET.get('q', '').strip()
 
-    p4_qs = Person4Report.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
-    p5_qs = Person5Report.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
-    p6_qs = Person6Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p4_qs = StitchingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p5_qs = JobWorkReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
+    p6_qs = FinishingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
 
     if query:
         p4_qs = p4_qs.filter(job_card_no__icontains=query)
@@ -478,17 +588,22 @@ def users_reports_view(request):
     else:
         limit = 5
 
+    # Split P4 reports
+    p4_in_progress = [r for r in p4_qs if not r.line_out_date][:limit]
+    p4_completed = [r for r in p4_qs if r.line_out_date][:limit]
+
     context = {
         'search_query': query,
         'person1_reports_count': CuttingReport.objects.filter(report_type='P1').count(),
         'person2_reports_count': CuttingReport.objects.filter(report_type='P2').count(),
         'person3_reports_count': CuttingReport.objects.filter(report_type='P3').count(),
-        'person4_reports_count': Person4Report.objects.count(),
-        'person5_reports_count': Person5Report.objects.count(),
-        'person6_reports_count': Person6Report.objects.count(),
-        'recent_person4_reports': p4_qs[:limit],
-        'recent_person5_reports': p5_qs[:limit],
-        'recent_person6_reports': p6_qs[:limit],
+        'stitching_reports_count': StitchingReport.objects.count(),
+        'jobwork_reports_count': JobWorkReport.objects.count(),
+        'finishing_reports_count': FinishingReport.objects.count(),
+        'recent_p4_in_progress': p4_in_progress,
+        'recent_p4_completed': p4_completed,
+        'recent_jobwork_reports': p5_qs[:limit],
+        'recent_finishing_reports': p6_qs[:limit],
     }
     return render(request, 'users_reports.html', context)
 
@@ -511,18 +626,18 @@ def job_card_detail_view(request, pk):
 
     # Link subsequent reports (P4, P5, P6) to whatever cutting report was submitted
     base_cutting = all_cutting.first()
-    person4_report = base_cutting.person4_reports.first() if (base_cutting and (show_all or report_type == 'P4')) else None
-    person5_report = base_cutting.person5_reports.first() if (base_cutting and (show_all or report_type == 'P5')) else None
-    person6_report = base_cutting.person6_reports.first() if (base_cutting and (show_all or report_type == 'P6')) else None
+    stitching_report = base_cutting.stitching_reports.first() if (base_cutting and (show_all or report_type == 'P4')) else None
+    jobwork_report = base_cutting.jobwork_reports.first() if (base_cutting and (show_all or report_type == 'P5')) else None
+    finishing_report = base_cutting.finishing_reports.first() if (base_cutting and (show_all or report_type == 'P6')) else None
 
     return render(request, 'job_card_detail.html', {
         'master_entry': master_entry,
         'cutting_report': p1_report,
         'person2_report': p2_report,
         'person3_report': p3_report,
-        'person4_report': person4_report,
-        'person5_report': person5_report,
-        'person6_report': person6_report,
+        'stitching_report': stitching_report,
+        'jobwork_report': jobwork_report,
+        'finishing_report': finishing_report,
         'report_type': report_type,
     })
 
@@ -594,7 +709,111 @@ def export_excel_view(request):
         messages.error(request, f'Export failed: {e}')
         return redirect('dashboard')
 
+import openpyxl
+from datetime import datetime
+
+@login_required
+def import_job_cards_view(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    if request.method == 'POST' and request.FILES.get('excel_file'):
+        excel_file = request.FILES['excel_file']
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            sheet = wb.active
+            
+            # Assuming headers in row 1: Date, Jobcard number, Cutting, Jobworker, Stiching, Finishing
+            # We will find the column indices dynamically to be safe
+            headers = [cell.value for cell in sheet[1]]
+            header_map = {str(h).strip().lower(): idx for idx, h in enumerate(headers) if h}
+            
+            # Check required columns
+            required_cols = ['jobcard number']
+            if not all(col in header_map for col in required_cols):
+                messages.error(request, f"Missing required columns. Found headers: {', '.join([str(h) for h in headers if h])}")
+                return redirect('create_master_entry')
+            
+            created_count = 0
+            updated_count = 0
+            
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                job_card_no = str(row[header_map.get('jobcard number', -1)]).strip()
+                if not job_card_no or job_card_no == 'None': continue
+                
+                def get_val(key1, key2=None):
+                    idx = header_map.get(key1)
+                    if idx is None and key2:
+                        idx = header_map.get(key2)
+                    if idx is not None and idx < len(row):
+                        return row[idx]
+                    return None
+                
+                def is_yes(val):
+                    return str(val).strip().lower() == 'yes' if val else False
+                
+                cutting_req = is_yes(get_val('cutting'))
+                jobwork_req = is_yes(get_val('jobwork', 'jobworker'))
+                stitching_req = is_yes(get_val('stitching', 'stiching'))
+                finishing_req = is_yes(get_val('finishing'))
+                
+                # Parse date if possible
+                date_val = row[header_map.get('date', -1)]
+                if isinstance(date_val, datetime):
+                    date_obj = date_val.date()
+                elif date_val:
+                    try:
+                        date_obj = datetime.strptime(str(date_val).strip(), '%m/%d/%Y').date()
+                    except ValueError:
+                        date_obj = timezone.now().date()
+                else:
+                    date_obj = timezone.now().date()
+
+                obj, created = JobCardRequirement.objects.update_or_create(
+                    job_card_no=job_card_no,
+                    defaults={
+                        'date': date_obj,
+                        'requires_cutting': cutting_req,
+                        'requires_jobwork': jobwork_req,
+                        'requires_stitching': stitching_req,
+                        'requires_finishing': finishing_req,
+                    }
+                )
+
+                # Create MasterEntry if it doesn't exist
+                MasterEntry.objects.get_or_create(
+                    job_card_number=job_card_no,
+                    defaults={
+                        'date': date_obj,
+                        'created_by': request.user
+                    }
+                )
+
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+                    
+            messages.success(request, f"Successfully imported! Created {created_count} new tasks, updated {updated_count} existing tasks.")
+        except Exception as e:
+            messages.error(request, f"Error processing file: {str(e)}")
+            
+        return redirect('create_master_entry')
+        
+    return redirect('create_master_entry')
+
 # ── Edit and Delete Views ───────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def delete_pending_task(request, pk):
+    if not request.user.is_superuser and getattr(request.user, 'profile', None) and request.user.profile.person_type != 'ADMIN':
+        raise PermissionDenied
+    task = get_object_or_404(JobCardRequirement, pk=pk)
+    task.delete()
+    messages.success(request, f"Pending task for {task.job_card_no} deleted.")
+    return redirect('dashboard')
+
 
 from django.core.exceptions import PermissionDenied
 
@@ -614,11 +833,34 @@ def edit_master_entry(request, pk):
             entry = form.save(commit=False)
             entry.created_at = timezone.now()
             entry.save()
+            
+            # Update the JobCardRequirement as well
+            JobCardRequirement.objects.update_or_create(
+                job_card_no=entry.job_card_number,
+                defaults={
+                    'date': entry.date,
+                    'requires_cutting': form.cleaned_data.get('requires_cutting', True),
+                    'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
+                    'requires_stitching': form.cleaned_data.get('requires_stitching', True),
+                    'requires_finishing': form.cleaned_data.get('requires_finishing', True),
+                }
+            )
+            
             messages.success(request, 'Master entry updated.')
             export_to_excel()
             return redirect('dashboard')
     else:
-        form = MasterEntryForm(instance=entry)
+        # Pre-fill form with existing JobCardRequirement values
+        req = JobCardRequirement.objects.filter(job_card_no=entry.job_card_number).first()
+        initial_data = {}
+        if req:
+            initial_data = {
+                'requires_cutting': 'True' if req.requires_cutting else 'False',
+                'requires_jobwork': 'True' if req.requires_jobwork else 'False',
+                'requires_stitching': 'True' if req.requires_stitching else 'False',
+                'requires_finishing': 'True' if req.requires_finishing else 'False',
+            }
+        form = MasterEntryForm(instance=entry, initial=initial_data)
     return render(request, 'master_entry_form.html', {'form': form, 'is_edit': True})
 
 @login_required
@@ -719,62 +961,85 @@ def delete_cutting_report(request, pk):
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
 @login_required
-def edit_person4_report(request, pk):
-    report = get_object_or_404(Person4Report, pk=pk)
+def edit_stitching_report(request, pk):
+    report = get_object_or_404(StitchingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
-    cutting_reports_qs = CuttingReport.objects.filter(Q(person4_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(stitching_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'job_card_no': cr.job_card_no,
             'item_name': cr.item_name,
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(StitchingReportPhoto, pk=delete_photo_id, stitching_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_stitching_report', pk=report.id)
+
     if request.method == 'POST':
-        form = Person4ReportForm(request.POST, request.FILES, instance=report)
+        form = StitchingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_stitching_report', pk=report.id)
+
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
             report.save()
-            messages.success(request, 'Stitching Miya Ji updated.')
+
+            for p in photos:
+                StitchingReportPhoto.objects.create(
+                    stitching_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            messages.success(request, 'Stitching updated.')
             export_to_excel()
             return redirect('submission_list')
     else:
-        form = Person4ReportForm(instance=report)
+        form = StitchingReportForm(instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
-    return render(request, 'person4_form.html', {
+    return render(request, 'stitching_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
-def delete_person4_report(request, pk):
-    report = get_object_or_404(Person4Report, pk=pk)
+def delete_stitching_report(request, pk):
+    report = get_object_or_404(StitchingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
         report.delete()
-        messages.success(request, 'Stitching Miya Ji deleted.')
+        messages.success(request, 'Stitching deleted.')
         export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
 @login_required
-def edit_person5_report(request, pk):
-    report = get_object_or_404(Person5Report, pk=pk)
+def edit_jobwork_report(request, pk):
+    report = get_object_or_404(JobWorkReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
-    cutting_reports_qs = CuttingReport.objects.filter(Q(person5_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(jobwork_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'job_card_no': cr.job_card_no,
             'item_name': cr.item_name,
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
     if request.method == 'POST':
-        form = Person5ReportForm(request.POST, request.FILES, instance=report)
+        form = JobWorkReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
             report = form.save(commit=False)
@@ -784,16 +1049,16 @@ def edit_person5_report(request, pk):
             export_to_excel()
             return redirect('submission_list')
     else:
-        form = Person5ReportForm(instance=report)
+        form = JobWorkReportForm(instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
-    return render(request, 'person5_form.html', {
+    return render(request, 'jobwork_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
-def delete_person5_report(request, pk):
-    report = get_object_or_404(Person5Report, pk=pk)
+def delete_jobwork_report(request, pk):
+    report = get_object_or_404(JobWorkReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
         report.delete()
@@ -803,29 +1068,30 @@ def delete_person5_report(request, pk):
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
 @login_required
-def edit_person6_report(request, pk):
-    report = get_object_or_404(Person6Report, pk=pk)
+def edit_finishing_report(request, pk):
+    report = get_object_or_404(FinishingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     
     # Handle photo deletion if requested via URL param
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
-        photo_to_delete = get_object_or_404(Person6ReportPhoto, pk=delete_photo_id, person6_report=report)
+        photo_to_delete = get_object_or_404(FinishingReportPhoto, pk=delete_photo_id, finishing_report=report)
         photo_to_delete.delete()
         messages.success(request, 'Photo deleted successfully.')
         return redirect(request.path)
 
     is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
-    cutting_reports_qs = CuttingReport.objects.filter(Q(person6_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(finishing_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
     cutting_reports_json = json.dumps({
         str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
             'date': cr.master_entry.date.strftime('%Y-%m-%d'),
             'lot_no': cr.job_card_no,
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
     if request.method == 'POST':
-        form = Person6ReportForm(request.POST, request.FILES, instance=report)
+        form = FinishingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
             report = form.save(commit=False)
@@ -834,8 +1100,8 @@ def edit_person6_report(request, pk):
             photos = request.FILES.getlist('photos')
             for photo_file in photos:
                 if report.photos.count() < 5:
-                    Person6ReportPhoto.objects.create(
-                        person6_report=report,
+                    FinishingReportPhoto.objects.create(
+                        finishing_report=report,
                         photo_data=photo_file.read(),
                         photo_name=photo_file.name,
                         photo_content_type=photo_file.content_type
@@ -844,16 +1110,16 @@ def edit_person6_report(request, pk):
             export_to_excel()
             return redirect('submission_list')
     else:
-        form = Person6ReportForm(instance=report)
+        form = FinishingReportForm(instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
-    return render(request, 'person6_form.html', {
+    return render(request, 'finishing_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
-def delete_person6_report(request, pk):
-    report = get_object_or_404(Person6Report, pk=pk)
+def delete_finishing_report(request, pk):
+    report = get_object_or_404(FinishingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
         report.delete()
@@ -889,7 +1155,9 @@ def serve_db_image(request, model_name, photo_id):
     if model_name == 'cutting':
         photo = get_object_or_404(CuttingReportPhoto, pk=photo_id)
     elif model_name == 'finishing':
-        photo = get_object_or_404(Person6ReportPhoto, pk=photo_id)
+        photo = get_object_or_404(FinishingReportPhoto, pk=photo_id)
+    elif model_name == 'p4':
+        photo = get_object_or_404(StitchingReportPhoto, pk=photo_id)
     else:
         raise Http404("Invalid photo model")
     

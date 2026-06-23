@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Manage Masters{% endblock %}
+{% block page_title %}👥 Manage Masters / Workers{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+  
+  <div class="section-card" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Add New Master / Worker</h2>
+    <form method="post" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+      {% csrf_token %}
+      <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+        <label class="form-label">Name (e.g., C1, Stitching 2)</label>
+        <input type="text" name="name" class="form-control" required placeholder="Enter name...">
+      </div>
+      <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-control" required>
+          <option value="">Select Department...</option>
+          <option value="Cutting">Cutting</option>
+          <option value="Stitching">Stitching</option>
+          <option value="Job Work">Job Work</option>
+          <option value="Finishing">Finishing</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <button type="submit" name="add_master" class="btn btn-primary">Add Master</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="section-card">
+    <h2 class="section-title">Current Masters / Workers</h2>
+    {% if masters %}
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for master in masters %}
+            <tr>
+              <td>
+                <span class="badge" style="
+                  {% if master.department == 'Cutting' %}background: #dbeafe; color: #1e40af;{% endif %}
+                  {% if master.department == 'Stitching' %}background: #fce7f3; color: #9d174d;{% endif %}
+                  {% if master.department == 'Job Work' %}background: #fef3c7; color: #b45309;{% endif %}
+                  {% if master.department == 'Finishing' %}background: #e0e7ff; color: #3730a3;{% endif %}
+                ">
+                  {{ master.department }}
+                </span>
+              </td>
+              <td style="font-weight: 600;">{{ master.name }}</td>
+              <td>
+                <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ master.name }}?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="master_id" value="{{ master.id }}">
+                  <button type="submit" name="delete_master" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #ef4444; border-color: #fca5a5;">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <p>No master names have been created yet. Add one above to get started.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

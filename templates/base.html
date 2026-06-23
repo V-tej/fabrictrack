@@ -61,19 +61,19 @@
     {% endif %}
 
     {% if user.profile.person_type == 'P4' %}
-    <a href="{% url 'person4_report' %}" class="nav-item {% if request.resolver_match.url_name == 'person4_report' %}active{% endif %}" id="nav-person4">
-      <span class="nav-icon">🧵</span> Stitching Miya Ji
+    <a href="{% url 'stitching_report' %}" class="nav-item {% if request.resolver_match.url_name == 'stitching_report' %}active{% endif %}" id="nav-person4">
+      <span class="nav-icon">🧵</span> Stitching
     </a>
     {% endif %}
 
     {% if user.profile.person_type == 'P5' %}
-    <a href="{% url 'person5_report' %}" class="nav-item {% if request.resolver_match.url_name == 'person5_report' %}active{% endif %}" id="nav-person5">
+    <a href="{% url 'jobwork_report' %}" class="nav-item {% if request.resolver_match.url_name == 'jobwork_report' %}active{% endif %}" id="nav-person5">
       <span class="nav-icon">👔</span> Job Work
     </a>
     {% endif %}
 
     {% if user.profile.person_type == 'P6' %}
-    <a href="{% url 'person6_report' %}" class="nav-item {% if request.resolver_match.url_name == 'person6_report' %}active{% endif %}" id="nav-person6">
+    <a href="{% url 'finishing_report' %}" class="nav-item {% if request.resolver_match.url_name == 'finishing_report' %}active{% endif %}" id="nav-person6">
       <span class="nav-icon">👔</span> Finishing Report
     </a>
     {% endif %}
@@ -95,6 +95,9 @@
     {% endif %}
 
     {% if user.is_superuser %}
+    <a href="{% url 'manage_masters' %}" class="nav-item {% if request.resolver_match.url_name == 'manage_masters' %}active{% endif %}" id="nav-manage-masters">
+      <span class="nav-icon">👤</span> Manage Masters
+    </a>
     <a href="/admin/auth/user/" class="nav-item" id="nav-users">
       <span class="nav-icon">👥</span> Users
     </a>
@@ -149,12 +152,26 @@
   </div>
 </div>
 
+<!-- ── QR Code Scanner Modal ───────────────────────────────────── -->
+<div id="qrScannerModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content" style="max-width: 500px; width: 90%;">
+    <div class="modal-icon">📷</div>
+    <h2>Scan Job Card QR</h2>
+    <p>Point your camera at the QR code printed on the job card.</p>
+    <div id="qr-reader" style="width: 100%; margin-top: 15px; border-radius: 8px; overflow: hidden;"></div>
+    <div class="modal-actions" style="margin-top: 20px;">
+      <button class="btn btn-secondary" id="btnCloseQrScanner">Cancel</button>
+    </div>
+  </div>
+</div>
+
 {% else %}
   {% block auth_content %}{% endblock %}
 {% endif %}
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="{% static 'js/app.js' %}?v={% now 'U' %}"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="{% static 'js/app_v2.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

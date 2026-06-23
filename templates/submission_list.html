@@ -52,7 +52,17 @@
             </td>
             <td><span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">{{ report.get_report_type_display }}</span></td>
             <td><strong>{{ report.item_name }}</strong></td>
-            <td>{{ report.cutting_master_name|default:"—" }}</td>
+            <td>
+              {% if report.master_name and report.cutting_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.cutting_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.cutting_master_name %}
+                {{ report.cutting_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{% if report.cutting_rate %}₹{{ report.cutting_rate }}{% else %}—{% endif %}</td>
             <td>{{ report.fabric_type_quality }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
@@ -97,27 +107,31 @@
 
 
   {% if show_p4 and user.profile.person_type in 'P4,ADMIN' or show_p4 and user.is_superuser %}
-  <!-- Stitching Miya Ji Section -->
+  <!-- Stitching Section -->
   <div class="section-card" id="p4SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
-      <h2 class="section-title">Stitching Miya Ji</h2>
+      <h2 class="section-title">Stitching</h2>
       <div class="header-actions">
-        <a href="{% url 'person4_report' %}" class="btn btn-primary btn-sm" id="btnNewP4Report">+ New Stitching Miya Ji</a>
+        <a href="{% url 'stitching_report' %}" class="btn btn-primary btn-sm" id="btnNewP4Report">+ New Stitching</a>
       </div>
     </div>
 
-    {% if p4_reports %}
-    <div class="table-wrapper">
-      <table class="data-table" id="p4SubmissionsTable">
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress (Pending Line Out)</h3>
+    {% if p4_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 2rem;">
+      <table class="data-table">
         <thead>
           <tr>
             <th>#</th>
             <th>P1 Date &amp; Job Card No.</th>
             <th>Job Card No.</th>
+            <th>Stitching Master</th>
             <th>Item Name</th>
             <th>Line In</th>
             <th>Line Out</th>
             <th>Total Pcs</th>
+            <th>Photos</th>
             <th>Darji Rate</th>
             <th>Folding Rate</th>
             <th>Overlock Rate</th>
@@ -130,7 +144,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for report in p4_reports %}
+          {% for report in p4_in_progress %}
           <tr class="table-row-hover">
             <td>{{ forloop.counter }}</td>
             <td>
@@ -139,10 +153,105 @@
               </a>
             </td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.stitching_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.stitching_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.stitching_master_name %}
+                {{ report.stitching_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td><strong>{{ report.item_name }}</strong></td>
             <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
             <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>{% if report.darji_rate %}₹{{ report.darji_rate }}{% else %}—{% endif %}</td>
+            <td>{% if report.folding_rate %}₹{{ report.folding_rate }}{% else %}—{% endif %}</td>
+            <td>{% if report.overlock_rate %}₹{{ report.overlock_rate }}{% else %}—{% endif %}</td>
+            <td>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem; margin-bottom: 2rem;">
+      <p style="margin: 0; color: #64748b;">No In Progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed (Line Out Done)</h3>
+    {% if p4_completed %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Stitching Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Darji Rate</th>
+            <th>Folding Rate</th>
+            <th>Overlock Rate</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p4_completed %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.stitching_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.stitching_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.stitching_master_name %}
+                {{ report.stitching_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{% if report.darji_rate %}₹{{ report.darji_rate }}{% else %}—{% endif %}</td>
             <td>{% if report.folding_rate %}₹{{ report.folding_rate }}{% else %}—{% endif %}</td>
             <td>{% if report.overlock_rate %}₹{{ report.overlock_rate }}{% else %}—{% endif %}</td>
@@ -155,8 +264,8 @@
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
               {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
-              <a href="{% url 'edit_person4_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_person4_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
               <span class="text-muted">—</span>
               {% endif %}
@@ -167,12 +276,11 @@
       </table>
     </div>
     {% else %}
-    <div class="empty-state" id="emptyP4Submissions">
-      <div class="empty-icon">📭</div>
-      <p>No Stitching Miya Ji submissions yet.</p>
-      <a href="{% url 'person4_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+    <div class="empty-state" style="padding: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No Completed submissions.</p>
     </div>
     {% endif %}
+
   </div>
   {% endif %}
 
@@ -182,7 +290,7 @@
     <div class="section-header-row">
       <h2 class="section-title">Job Work</h2>
       <div class="header-actions">
-        <a href="{% url 'person5_report' %}" class="btn btn-primary btn-sm" id="btnNewP5Report">+ New Job Work</a>
+        <a href="{% url 'jobwork_report' %}" class="btn btn-primary btn-sm" id="btnNewP5Report">+ New Job Work</a>
       </div>
     </div>
 
@@ -216,7 +324,17 @@
                 <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
               </a>
             </td>
-            <td><strong>{{ report.jobworker }}</strong></td>
+            <td><strong>
+              {% if report.master_name and report.jobworker %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.jobworker }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.jobworker %}
+                {{ report.jobworker }}
+              {% else %}
+                —
+              {% endif %}
+            </strong></td>
             <td><span class="badge" style="background: var(--light-bg); color: var(--text-color);">{{ report.job_work_type }}</span></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
@@ -231,8 +349,8 @@
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
               {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
-              <a href="{% url 'edit_person5_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_person5_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
               <span class="text-muted">—</span>
               {% endif %}
@@ -246,7 +364,7 @@
     <div class="empty-state" id="emptyP5Submissions">
       <div class="empty-icon">📭</div>
       <p>No Job Work submissions yet.</p>
-      <a href="{% url 'person5_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+      <a href="{% url 'jobwork_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
     </div>
     {% endif %}
   </div>
@@ -258,7 +376,7 @@
     <div class="section-header-row">
       <h2 class="section-title">Finishing Reports</h2>
       <div class="header-actions">
-        <a href="{% url 'person6_report' %}" class="btn btn-primary btn-sm" id="btnNewP6Report">+ New Finishing Report</a>
+        <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm" id="btnNewP6Report">+ New Finishing Report</a>
       </div>
     </div>
 
@@ -270,7 +388,8 @@
             <th>#</th>
             <th>P1 Date &amp; Job Card No.</th>
             <th>Date</th>
-            <th>Lot No</th>
+            <th>Lot No.</th>
+            <th>Finishing Master</th>
             <th>Total Pcs</th>
             <th>Short</th>
             <th>Packed</th>
@@ -295,6 +414,17 @@
             </td>
             <td>{{ report.date|date:"d M Y" }}</td>
             <td><code>{{ report.lot_no }}</code></td>
+            <td>
+              {% if report.master_name and report.finishing_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.finishing_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.finishing_master_name %}
+                {{ report.finishing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td><strong>{{ report.total_pcs }}</strong></td>
             <td>{{ report.total_pcs_short }}</td>
             <td>{{ report.total_pcs_packed }}</td>
@@ -317,8 +447,8 @@
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
               {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
-              <a href="{% url 'edit_person6_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_person6_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              <a href="{% url 'edit_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
               <span class="text-muted">—</span>
               {% endif %}
@@ -332,7 +462,7 @@
     <div class="empty-state" id="emptyP6Submissions">
       <div class="empty-icon">📭</div>
       <p>No Finishing Report submissions yet.</p>
-      <a href="{% url 'person6_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+      <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
     </div>
     {% endif %}
   </div>

@@ -293,7 +293,17 @@
         </div>
         <div class="data-item">
           <span class="data-label">Cutting Master</span>
-          <span class="data-value">{{ cutting_report.cutting_master_name|default:"—" }}</span>
+          <span class="data-value">
+            {% if cutting_report.master_name and cutting_report.cutting_master_name %}
+              {{ cutting_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ cutting_report.cutting_master_name }})</span>
+            {% elif cutting_report.master_name %}
+              {{ cutting_report.master_name }}
+            {% elif cutting_report.cutting_master_name %}
+              {{ cutting_report.cutting_master_name }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
         </div>
         <div class="data-item">
           <span class="data-label">Job Card No.</span>
@@ -408,7 +418,17 @@
         </div>
         <div class="data-item">
           <span class="data-label">Cutting Master</span>
-          <span class="data-value">{{ person2_report.cutting_master_name|default:"—" }}</span>
+          <span class="data-value">
+            {% if person2_report.master_name and person2_report.cutting_master_name %}
+              {{ person2_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ person2_report.cutting_master_name }})</span>
+            {% elif person2_report.master_name %}
+              {{ person2_report.master_name }}
+            {% elif person2_report.cutting_master_name %}
+              {{ person2_report.cutting_master_name }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
         </div>
         <div class="data-item">
           <span class="data-label">Grand Total Pcs</span>
@@ -514,7 +534,17 @@
         </div>
         <div class="data-item">
           <span class="data-label">Cutting Master</span>
-          <span class="data-value">{{ person3_report.cutting_master_name|default:"—" }}</span>
+          <span class="data-value">
+            {% if person3_report.master_name and person3_report.cutting_master_name %}
+              {{ person3_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ person3_report.cutting_master_name }})</span>
+            {% elif person3_report.master_name %}
+              {{ person3_report.master_name }}
+            {% elif person3_report.cutting_master_name %}
+              {{ person3_report.cutting_master_name }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
         </div>
         <div class="data-item">
           <span class="data-label">Grand Total Pcs</span>
@@ -602,61 +632,61 @@
   <div class="section">
     <div class="section-header" style="background: var(--purple-light);">
       <div class="section-icon" style="background: var(--purple-light);">🧵</div>
-      <span class="section-title" style="color: var(--purple);">Stitching Miya Ji</span>
-      <span class="section-status {% if person4_report %}status-done{% else %}status-missing{% endif %}">
-        {% if person4_report %}Submitted{% else %}Pending{% endif %}
+      <span class="section-title" style="color: var(--purple);">Stitching</span>
+      <span class="section-status {% if stitching_report %}status-done{% else %}status-missing{% endif %}">
+        {% if stitching_report %}Submitted{% else %}Pending{% endif %}
       </span>
     </div>
-    {% if person4_report %}
+    {% if stitching_report %}
     <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Item Name</span>
-          <span class="data-value">{{ person4_report.item_name }}</span>
+          <span class="data-value">{{ stitching_report.item_name }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Job Card No.</span>
-          <span class="data-value">{{ person4_report.job_card_no }}</span>
+          <span class="data-value">{{ stitching_report.job_card_no }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Pcs</span>
-          <span class="data-value" style="font-size:1.2rem; color: var(--purple);">{{ person4_report.total_pcs|default:"—" }}</span>
+          <span class="data-value" style="font-size:1.2rem; color: var(--purple);">{{ stitching_report.total_pcs|default:"—" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Line In Date</span>
-          <span class="data-value">{{ person4_report.line_in_date|date:"d M Y"|default:"—" }}</span>
+          <span class="data-value">{{ stitching_report.line_in_date|date:"d M Y"|default:"—" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Line Out Date</span>
-          <span class="data-value">{{ person4_report.line_out_date|date:"d M Y"|default:"—" }}</span>
+          <span class="data-value">{{ stitching_report.line_out_date|date:"d M Y"|default:"—" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Darji Rate</span>
-          <span class="data-value">{% if person4_report.darji_rate %}₹{{ person4_report.darji_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value">{% if stitching_report.darji_rate %}₹{{ stitching_report.darji_rate }}{% else %}—{% endif %}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Folding Rate</span>
-          <span class="data-value">{% if person4_report.folding_rate %}₹{{ person4_report.folding_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value">{% if stitching_report.folding_rate %}₹{{ stitching_report.folding_rate }}{% else %}—{% endif %}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Overlock Rate</span>
-          <span class="data-value">{% if person4_report.overlock_rate %}₹{{ person4_report.overlock_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value">{% if stitching_report.overlock_rate %}₹{{ stitching_report.overlock_rate }}{% else %}—{% endif %}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Rate</span>
-          <span class="data-value">{% if person4_report.total_rate %}₹{{ person4_report.total_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value">{% if stitching_report.total_rate %}₹{{ stitching_report.total_rate }}{% else %}—{% endif %}</span>
         </div>
-        {% if person4_report.option_1 %}
+        {% if stitching_report.option_1 %}
         <div class="data-item full-width">
           <span class="data-label">Option 1</span>
-          <span class="data-value">{{ person4_report.option_1 }}</span>
+          <span class="data-value">{{ stitching_report.option_1 }}</span>
         </div>
         {% endif %}
       </div>
-      {% if person4_report.signature %}
+      {% if stitching_report.signature %}
       <div class="divider"></div>
       <div class="data-label">Signature</div>
-      <div class="sig-wrap"><img src="{{ person4_report.signature }}" alt="Signature"></div>
+      <div class="sig-wrap"><img src="{{ stitching_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
     {% else %}
@@ -669,48 +699,58 @@
     <div class="section-header" style="background: rgba(236,72,153,0.1);">
       <div class="section-icon" style="background: rgba(236,72,153,0.1);">📦</div>
       <span class="section-title" style="color: var(--pink);">Job Work</span>
-      <span class="section-status {% if person5_report %}status-done{% else %}status-missing{% endif %}">
-        {% if person5_report %}Submitted{% else %}Pending{% endif %}
+      <span class="section-status {% if jobwork_report %}status-done{% else %}status-missing{% endif %}">
+        {% if jobwork_report %}Submitted{% else %}Pending{% endif %}
       </span>
     </div>
-    {% if person5_report %}
+    {% if jobwork_report %}
     <div class="section-body">
       <div class="data-grid">
         <div class="data-item full-width">
           <span class="data-label">Job Worker</span>
-          <span class="data-value">{{ person5_report.jobworker }}</span>
+          <span class="data-value">
+            {% if jobwork_report.master_name and jobwork_report.jobworker %}
+              {{ jobwork_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ jobwork_report.jobworker }})</span>
+            {% elif jobwork_report.master_name %}
+              {{ jobwork_report.master_name }}
+            {% elif jobwork_report.jobworker %}
+              {{ jobwork_report.jobworker }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
         </div>
         <div class="data-item">
           <span class="data-label">Type</span>
-          <span class="data-value">{{ person5_report.job_work_type }}</span>
+          <span class="data-value">{{ jobwork_report.job_work_type }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Date</span>
-          <span class="data-value">{{ person5_report.date|date:"d M Y" }}</span>
+          <span class="data-value">{{ jobwork_report.date|date:"d M Y" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Pcs</span>
-          <span class="data-value" style="color: var(--pink);">{{ person5_report.total_pcs }}</span>
+          <span class="data-value" style="color: var(--pink);">{{ jobwork_report.total_pcs }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Pcs Short</span>
-          <span class="data-value">{{ person5_report.total_pcs_short }}</span>
+          <span class="data-value">{{ jobwork_report.total_pcs_short }}</span>
         </div>
         <div class="data-item full-width">
           <span class="data-label">Purpose</span>
-          <span class="data-value">{{ person5_report.purpose }}</span>
+          <span class="data-value">{{ jobwork_report.purpose }}</span>
         </div>
-        {% if person5_report.any_other_problem %}
+        {% if jobwork_report.any_other_problem %}
         <div class="data-item full-width">
           <span class="data-label">Other Problem</span>
-          <span class="data-value">{{ person5_report.any_other_problem }}</span>
+          <span class="data-value">{{ jobwork_report.any_other_problem }}</span>
         </div>
         {% endif %}
       </div>
-      {% if person5_report.signature %}
+      {% if jobwork_report.signature %}
       <div class="divider"></div>
       <div class="data-label">Signature</div>
-      <div class="sig-wrap"><img src="{{ person5_report.signature }}" alt="Signature"></div>
+      <div class="sig-wrap"><img src="{{ jobwork_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
     {% else %}
@@ -723,60 +763,60 @@
     <div class="section-header" style="background: rgba(251,191,36,0.1);">
       <div class="section-icon" style="background: rgba(251,191,36,0.1);">✅</div>
       <span class="section-title" style="color: #fbbf24;">Finishing</span>
-      <span class="section-status {% if person6_report %}status-done{% else %}status-missing{% endif %}">
-        {% if person6_report %}Submitted{% else %}Pending{% endif %}
+      <span class="section-status {% if finishing_report %}status-done{% else %}status-missing{% endif %}">
+        {% if finishing_report %}Submitted{% else %}Pending{% endif %}
       </span>
     </div>
-    {% if person6_report %}
+    {% if finishing_report %}
     <div class="section-body">
       <div class="data-grid">
         <div class="data-item">
           <span class="data-label">Date</span>
-          <span class="data-value">{{ person6_report.date|date:"d M Y" }}</span>
+          <span class="data-value">{{ finishing_report.date|date:"d M Y" }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Lot No.</span>
-          <span class="data-value">{{ person6_report.lot_no }}</span>
+          <span class="data-value">{{ finishing_report.lot_no }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Pcs</span>
-          <span class="data-value" style="color: #fbbf24; font-size: 1.2rem;">{{ person6_report.total_pcs }}</span>
+          <span class="data-value" style="color: #fbbf24; font-size: 1.2rem;">{{ finishing_report.total_pcs }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Pcs Short</span>
-          <span class="data-value">{{ person6_report.total_pcs_short }}</span>
+          <span class="data-value">{{ finishing_report.total_pcs_short }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Pcs Packed</span>
-          <span class="data-value">{{ person6_report.total_pcs_packed }}</span>
+          <span class="data-value">{{ finishing_report.total_pcs_packed }}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Tape</span>
-          <span class="data-value">{{ person6_report.total_tape }}</span>
+          <span class="data-value">{{ finishing_report.total_tape }}</span>
         </div>
       </div>
       <div class="divider"></div>
       <div class="data-label" style="margin-bottom: 0.5rem;">Tape Details</div>
       <div class="tape-badges">
-        <div class="tape-badge tape-green">🟢 Green: {{ person6_report.green_tape }}</div>
-        <div class="tape-badge tape-red">🔴 Red: {{ person6_report.red_tape }}</div>
-        <div class="tape-badge tape-blue">🔵 Blue: {{ person6_report.blue_tape }}</div>
+        <div class="tape-badge tape-green">🟢 Green: {{ finishing_report.green_tape }}</div>
+        <div class="tape-badge tape-red">🔴 Red: {{ finishing_report.red_tape }}</div>
+        <div class="tape-badge tape-blue">🔵 Blue: {{ finishing_report.blue_tape }}</div>
       </div>
-      {% if person6_report.photos.all %}
+      {% if finishing_report.photos.all %}
       <div class="divider"></div>
       <div class="data-label">Photos</div>
       <div class="photo-grid">
-        {% for photo in person6_report.photos.all %}
+        {% for photo in finishing_report.photos.all %}
         <a href="{% url 'serve_db_image' 'finishing' photo.id %}" target="_blank">
           <img src="{% url 'serve_db_image' 'finishing' photo.id %}" alt="Photo">
         </a>
         {% endfor %}
       </div>
       {% endif %}
-      {% if person6_report.signature %}
+      {% if finishing_report.signature %}
       <div class="divider"></div>
       <div class="data-label">Signature</div>
-      <div class="sig-wrap"><img src="{{ person6_report.signature }}" alt="Signature"></div>
+      <div class="sig-wrap"><img src="{{ finishing_report.signature }}" alt="Signature"></div>
       {% endif %}
     </div>
     {% else %}

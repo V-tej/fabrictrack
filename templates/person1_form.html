@@ -1,6 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Cutting Report{% endblock %}
-{% block page_title %}✂️ Cutting Report{% endblock %}
+{% block title %}Cutting Report
+{% endblock %}
+{% block page_title %}✂️ Cutting Report
+{% endblock %}
 
 {% block content %}
 <div class="form-page fade-in">
@@ -20,23 +22,41 @@
     <form method="post" enctype="multipart/form-data" id="cuttingReportForm" novalidate>
       {% csrf_token %}
 
+      <!-- ── Section: Master Name ────────────────────────────── -->
+      <div class="form-section"
+        style="background: rgba(245, 158, 11, 0.05); border: 1px solid #f59e0b; padding-bottom: 1rem;">
+        <div class="form-section-title" style="color: #d97706;">👤 Select Your Name First</div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Select Master <span class="required-star">*</span></label>
+            {{ form.master_name }}
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_cutting_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
+            {{ form.cutting_master_name }}
+          </div>
+        </div>
+      </div>
+
       <!-- ── Section: Link to Master Entry ───────────────────────── -->
       <div class="form-section">
         <div class="form-section-title">📋 Production Entry</div>
         <div class="form-row">
           {% if is_admin %}
           <div class="form-group full-width">
-            <label for="id_report_type" class="form-label">Report Type (Who is this for?) <span class="required-star">*</span></label>
+            <label for="id_report_type" class="form-label">Report Type (Who is this for?) <span
+                class="required-star">*</span></label>
             {{ form.report_type }}
             {% if form.report_type.errors %}
             <span class="field-error">{{ form.report_type.errors.0 }}</span>
             {% endif %}
           </div>
           {% else %}
-            <div style="display:none;">{{ form.report_type }}</div>
+          <div style="display:none;">{{ form.report_type }}</div>
           {% endif %}
           <div class="form-group full-width">
-            <label for="id_master_entry" class="form-label">Date &amp; Lot No. <span class="required-star">*</span></label>
+            <label for="id_master_entry" class="form-label">Date &amp; Lot No. <span
+                class="required-star">*</span></label>
             {{ form.master_entry }}
             {% if form.master_entry.errors %}
             <span class="field-error">{{ form.master_entry.errors.0 }}</span>
@@ -54,10 +74,6 @@
 
         <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_cutting_master_name" class="form-label">Cutting Master Name</label>
-            {{ form.cutting_master_name }}
-          </div>
-          <div class="form-group">
             <label for="id_cutting_rate" class="form-label">Cutting Rate</label>
             {{ form.cutting_rate }}
           </div>
@@ -65,7 +81,8 @@
 
         <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_fabric_type_quality" class="form-label">Fabric Type and Quality <span class="required-star">*</span></label>
+            <label for="id_fabric_type_quality" class="form-label">Fabric Type and Quality <span
+                class="required-star">*</span></label>
             {{ form.fabric_type_quality }}
             {% if form.fabric_type_quality.errors %}
             <span class="field-error">{{ form.fabric_type_quality.errors.0 }}</span>
@@ -107,12 +124,12 @@
           <div class="form-group">
             <label class="form-label">Total No. of Fabric Codes <span class="required-star">*</span></label>
             <select id="ui_num_fabric_codes" class="form-control">
-               <option value="0">Select...</option>
-               <option value="1">1</option>
-               <option value="2">2</option>
-               <option value="3">3</option>
-               <option value="4">4</option>
-               <option value="5">5</option>
+              <option value="0">Select...</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
             </select>
             <div style="display: none;">
               {{ form.total_colours }}
@@ -126,12 +143,15 @@
               {{ form.total_weight }}
               {{ form.total_meters }}
             </div>
-            <div id="dynamic-weight-sums" style="margin-top: 8px; font-size: 0.85rem; color: #60a5fa; font-weight: 600; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; display: inline-block;">
-              Total Weight: <span id="sum-weight-display">0.000</span> kg &nbsp;|&nbsp; Total Meters: <span id="sum-meters-display">0.000</span> m
+            <div id="dynamic-weight-sums"
+              style="margin-top: 8px; font-size: 0.85rem; color: #60a5fa; font-weight: 600; padding: 6px 10px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; display: inline-block;">
+              Total Weight: <span id="sum-weight-display">0.000</span> kg &nbsp;|&nbsp; Total Meters: <span
+                id="sum-meters-display">0.000</span> m
             </div>
           </div>
         </div>
-        <div id="fabric-codes-config-container" class="form-row" style="display: none; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: flex-end;"></div>
+        <div id="fabric-codes-config-container" class="form-row"
+          style="display: none; gap: 12px; margin-top: 8px; flex-wrap: wrap; align-items: flex-end;"></div>
 
         <!-- Dynamic Colors Container (rows added by JS) -->
         <div id="dynamic-colors-container"></div>
@@ -199,13 +219,18 @@
 
           {% if is_edit and report.photos.all %}
           <div class="existing-photos" style="margin-bottom: 1.5rem;">
-            <label class="form-label" style="font-weight:600; font-size: 0.95rem; margin-bottom: 0.75rem; display:block;">Current Photos (Click red cross to delete):</label>
+            <label class="form-label"
+              style="font-weight:600; font-size: 0.95rem; margin-bottom: 0.75rem; display:block;">Current Photos (Click
+              red cross to delete):</label>
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
               {% for photo in report.photos.all %}
-                <div style="position: relative; width: 90px; height: 90px;">
-                  <img src="{% url 'serve_db_image' 'cutting' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
-                  <a href="?delete_photo={{ photo.id }}" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);" title="Delete Photo">×</a>
-                </div>
+              <div style="position: relative; width: 90px; height: 90px;">
+                <img src="{% url 'serve_db_image' 'cutting' photo.id %}"
+                  style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
+                <a href="?delete_photo={{ photo.id }}"
+                  style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);"
+                  title="Delete Photo">×</a>
+              </div>
               {% endfor %}
             </div>
           </div>
@@ -257,7 +282,7 @@
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const totalColoursInput = document.getElementById('id_total_colours');
     const container = document.getElementById('dynamic-colors-container');
     const grandTotals = {
@@ -271,56 +296,56 @@
     };
     const totalPcsEl = document.getElementById('id_total_pcs');
     const totalWeightEl = document.getElementById('id_total_weight');
-    
+
     // Check if we are editing and have existing colors
     const existingColors = {{ colors_json|default:"[]"|safe }};
-    const fcConfigContainer = document.getElementById('fabric-codes-config-container');
-    const fcSelect = document.getElementById('ui_num_fabric_codes');
-    
-    if (fcSelect) {
-      fcSelect.addEventListener('change', function() {
-         const numFc = parseInt(this.value) || 0;
-         generateFcInputs(numFc);
-      });
-    }
+  const fcConfigContainer = document.getElementById('fabric-codes-config-container');
+  const fcSelect = document.getElementById('ui_num_fabric_codes');
 
-    function generateFcInputs(numFc, initialCounts = {}) {
-       if (!fcConfigContainer) return;
-       fcConfigContainer.innerHTML = '';
-       if (numFc > 0) {
-          fcConfigContainer.style.display = 'flex';
-          for(let i=1; i<=numFc; i++) {
-              const count = initialCounts[i] || 1;
-              fcConfigContainer.insertAdjacentHTML('beforeend', `
+  if (fcSelect) {
+    fcSelect.addEventListener('change', function () {
+      const numFc = parseInt(this.value) || 0;
+      generateFcInputs(numFc);
+    });
+  }
+
+  function generateFcInputs(numFc, initialCounts = {}) {
+    if (!fcConfigContainer) return;
+    fcConfigContainer.innerHTML = '';
+    if (numFc > 0) {
+      fcConfigContainer.style.display = 'flex';
+      for (let i = 1; i <= numFc; i++) {
+        const count = initialCounts[i] || 1;
+        fcConfigContainer.insertAdjacentHTML('beforeend', `
                 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 110px; max-width: 150px;">
                   <label style="font-size: 0.78em; color: var(--text-muted); font-weight: 600; white-space: nowrap;">FC ${i} Colors</label>
                   <input type="number" class="form-control fc-color-input" data-fc="${i}" min="1" max="15" value="${count}" style="width: 100%; text-align: center;">
                 </div>
               `);
-          }
-          document.querySelectorAll('.fc-color-input').forEach(inp => {
-             inp.addEventListener('input', renderColors);
-          });
-       } else {
-          fcConfigContainer.style.display = 'none';
-       }
-       renderColors();
+      }
+      document.querySelectorAll('.fc-color-input').forEach(inp => {
+        inp.addEventListener('input', renderColors);
+      });
+    } else {
+      fcConfigContainer.style.display = 'none';
     }
-    
-    function renderColors() {
-      container.innerHTML = '';
-      const fcInputs = document.querySelectorAll('.fc-color-input');
-      let globalIndex = 1;
-      
-      fcInputs.forEach(input => {
-         const fcNum = input.getAttribute('data-fc');
-         const numColors = parseInt(input.value) || 0;
-         
-         for(let c = 1; c <= numColors; c++) {
-            let existing = existingColors[globalIndex-1] || {};
-            let defaultName = numColors === 1 ? `Fabric Code ${fcNum}` : `Fabric Code ${fcNum} - Color ${c}`;
-            
-            const html = `
+    renderColors();
+  }
+
+  function renderColors() {
+    container.innerHTML = '';
+    const fcInputs = document.querySelectorAll('.fc-color-input');
+    let globalIndex = 1;
+
+    fcInputs.forEach(input => {
+      const fcNum = input.getAttribute('data-fc');
+      const numColors = parseInt(input.value) || 0;
+
+      for (let c = 1; c <= numColors; c++) {
+        let existing = existingColors[globalIndex - 1] || {};
+        let defaultName = numColors === 1 ? `Fabric Code ${fcNum}` : `Fabric Code ${fcNum} - Color ${c}`;
+
+        const html = `
               <div class="form-row">
                 <div class="form-group size-grid-group color-row-group">
                   <div class="color-row-header">
@@ -349,100 +374,135 @@
                 </div>
               </div>
             `;
-            container.insertAdjacentHTML('beforeend', html);
-            globalIndex++;
-         }
-      });
-      
-      if(totalColoursInput) {
-          totalColoursInput.value = globalIndex - 1;
+        container.insertAdjacentHTML('beforeend', html);
+        globalIndex++;
       }
-      
-      bindDynamicEvents();
-      calculateTotals();
-    }
-    
-    function bindDynamicEvents() {
-      document.querySelectorAll('.dynamic-size').forEach(input => {
-        input.addEventListener('input', calculateTotals);
-      });
-      document.querySelectorAll('input[name^="color_weight_"], input[name^="color_meters_"]').forEach(el => {
-        el.addEventListener('input', calculateTotals);
-      });
+    });
+
+    if (totalColoursInput) {
+      totalColoursInput.value = globalIndex - 1;
     }
 
-    function calculateTotals() {
-      const hasDynamicRows = document.querySelectorAll('.dynamic-size').length > 0;
-      if(!hasDynamicRows) return;
-      let totals = { 'S':0, 'M':0, 'L':0, 'XL':0, '2XL':0, '3XL':0, '4XL':0 };
-      let sum = 0;
-      document.querySelectorAll('.dynamic-size').forEach(input => {
-        const size = input.getAttribute('data-size');
-        const val = parseInt(input.value) || 0;
-        totals[size] += val;
-        sum += val;
-      });
-      
-      for(let size in totals) {
-        if(grandTotals[size]) grandTotals[size].value = totals[size];
+    bindDynamicEvents();
+    calculateTotals();
+  }
+
+  function bindDynamicEvents() {
+    document.querySelectorAll('.dynamic-size').forEach(input => {
+      input.addEventListener('input', calculateTotals);
+    });
+    document.querySelectorAll('input[name^="color_weight_"], input[name^="color_meters_"]').forEach(el => {
+      el.addEventListener('input', calculateTotals);
+    });
+  }
+
+  function calculateTotals() {
+    const hasDynamicRows = document.querySelectorAll('.dynamic-size').length > 0;
+    if (!hasDynamicRows) return;
+    let totals = { 'S': 0, 'M': 0, 'L': 0, 'XL': 0, '2XL': 0, '3XL': 0, '4XL': 0 };
+    let sum = 0;
+    document.querySelectorAll('.dynamic-size').forEach(input => {
+      const size = input.getAttribute('data-size');
+      const val = parseInt(input.value) || 0;
+      totals[size] += val;
+      sum += val;
+    });
+
+    for (let size in totals) {
+      if (grandTotals[size]) grandTotals[size].value = totals[size];
+    }
+
+    let sumWeight = 0;
+    let sumMeters = 0;
+    let numColors = parseInt(totalColoursInput.value);
+    for (let i = 1; i <= numColors; i++) {
+      let wInput = document.querySelector(`input[name="color_weight_${i}"]`);
+      let mInput = document.querySelector(`input[name="color_meters_${i}"]`);
+      if (wInput) sumWeight += parseFloat(wInput.value) || 0;
+      if (mInput) sumMeters += parseFloat(mInput.value) || 0;
+    }
+
+    const wDisplay = document.getElementById('sum-weight-display');
+    const mDisplay = document.getElementById('sum-meters-display');
+    if (wDisplay) wDisplay.innerText = sumWeight.toFixed(3);
+    if (mDisplay) mDisplay.innerText = sumMeters.toFixed(3);
+
+    // Update form hidden fields for weight and meters
+    const totalWeightEl = document.getElementById('id_total_weight');
+    const totalMetersEl = document.getElementById('id_total_meters');
+    if (totalWeightEl) totalWeightEl.value = sumWeight.toFixed(3);
+    if (totalMetersEl) totalMetersEl.value = sumMeters.toFixed(3);
+
+    if (totalPcsEl) {
+      totalPcsEl.value = sum;
+
+      // Update average per piece calculation dynamically:
+      const avgPcsEl = document.getElementById('id_avg_per_pcs');
+      if (avgPcsEl && sum > 0) {
+        avgPcsEl.value = (sumWeight / sum).toFixed(3);
       }
-      
-      let sumWeight = 0;
-      let sumMeters = 0;
-      let numColors = parseInt(totalColoursInput.value);
-      for(let i=1; i<=numColors; i++) {
-         let wInput = document.querySelector(`input[name="color_weight_${i}"]`);
-         let mInput = document.querySelector(`input[name="color_meters_${i}"]`);
-         if(wInput) sumWeight += parseFloat(wInput.value) || 0;
-         if(mInput) sumMeters += parseFloat(mInput.value) || 0;
-      }
-      
-      const wDisplay = document.getElementById('sum-weight-display');
-      const mDisplay = document.getElementById('sum-meters-display');
-      if (wDisplay) wDisplay.innerText = sumWeight.toFixed(3);
-      if (mDisplay) mDisplay.innerText = sumMeters.toFixed(3);
-      
-      // Update form hidden fields for weight and meters
-      const totalWeightEl = document.getElementById('id_total_weight');
-      const totalMetersEl = document.getElementById('id_total_meters');
-      if (totalWeightEl) totalWeightEl.value = sumWeight.toFixed(3);
-      if (totalMetersEl) totalMetersEl.value = sumMeters.toFixed(3);
-      
-      if(totalPcsEl) {
-        totalPcsEl.value = sum;
-        
-        // Update average per piece calculation dynamically:
-        const avgPcsEl = document.getElementById('id_avg_per_pcs');
-        if (avgPcsEl && sum > 0) {
-            avgPcsEl.value = (sumWeight / sum).toFixed(3);
+    }
+  }
+
+  if (fcSelect) {
+    // Initial render if editing
+    if (existingColors.length > 0) {
+      let fcCounts = {};
+      let maxFc = 0;
+      existingColors.forEach(ec => {
+        let match = ec.color_name.match(/Fabric Code (\d+)/i);
+        if (match) {
+          let fc = parseInt(match[1]);
+          fcCounts[fc] = (fcCounts[fc] || 0) + 1;
+          if (fc > maxFc) maxFc = fc;
+        } else {
+          fcCounts[1] = (fcCounts[1] || 0) + 1;
+          if (1 > maxFc) maxFc = 1;
         }
+      });
+      if (maxFc < 1) maxFc = 1;
+      fcSelect.value = maxFc;
+      generateFcInputs(maxFc, fcCounts);
+    } else {
+      // If no existing, maybe default to 0
+      fcSelect.value = "0";
+    }
+  }
+  });
+</script>
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const masterSelectId = 'id_cutting_master_name';
+    const masterSelect = document.getElementById(masterSelectId);
+    if (!masterSelect) return;
+
+    const allInputs = document.querySelectorAll('input, select, textarea, button');
+
+    function checkMaster(e) {
+      if (!masterSelect.value && e.target !== masterSelect && e.target.type !== 'hidden') {
+        e.preventDefault();
+        e.stopPropagation();
+        alert('Please select the Master Name first!');
+        masterSelect.focus();
+        return false;
       }
     }
 
-    if(fcSelect) {
-      // Initial render if editing
-      if(existingColors.length > 0) {
-          let fcCounts = {};
-          let maxFc = 0;
-          existingColors.forEach(ec => {
-              let match = ec.color_name.match(/Fabric Code (\d+)/i);
-              if (match) {
-                 let fc = parseInt(match[1]);
-                 fcCounts[fc] = (fcCounts[fc] || 0) + 1;
-                 if(fc > maxFc) maxFc = fc;
-              } else {
-                 fcCounts[1] = (fcCounts[1] || 0) + 1;
-                 if(1 > maxFc) maxFc = 1;
-              }
-          });
-          if(maxFc < 1) maxFc = 1;
-          fcSelect.value = maxFc;
-          generateFcInputs(maxFc, fcCounts);
-      } else {
-          // If no existing, maybe default to 0
-          fcSelect.value = "0";
+    allInputs.forEach(input => {
+      if (input !== masterSelect && input.type !== 'hidden') {
+        input.addEventListener('mousedown', checkMaster, true);
+        input.addEventListener('focus', checkMaster, true);
+        input.addEventListener('click', checkMaster, true);
+        input.addEventListener('keydown', function (e) {
+          if (!masterSelect.value && e.key !== 'Tab') {
+            checkMaster(e);
+          }
+        }, true);
       }
-    }
+    });
   });
 </script>
 

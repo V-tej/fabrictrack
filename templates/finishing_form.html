@@ -1,6 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Finishing Report{% endblock %}
-{% block page_title %}👔 Finishing Report{% endblock %}
+{% block title %}Finishing Report
+{% endblock %}
+{% block page_title %}👔 Finishing Report
+{% endblock %}
 
 {% block content %}
 <div class="form-page fade-in">
@@ -20,6 +22,21 @@
     <form method="post" enctype="multipart/form-data" id="cuttingReportForm" novalidate>
       {% csrf_token %}
 
+      <!-- ── Section: Master Name ────────────────────────────── -->
+      <div class="form-section" style="background: rgba(245, 158, 11, 0.05); border: 1px solid #f59e0b; padding-bottom: 1rem;">
+        <div class="form-section-title" style="color: #d97706;">👤 Select Your Name First</div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Select Master <span class="required-star">*</span></label>
+            {{ form.master_name }}
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_finishing_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
+            {{ form.finishing_master_name }}
+          </div>
+        </div>
+      </div>
+
       <!-- ── Section: Link to P1 Report ───────────────────────── -->
       <div class="form-section">
         <div class="form-section-title">📋 Select Cutting Report</div>
@@ -27,7 +44,10 @@
           <div class="form-group full-width">
             <label for="id_cutting_report" class="form-label">Select Cutting Report <span
                 class="required-star">*</span></label>
-            {{ form.cutting_report }}
+            <div style="display: flex; gap: 10px; align-items: center;">
+              {{ form.cutting_report }}
+              <button type="button" class="btn btn-secondary btn-scan-qr" style="white-space: nowrap; padding: 0.5rem 1rem;">📷 Scan QR</button>
+            </div>
             {% if form.cutting_report.errors %}
             <span class="field-error">{{ form.cutting_report.errors.0 }}</span>
             {% endif %}
@@ -233,4 +253,5 @@
     }
   });
 </script>
+
 {% endblock %}

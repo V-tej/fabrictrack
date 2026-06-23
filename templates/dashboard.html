@@ -69,6 +69,98 @@
     </div>
   </div>
 
+  <!-- ── Pending Tasks ──────────────────────────────────────────────── -->
+  {% if pending_tasks %}
+  <div class="section-card" id="pending-tasks" style="border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.02);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 class="section-title" style="color: #f59e0b; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        ⏳ Pending Tasks <span class="badge" style="background: #f59e0b; color: #fff;">{{ pending_tasks.count }}</span>
+      </h2>
+      <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="max-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
+    </div>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Job Card No</th>
+            <th>Date Assigned</th>
+            {% if person_type == 'ADMIN' or user.is_superuser %}
+              <th>Cutting</th>
+              <th>Jobwork</th>
+              <th>Stitching</th>
+              <th>Finishing</th>
+            {% endif %}
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in pending_tasks %}
+          <tr>
+            <td><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
+            <td>{{ task.date|date:"d-b-Y" }}</td>
+            {% if person_type == 'ADMIN' or user.is_superuser %}
+              <td>
+                {% if task.requires_cutting %}
+                  {% if task.is_cutting_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_jobwork %}
+                  {% if task.is_jobwork_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_stitching %}
+                  {% if task.is_stitching_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_finishing %}
+                  {% if task.is_finishing_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+            {% endif %}
+            <td>
+              {% if person_type == 'P1' or person_type == 'P2' or person_type == 'P3' %}
+                <a href="{% url 'cutting_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+              {% elif person_type == 'P4' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start stitching until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'stitching_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P5' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start job work until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'jobwork_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P6' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start finishing until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'finishing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'ADMIN' or user.is_superuser %}
+                {% if task.master_entry_id %}
+                  <a href="{% url 'edit_master_entry' task.master_entry_id %}" style="text-decoration: none; font-size: 1.2rem; margin-right: 10px;" title="Edit Task">✏️</a>
+                {% endif %}
+                <form method="POST" action="{% url 'delete_pending_task' task.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this pending task?');">
+                  {% csrf_token %}
+                  <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #ef4444;" title="Delete Task">🗑️</button>
+                </form>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── Recent Reports ─────────────────────────────────────────────── -->
   <div class="section-card" id="recent-reports">
     <h2 class="section-title">Recent Reports</h2>
@@ -114,13 +206,43 @@
             </td>
 
             {% if person_type == 'P1' or person_type == 'ADMIN' %}
-              <td>{{ report.item_name }}</td><td>{{ report.cutting_master_name|default:"—" }}</td>
+              <td>{{ report.item_name }}</td><td>
+                {% if report.master_name and report.cutting_master_name %}
+                  {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.cutting_master_name }})</span>
+                {% elif report.master_name %}
+                  {{ report.master_name }}
+                {% elif report.cutting_master_name %}
+                  {{ report.cutting_master_name }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
             {% elif person_type == 'P2' or person_type == 'P3' %}
-              <td>{{ report.item_name }}</td><td>{{ report.cutting_master_name|default:"—" }}</td>
+              <td>{{ report.item_name }}</td><td>
+                {% if report.master_name and report.stitching_master_name %}
+                  {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.stitching_master_name }})</span>
+                {% elif report.master_name %}
+                  {{ report.master_name }}
+                {% elif report.stitching_master_name %}
+                  {{ report.stitching_master_name }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
             {% elif person_type == 'P4' %}
               <td>{{ report.item_name }}</td><td>₹{{ report.total_rate }}</td>
             {% elif person_type == 'P5' %}
-              <td>{{ report.jobworker }}</td><td>{{ report.job_work_type }}</td>
+              <td>
+                {% if report.master_name and report.jobworker %}
+                  {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.jobworker }})</span>
+                {% elif report.master_name %}
+                  {{ report.master_name }}
+                {% elif report.jobworker %}
+                  {{ report.jobworker }}
+                {% else %}
+                  —
+                {% endif %}
+              </td><td>{{ report.job_work_type }}</td>
             {% elif person_type == 'P6' %}
               <td>{{ report.date|date:"d-b-Y" }}</td><td>{{ report.total_pcs_packed }}</td>
             {% endif %}
@@ -143,4 +265,29 @@
   </div>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('pendingSearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#pending-tasks tbody tr');
+        
+        rows.forEach(row => {
+          // Job Card No is in the first td
+          const jobCardCell = row.querySelector('td:first-child');
+          if (jobCardCell) {
+            const text = jobCardCell.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          }
+        });
+      });
+    }
+  });
+</script>
 {% endblock %}

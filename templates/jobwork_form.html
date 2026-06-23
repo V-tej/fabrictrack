@@ -1,6 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Job Work{% endblock %}
-{% block page_title %}👔 Job Work{% endblock %}
+{% block title %}Job Work
+{% endblock %}
+{% block page_title %}👔 Job Work
+{% endblock %}
 
 {% block content %}
 <div class="form-page fade-in">
@@ -20,6 +22,21 @@
     <form method="post" enctype="multipart/form-data" id="cuttingReportForm" novalidate>
       {% csrf_token %}
 
+      <!-- ── Section: Master Name ────────────────────────────── -->
+      <div class="form-section" style="background: rgba(245, 158, 11, 0.05); border: 1px solid #f59e0b; padding-bottom: 1rem;">
+        <div class="form-section-title" style="color: #d97706;">👤 Select Your Name First</div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Select Master <span class="required-star">*</span></label>
+            {{ form.master_name }}
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="id_jobworker" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
+            {{ form.jobworker }}
+          </div>
+        </div>
+      </div>
+
       <!-- ── Section: Link to P1 Report ───────────────────────── -->
       <div class="form-section">
         <div class="form-section-title">📋 Select Cutting Report</div>
@@ -27,7 +44,10 @@
           <div class="form-group full-width">
             <label for="id_cutting_report" class="form-label">Select Cutting Report <span
                 class="required-star">*</span></label>
-            {{ form.cutting_report }}
+            <div style="display: flex; gap: 10px; align-items: center;">
+              {{ form.cutting_report }}
+              <button type="button" class="btn btn-secondary btn-scan-qr" style="white-space: nowrap; padding: 0.5rem 1rem;">📷 Scan QR</button>
+            </div>
             {% if form.cutting_report.errors %}
             <span class="field-error">{{ form.cutting_report.errors.0 }}</span>
             {% endif %}
@@ -43,13 +63,6 @@
         <div class="form-section-title">👔 Job Details</div>
 
         <div class="form-row two-col">
-          <div class="form-group">
-            <label for="id_jobworker" class="form-label">Jobworker <span class="required-star">*</span></label>
-            {{ form.jobworker }}
-            {% if form.jobworker.errors %}
-            <span class="field-error">{{ form.jobworker.errors.0 }}</span>
-            {% endif %}
-          </div>
           <div class="form-group">
             <label for="id_job_work_type" class="form-label">Job Work In / Out <span
                 class="required-star">*</span></label>
@@ -116,21 +129,39 @@
 
 
 
-      <!-- ── Section: Signature ──────────────────────────────────── -->
+      <!-- ── Section: Signatures ──────────────────────────────────── -->
       <div class="form-section">
-        <div class="form-section-title">✍️ Signature <span class="required-star">*</span></div>
-        <div class="form-group">
-          <label class="form-label">Sign Here <span class="required-star">*</span></label>
-          {{ form.signature }}
-          <div class="signature-wrapper">
-            <canvas id="signatureCanvas" class="signature-canvas"></canvas>
-            <div class="signature-actions">
-              <button type="button" class="btn-clear-sig" id="btnClearSig">Clear Signature</button>
+        <div class="form-section-title">✍️ Signatures <span class="required-star">*</span></div>
+        <div class="form-row two-col" style="gap: 24px; display: grid; grid-template-columns: 1fr 1fr;">
+          <!-- Signature 1 -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Worker Signature <span class="required-star">*</span></label>
+            {{ form.signature }}
+            <div class="signature-wrapper">
+              <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+              <div class="signature-actions">
+                <button type="button" class="btn-clear-sig" id="btnClearSig">Clear Signature</button>
+              </div>
             </div>
+            {% if form.signature.errors %}
+            <span class="field-error">{{ form.signature.errors.0 }}</span>
+            {% endif %}
           </div>
-          {% if form.signature.errors %}
-          <span class="field-error">{{ form.signature.errors.0 }}</span>
-          {% endif %}
+          
+          <!-- Signature 2 -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Master/Manager Signature <span class="required-star">*</span></label>
+            {{ form.signature_2 }}
+            <div class="signature-wrapper">
+              <canvas id="signatureCanvas2" class="signature-canvas"></canvas>
+              <div class="signature-actions">
+                <button type="button" class="btn-clear-sig" id="btnClearSig2">Clear Signature</button>
+              </div>
+            </div>
+            {% if form.signature_2.errors %}
+            <span class="field-error">{{ form.signature_2.errors.0 }}</span>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -146,4 +177,5 @@
     </form>
   </div>
 </div>
+
 {% endblock %}

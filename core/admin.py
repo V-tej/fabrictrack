@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, MasterEntry, CuttingReport, CuttingReportPhoto, Person4Report, Person5Report, Person6Report, Person6ReportPhoto
+from .models import UserProfile, MasterEntry, CuttingReport, CuttingReportPhoto, StitchingReport, JobWorkReport, FinishingReport, FinishingReportPhoto
 
 
 @admin.register(UserProfile)
@@ -26,11 +26,11 @@ class MasterEntryAdmin(admin.ModelAdmin):
 @admin.register(CuttingReport)
 class CuttingReportAdmin(admin.ModelAdmin):
     list_display = [
-        'master_entry', 'item_name', 'cutting_master_name',
+        'master_entry', 'item_name', 'master_name', 'cutting_master_name',
         'total_pcs', 'total_colours', 'created_by', 'created_at'
     ]
     list_filter = ['master_entry__date', 'created_by']
-    search_fields = ['item_name', 'job_card_no', 'cutting_master_name']
+    search_fields = ['item_name', 'job_card_no', 'master_name', 'cutting_master_name']
     inlines = [CuttingReportPhotoInline]
     readonly_fields = ['created_at']
 
@@ -41,46 +41,46 @@ class CuttingReportPhotoAdmin(admin.ModelAdmin):
 
 
 
-@admin.register(Person4Report)
-class Person4ReportAdmin(admin.ModelAdmin):
+@admin.register(StitchingReport)
+class StitchingReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'item_name', 'job_card_no',
+        'cutting_report', 'master_name', 'stitching_master_name', 'item_name', 'job_card_no',
         'total_pcs', 'created_by', 'created_at'
     ]
     list_filter = ['cutting_report__master_entry__date', 'created_by']
-    search_fields = ['item_name', 'job_card_no']
+    search_fields = ['item_name', 'job_card_no', 'master_name', 'stitching_master_name']
     readonly_fields = ['created_at']
 
 
-@admin.register(Person5Report)
-class Person5ReportAdmin(admin.ModelAdmin):
+@admin.register(JobWorkReport)
+class JobWorkReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'jobworker', 'job_work_type',
+        'cutting_report', 'master_name', 'jobworker', 'job_work_type',
         'job_card_no', 'total_pcs', 'created_by', 'created_at'
     ]
-    list_filter = ['cutting_report__master_entry__date', 'job_work_type', 'created_by']
-    search_fields = ['jobworker', 'job_card_no', 'purpose']
+    list_filter = ['date', 'job_work_type', 'created_by']
+    search_fields = ['master_name', 'finishing_master_name', 'job_card_no']
     readonly_fields = ['created_at']
 
 
-class Person6ReportPhotoInline(admin.TabularInline):
-    model = Person6ReportPhoto
+class FinishingReportPhotoInline(admin.TabularInline):
+    model = FinishingReportPhoto
     extra = 0
     readonly_fields = ['uploaded_at']
 
 
-@admin.register(Person6Report)
-class Person6ReportAdmin(admin.ModelAdmin):
+@admin.register(FinishingReport)
+class FinishingReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'lot_no', 'date',
+        'cutting_report', 'master_name', 'finishing_master_name', 'lot_no', 'date',
         'total_pcs', 'created_by', 'created_at'
     ]
-    list_filter = ['cutting_report__master_entry__date', 'date', 'created_by']
-    search_fields = ['lot_no']
-    inlines = [Person6ReportPhotoInline]
+    list_filter = ['date', 'created_by']
+    search_fields = ['lot_no', 'master_name', 'finishing_master_name']
+    inlines = [FinishingReportPhotoInline]
     readonly_fields = ['created_at']
 
 
-@admin.register(Person6ReportPhoto)
-class Person6ReportPhotoAdmin(admin.ModelAdmin):
-    list_display = ['person6_report', 'photo_name', 'uploaded_at']
+@admin.register(FinishingReportPhoto)
+class FinishingReportPhotoAdmin(admin.ModelAdmin):
+    list_display = ['finishing_report', 'photo_name', 'uploaded_at']

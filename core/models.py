@@ -8,7 +8,7 @@ PERSON_CHOICES = [
     ('P1', 'Person 1 — Cutting Report'),
     ('P2', 'CR Lakshay'),
     ('P3', 'CR Rahul'),
-    ('P4', 'Stitching Miya Ji'),
+    ('P4', 'Stitching'),
     ('P5', 'Job Work'),
     ('P6', 'Finishing Report'),
     ('P7', 'Person 7'),
@@ -58,6 +58,23 @@ class MasterEntry(models.Model):
     def __str__(self):
         return f"{self.date.strftime('%d-%b-%Y')} — {self.job_card_number}"
 
+class MasterName(models.Model):
+    DEPARTMENT_CHOICES = [
+        ('Cutting', 'Cutting'),
+        ('Stitching', 'Stitching'),
+        ('Job Work', 'Job Work'),
+        ('Finishing', 'Finishing'),
+    ]
+    name = models.CharField(max_length=100)
+    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
+
+    class Meta:
+        ordering = ['department', 'name']
+        unique_together = ('name', 'department')
+
+    def __str__(self):
+        return f"{self.name} ({self.department})"
+
 
 class CuttingReport(models.Model):
     """Person 1 — Cutting Report form."""
@@ -74,6 +91,7 @@ class CuttingReport(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     cutting_master_name = models.CharField(max_length=200, blank=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
     cutting_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     fabric_type_quality = models.CharField(max_length=300)
     item_name = models.CharField(max_length=200)
@@ -154,18 +172,20 @@ class CuttingReportPhoto(models.Model):
 
 
 
-class Person4Report(models.Model):
-    """Stitching Miya Ji — Form based on P1's Cutting Report."""
+class StitchingReport(models.Model):
+    """Stitching — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
         CuttingReport,
         on_delete=models.CASCADE,
-        related_name='person4_reports'
+        related_name='stitching_reports'
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    stitching_master_name = models.CharField(max_length=200, blank=True, null=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
     job_card_no = models.CharField(max_length=100)
     line_in_date = models.DateField(null=True, blank=True)
     total_pcs = models.PositiveIntegerField(null=True, blank=True)
-    line_out_date = models.DateField(default=timezone.now)
+    line_out_date = models.DateField(null=True, blank=True)
     item_name = models.CharField(max_length=200)
     darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
@@ -173,25 +193,40 @@ class Person4Report(models.Model):
     total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     option_1 = models.CharField(max_length=200, blank=True)
     signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name = 'Stitching Miya Ji'
-        verbose_name_plural = 'Stitching Miya Ji'
+        verbose_name = 'Stitching'
+        verbose_name_plural = 'Stitching'
 
     def __str__(self):
-        return f"Stitching Miya Ji — {self.cutting_report.master_entry} — {self.item_name}"
+        return f"Stitching — {self.cutting_report.master_entry} — {self.item_name}"
 
 
+class StitchingReportPhoto(models.Model):
+    """Up to 5 job card photos per StitchingReport."""
+    stitching_report = models.ForeignKey(
+        StitchingReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.stitching_report}"
 
 
-class Person5Report(models.Model):
+class JobWorkReport(models.Model):
     """Job Work — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
         CuttingReport,
         on_delete=models.CASCADE,
-        related_name='person5_reports'
+        related_name='jobwork_reports'
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     
@@ -201,6 +236,7 @@ class Person5Report(models.Model):
     ]
     
     jobworker = models.CharField(max_length=200)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
     job_work_type = models.CharField(max_length=50, choices=JOB_WORK_CHOICES)
     purpose = models.CharField(max_length=300)
     job_card_no = models.CharField(max_length=100)
@@ -210,6 +246,7 @@ class Person5Report(models.Model):
     total_pcs = models.PositiveIntegerField()
     
     signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -221,14 +258,16 @@ class Person5Report(models.Model):
         return f"Job Work — {self.jobworker} — {self.job_work_type}"
 
 
-class Person6Report(models.Model):
+class FinishingReport(models.Model):
     """Finishing Report — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
         CuttingReport,
         on_delete=models.CASCADE,
-        related_name='person6_reports'
+        related_name='finishing_reports'
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    finishing_master_name = models.CharField(max_length=200, blank=True, null=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
     
     date = models.DateField()
     lot_no = models.CharField(max_length=100)
@@ -252,10 +291,10 @@ class Person6Report(models.Model):
     def __str__(self):
         return f"Finishing Report — {self.lot_no} — {self.date}"
 
-class Person6ReportPhoto(models.Model):
-    """Up to 5 photos per Person6Report."""
-    person6_report = models.ForeignKey(
-        Person6Report,
+class FinishingReportPhoto(models.Model):
+    """Up to 5 photos per FinishingReport."""
+    finishing_report = models.ForeignKey(
+        FinishingReport,
         on_delete=models.CASCADE,
         related_name='photos'
     )
@@ -265,4 +304,34 @@ class Person6ReportPhoto(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Photo for {self.person6_report}"
+        return f"Photo for {self.finishing_report}"
+
+
+class JobCardRequirement(models.Model):
+    """Tracks required and completed jobs for a given Job Card from Excel Import."""
+    job_card_no = models.CharField(max_length=100, unique=True)
+    date = models.DateField(default=timezone.now)
+    
+    # Requirements (Yes/No from Excel)
+    requires_cutting = models.BooleanField(default=False)
+    requires_jobwork = models.BooleanField(default=False)
+    requires_stitching = models.BooleanField(default=False)
+    requires_finishing = models.BooleanField(default=False)
+    
+    # Status (Updated when reports are submitted)
+    is_cutting_done = models.BooleanField(default=False)
+    is_jobwork_done = models.BooleanField(default=False)
+    is_stitching_done = models.BooleanField(default=False)
+    is_finishing_done = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Requirement: {self.job_card_no}"
+
+    @property
+    def master_entry_id(self):
+        from .models import MasterEntry # ensure no circular import if needed, though they are in same file
+        me = MasterEntry.objects.filter(job_card_number=self.job_card_no).first()
+        return me.id if me else None

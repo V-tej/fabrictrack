@@ -4,7 +4,7 @@ from django.conf import settings
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, Person6ReportPhoto
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, FinishingReportPhoto
 import io
 import zipfile
 
@@ -48,8 +48,8 @@ def export_to_excel(since_date=None):
     _style_sheet(ws2)
 
     headers2 = [
-        '#', 'Date', 'Report Type', 'Job Card Number', 'Cutting Master Name', 'Cutting Rate',
-        'Fabric Type & Quality', 'Item Name', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
+        '#', 'Date & Lot No.', 'Report Type', 'Cutting Master Name', 'Cutting Rate', 'Fabric', 'Item Name', 'Job Card No.',
+        'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
         'Submitted By', 'Submitted At',
         'Jobworker', 'Job Work In / Out', 'Purpose', 'Job Work Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
         'Line in Date', 'Line out Date', 'Total Pcs', 'Darji Rate', 'Folding Rate', 'Overlock Rate', 'Total Rate', 'Option 1',
@@ -65,19 +65,9 @@ def export_to_excel(since_date=None):
     all_reports = list(all_reports.order_by('-created_at'))
 
     for i, report in enumerate(all_reports, start=1):
-        r_type_val = report.report_type
-        
-        if r_type_val == 'P2':
-            r_type = 'CR Lakshay (P2)'
-        elif r_type_val == 'P3':
-            r_type = 'CR Rahul (P3)'
-        else:
-            r_type = 'Cutting Report (P1)'
-
-        date_val = report.master_entry.date
-        job_work = report.person5_reports.first()
-        stitching = report.person4_reports.first()
-        finishing = report.person6_reports.first()
+        job_work = report.jobwork_reports.first()
+        stitching = report.stitching_reports.first()
+        finishing = report.finishing_reports.first()
             
         if job_work:
             jw_data = [
@@ -122,13 +112,13 @@ def export_to_excel(since_date=None):
 
         ws2.append([
             i,
-            date_val.strftime('%d-%b-%Y'),
-            r_type,
-            report.job_card_no,
+            report.master_entry.date.strftime('%d-%b-%Y') + " | " + report.master_entry.job_card_number,
+            report.get_report_type_display(),
             report.cutting_master_name or '—',
             float(report.cutting_rate) if report.cutting_rate else '—',
             report.fabric_type_quality,
             report.item_name,
+            report.job_card_no,
             report.size_s,
             report.size_m,
             report.size_l,
@@ -143,19 +133,19 @@ def export_to_excel(since_date=None):
 
     _auto_width_and_style(ws2)
 
-    # ── Sheet 5: Stitching Miya Ji ────────────────────────────────────────────
-    ws5 = wb.create_sheet('Stitching Miya Ji')
+    # ── Sheet 5: Stitching ────────────────────────────────────────────
+    ws5 = wb.create_sheet('Stitching')
     _style_sheet(ws5)
 
     headers5 = [
-        '#', 'P1 Date', 'Job Card Number', 'Item Name', 'Line In Date', 'Line Out Date',
+        '#', 'P1 Date', 'Job Card Number', 'Stitching Master', 'Item Name', 'Line In Date', 'Line Out Date',
         'Total Pcs', 'Darji Rate', 'Folding Rate', 'Overlock Rate', 'Total Rate', 'Option 1',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws5, headers5)
 
-    from .models import Person4Report
-    p4_qs = Person4Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    from .models import StitchingReport
+    p4_qs = StitchingReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
     if since_date:
         p4_qs = p4_qs.filter(created_at__gt=since_date)
     for i, report in enumerate(p4_qs.order_by('-created_at'), start=1):
@@ -163,6 +153,7 @@ def export_to_excel(since_date=None):
             i,
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
             report.job_card_no,
+            report.master_name or '—',
             report.item_name,
             report.line_in_date.strftime('%d-%b-%Y') if report.line_in_date else '—',
             report.line_out_date.strftime('%d-%b-%Y') if report.line_out_date else '—',
@@ -189,8 +180,8 @@ def export_to_excel(since_date=None):
     ]
     _write_header_row(ws6, headers6)
 
-    from .models import Person5Report
-    p5_qs = Person5Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    from .models import JobWorkReport
+    p5_qs = JobWorkReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
     if since_date:
         p5_qs = p5_qs.filter(created_at__gt=since_date)
     for i, report in enumerate(p5_qs.order_by('-created_at'), start=1):
@@ -216,14 +207,14 @@ def export_to_excel(since_date=None):
     _style_sheet(ws7)
 
     headers7 = [
-        '#', 'P1 Date', 'Lot No', 'Date', 'Total Pcs', 'Total Pcs Short',
+        '#', 'P1 Date', 'Lot No', 'Finishing Master', 'Date', 'Total Pcs', 'Total Pcs Short',
         'Total Pcs Packed', 'Green Tape', 'Red Tape', 'Blue Tape', 'Total Tape',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws7, headers7)
 
-    from .models import Person6Report
-    p6_qs = Person6Report.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').all()
+    from .models import FinishingReport
+    p6_qs = FinishingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').all()
     if since_date:
         p6_qs = p6_qs.filter(created_at__gt=since_date)
     for i, report in enumerate(p6_qs.order_by('-created_at'), start=1):
@@ -231,6 +222,7 @@ def export_to_excel(since_date=None):
             i,
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
             report.lot_no,
+            report.master_name or '—',
             report.date.strftime('%d-%b-%Y') if report.date else '—',
             report.total_pcs if report.total_pcs is not None else '—',
             report.total_pcs_short if report.total_pcs_short is not None else '—',
@@ -322,8 +314,8 @@ def generate_backup_zip():
             zip_file.writestr(filename, bytes(photo.photo_data))
             
         # Add Finishing Report Photos
-        for photo in Person6ReportPhoto.objects.select_related('person6_report').all():
-            lot_no = photo.person6_report.lot_no or "unknown"
+        for photo in FinishingReportPhoto.objects.select_related('finishing_report').all():
+            lot_no = photo.finishing_report.lot_no or "unknown"
             lot_no_safe = "".join([c for c in lot_no if c.isalnum() or c in (' ', '-', '_')]).strip()
             lot_no_safe = lot_no_safe.replace(' ', '_')
             sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])

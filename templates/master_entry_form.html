@@ -25,12 +25,54 @@
             {% if form.job_card_number.errors %}<span class="field-error">{{ form.job_card_number.errors.0 }}</span>{% endif %}
           </div>
         </div>
+
+        <h3 class="section-title" style="margin-top: 1.5rem; font-size: 1.1rem;">Require Submissions For: <span class="required-star">*</span></h3>
+        <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+          <div class="form-group">
+            <label for="id_requires_cutting" class="form-label">Cutting</label>
+            {{ form.requires_cutting }}
+            {% if form.requires_cutting.errors %}<span class="field-error">{{ form.requires_cutting.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_jobwork" class="form-label">Job Work</label>
+            {{ form.requires_jobwork }}
+            {% if form.requires_jobwork.errors %}<span class="field-error">{{ form.requires_jobwork.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_stitching" class="form-label">Stitching</label>
+            {{ form.requires_stitching }}
+            {% if form.requires_stitching.errors %}<span class="field-error">{{ form.requires_stitching.errors.0 }}</span>{% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_finishing" class="form-label">Finishing</label>
+            {{ form.requires_finishing }}
+            {% if form.requires_finishing.errors %}<span class="field-error">{{ form.requires_finishing.errors.0 }}</span>{% endif %}
+          </div>
+        </div>
       </div>
       <div class="form-actions">
         <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
         <button type="submit" class="btn btn-primary" id="btnCreateMaster">Create Entry</button>
       </div>
     </form>
+  </div>
+
+  <div class="form-card" style="margin-top: 2rem;">
+    <div class="form-card-header">
+      <h3 style="margin: 0 0 0.5rem 0; color: #3b82f6;">Import Pending Tasks (Excel)</h3>
+      <p class="form-subtitle">
+        Upload an Excel file to bulk-assign pending tasks. The file must have headers: <strong>Date, Jobcard number, Cutting, Jobworker, Stiching, Finishing</strong>.
+      </p>
+    </div>
+    <div class="form-section">
+      <form method="POST" action="{% url 'import_job_cards' %}" enctype="multipart/form-data" style="display: flex; gap: 1rem; align-items: center;">
+        {% csrf_token %}
+        <input type="file" name="excel_file" accept=".xlsx, .xls" required class="form-control" style="flex: 1;">
+        <button type="submit" class="btn btn-primary">
+          ⬆️ Upload & Import
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}
