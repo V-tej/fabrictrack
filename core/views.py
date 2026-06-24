@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 import json
 
 from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement
@@ -269,11 +270,7 @@ def cutting_report_view(request):
                     photo_content_type=photo_file.content_type
                 )
 
-            # Update Excel export
-            try:
-                export_to_excel()
-            except Exception as e:
-                messages.warning(request, f'Report saved but Excel export failed: {e}')
+
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=True)
@@ -338,10 +335,7 @@ def stitching_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            try:
-                export_to_excel()
-            except Exception as e:
-                messages.warning(request, f'Report saved but Excel export failed: {e}')
+
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=True)
@@ -393,10 +387,7 @@ def jobwork_report_view(request):
             report.created_by = request.user
             report.save()
 
-            try:
-                export_to_excel()
-            except Exception as e:
-                messages.warning(request, f'Report saved but Excel export failed: {e}')
+
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=True)
@@ -478,10 +469,7 @@ def finishing_report_view(request):
                     photo_content_type=photo_file.content_type
                 )
 
-            try:
-                export_to_excel()
-            except Exception as e:
-                messages.warning(request, f'Report saved but Excel export failed: {e}')
+
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_finishing_done=True)
@@ -508,47 +496,91 @@ def finishing_report_view(request):
 def submission_list_view(request):
     profile = getattr(request.user, 'profile', None)
     person_type = profile.person_type if profile else 'P1'
+    filter_param = request.GET.get('filter')
+    page_number = request.GET.get('page', '1')
 
-    reports = []
-    p4_reports = []
-    p5_reports = []
-    p6_reports = []
-
+    # Base querysets with optimized prefetching to avoid N+1 queries
     if person_type in ['P1', 'P2', 'P3'] and not request.user.is_superuser:
-        reports = CuttingReport.objects.filter(
+        reports_qs = CuttingReport.objects.filter(
             created_by=request.user
         ).select_related('master_entry').prefetch_related('photos').order_by('-created_at')
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
     elif person_type == 'P4' and not request.user.is_superuser:
-        p4_reports = StitchingReport.objects.filter(
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.filter(
             created_by=request.user
-        ).select_related('cutting_report__master_entry').order_by('-created_at')
+        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
     elif person_type == 'P5' and not request.user.is_superuser:
-        p5_reports = JobWorkReport.objects.filter(
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').order_by('-created_at')
+        p6_qs = FinishingReport.objects.none()
     elif person_type == 'P6' and not request.user.is_superuser:
-        p6_reports = FinishingReport.objects.filter(
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
     else:
-        reports = CuttingReport.objects.select_related(
+        # Admin or Superuser sees all querysets
+        reports_qs = CuttingReport.objects.select_related(
             'master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
-        p4_reports = StitchingReport.objects.select_related(
+        p4_qs = StitchingReport.objects.select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).prefetch_related('photos').order_by('-created_at')
+        p5_qs = JobWorkReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).order_by('-created_at')
-        p5_reports = JobWorkReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).order_by('-created_at')
-        p6_reports = FinishingReport.objects.select_related(
+        p6_qs = FinishingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
 
-    filter_param = request.GET.get('filter')
-    
-    # Split P4 reports into in_progress and completed
-    p4_in_progress = [r for r in p4_reports if not r.line_out_date]
-    p4_completed = [r for r in p4_reports if r.line_out_date]
+    reports = []
+    p4_in_progress = []
+    p4_completed = []
+    p5_reports = []
+    p6_reports = []
+    is_paginated = False
+    page_obj = None
+
+    ITEMS_PER_PAGE = 20
+    ITEMS_OVERVIEW = 10
+
+    if filter_param:
+        is_paginated = True
+        if filter_param in ['p1', 'p2', 'p3']:
+            paginator = Paginator(reports_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            reports = page_obj
+        elif filter_param == 'p4':
+            paginator = Paginator(p4_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p4_in_progress = [r for r in page_obj if not r.line_out_date]
+            p4_completed = [r for r in page_obj if r.line_out_date]
+        elif filter_param == 'p5':
+            paginator = Paginator(p5_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p5_reports = page_obj
+        elif filter_param == 'p6':
+            paginator = Paginator(p6_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p6_reports = page_obj
+    else:
+        # Overview mode: show latest 10 items for each list to ensure fast rendering
+        reports = reports_qs[:ITEMS_OVERVIEW]
+        p4_overview = p4_qs[:ITEMS_OVERVIEW]
+        p4_in_progress = [r for r in p4_overview if not r.line_out_date]
+        p4_completed = [r for r in p4_overview if r.line_out_date]
+        p5_reports = p5_qs[:ITEMS_OVERVIEW]
+        p6_reports = p6_qs[:ITEMS_OVERVIEW]
 
     return render(request, 'submission_list.html', {
         'reports': reports,
@@ -558,9 +590,11 @@ def submission_list_view(request):
         'p6_reports': p6_reports,
         'person_type': person_type,
         'filter_param': filter_param,
-        'show_p1': not filter_param or filter_param == 'p1',
-        'show_p2': not filter_param or filter_param == 'p2',
-        'show_p3': not filter_param or filter_param == 'p3',
+        'is_paginated': is_paginated,
+        'page_obj': page_obj,
+        'show_p1': not filter_param or filter_param in ['p1', 'p2', 'p3'],
+        'show_p2': not filter_param or filter_param in ['p1', 'p2', 'p3'],
+        'show_p3': not filter_param or filter_param in ['p1', 'p2', 'p3'],
         'show_p4': not filter_param or filter_param == 'p4',
         'show_p5': not filter_param or filter_param == 'p5',
         'show_p6': not filter_param or filter_param == 'p6',
@@ -847,7 +881,6 @@ def edit_master_entry(request, pk):
             )
             
             messages.success(request, 'Master entry updated.')
-            export_to_excel()
             return redirect('dashboard')
     else:
         # Pre-fill form with existing JobCardRequirement values
@@ -870,7 +903,6 @@ def delete_master_entry(request, pk):
     if request.method == 'POST':
         entry.delete()
         messages.success(request, 'Master entry deleted.')
-        export_to_excel()
         return redirect('dashboard')
     return render(request, 'confirm_delete.html', {'object': entry, 'cancel_url': 'dashboard'})
 
@@ -939,7 +971,6 @@ def edit_cutting_report(request, pk):
                         photo_content_type=photo_file.content_type
                     )
             messages.success(request, 'Cutting Report updated.')
-            export_to_excel()
             return redirect('submission_list')
     else:
         form = CuttingReportForm(instance=report)
@@ -956,7 +987,6 @@ def delete_cutting_report(request, pk):
     if request.method == 'POST':
         report.delete()
         messages.success(request, 'Cutting Report deleted.')
-        export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -1003,7 +1033,6 @@ def edit_stitching_report(request, pk):
                 )
 
             messages.success(request, 'Stitching updated.')
-            export_to_excel()
             return redirect('submission_list')
     else:
         form = StitchingReportForm(instance=report)
@@ -1020,7 +1049,6 @@ def delete_stitching_report(request, pk):
     if request.method == 'POST':
         report.delete()
         messages.success(request, 'Stitching deleted.')
-        export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -1046,7 +1074,6 @@ def edit_jobwork_report(request, pk):
             report.created_at = timezone.now()
             report.save()
             messages.success(request, 'Job Work updated.')
-            export_to_excel()
             return redirect('submission_list')
     else:
         form = JobWorkReportForm(instance=report)
@@ -1063,7 +1090,6 @@ def delete_jobwork_report(request, pk):
     if request.method == 'POST':
         report.delete()
         messages.success(request, 'Job Work deleted.')
-        export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -1107,7 +1133,6 @@ def edit_finishing_report(request, pk):
                         photo_content_type=photo_file.content_type
                     )
             messages.success(request, 'Finishing Report updated.')
-            export_to_excel()
             return redirect('submission_list')
     else:
         form = FinishingReportForm(instance=report)
@@ -1124,7 +1149,6 @@ def delete_finishing_report(request, pk):
     if request.method == 'POST':
         report.delete()
         messages.success(request, 'Finishing Report deleted.')
-        export_to_excel()
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -1163,6 +1187,7 @@ def serve_db_image(request, model_name, photo_id):
     
     response = HttpResponse(photo.photo_data, content_type=photo.photo_content_type)
     response['Content-Disposition'] = f'inline; filename="{photo.photo_name}"'
+    response['Cache-Control'] = 'public, max-age=31536000'  # Cache for 1 year
     return response
 
 
@@ -1180,10 +1205,7 @@ def reset_database_view(request):
         system_settings.last_excel_download_at = None
         system_settings.save()
         
-        try:
-            export_to_excel()
-        except Exception:
-            pass
+
             
         messages.success(request, 'Database successfully reset! All master entries, reports, and photos have been permanently deleted.')
         return redirect('dashboard')

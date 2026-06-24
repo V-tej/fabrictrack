@@ -5,11 +5,43 @@
 {% block content %}
 <div class="fade-in">
 
+  <!-- Navigation Tabs for Departments -->
+  <div class="tabs-container" style="margin-bottom: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <a href="{% url 'submission_list' %}" class="btn {% if not filter_param %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      All Departments
+    </a>
+    {% if user.profile.person_type in 'P1,P2,P3,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p1" class="btn {% if filter_param == 'p1' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      ✂️ Cutting Reports
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P4,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p4" class="btn {% if filter_param == 'p4' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🧵 Stitching
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P5,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p5" class="btn {% if filter_param == 'p5' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      👔 Job Work
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P6,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p6" class="btn {% if filter_param == 'p6' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      👔 Finishing Reports
+    </a>
+    {% endif %}
+  </div>
+
   {% if show_p1 and user.profile.person_type in 'P1,P2,P3,ADMIN' or show_p1 and user.is_superuser %}
   <div class="section-card" id="submissionsCard">
     <div class="section-header-row">
-      <h2 class="section-title">Cutting Reports</h2>
+      <h2 class="section-title">Cutting Reports {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p1" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
         {% if request.user.profile.person_type in 'P1,P2,P3' %}
         <a href="{% url 'cutting_report' %}" class="btn btn-primary btn-sm" id="btnNewReport">+ New Report</a>
         {% endif %}
@@ -72,7 +104,7 @@
               <div class="photo-thumbs">
                 {% for photo in report.photos.all %}
                 <a href="{% url 'serve_db_image' 'cutting' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
+                  <img src="{% url 'serve_db_image' 'cutting' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
                 </a>
                 {% endfor %}
               </div>
@@ -110,8 +142,13 @@
   <!-- Stitching Section -->
   <div class="section-card" id="p4SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
-      <h2 class="section-title">Stitching</h2>
+      <h2 class="section-title">Stitching {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p4" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
         <a href="{% url 'stitching_report' %}" class="btn btn-primary btn-sm" id="btnNewP4Report">+ New Stitching</a>
       </div>
     </div>
@@ -288,8 +325,13 @@
   <!-- Job Work Section -->
   <div class="section-card" id="p5SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
-      <h2 class="section-title">Job Work</h2>
+      <h2 class="section-title">Job Work {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p5" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
         <a href="{% url 'jobwork_report' %}" class="btn btn-primary btn-sm" id="btnNewP5Report">+ New Job Work</a>
       </div>
     </div>
@@ -374,8 +416,13 @@
   <!-- Finishing Report Section -->
   <div class="section-card" id="p6SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
-      <h2 class="section-title">Finishing Reports</h2>
+      <h2 class="section-title">Finishing Reports {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p6" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
         <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm" id="btnNewP6Report">+ New Finishing Report</a>
       </div>
     </div>
@@ -435,7 +482,7 @@
               <div class="photo-thumbs">
                 {% for photo in report.photos.all %}
                 <a href="{% url 'serve_db_image' 'finishing' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
-                  <img src="{% url 'serve_db_image' 'finishing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" />
+                  <img src="{% url 'serve_db_image' 'finishing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
                 </a>
                 {% endfor %}
               </div>
@@ -464,6 +511,24 @@
       <p>No Finishing Report submissions yet.</p>
       <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
     </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if is_paginated and page_obj.has_other_pages %}
+  <div class="pagination-container" style="display: flex; justify-content: center; align-items: center; margin-top: 2rem; gap: 0.5rem;">
+    {% if page_obj.has_previous %}
+      <a href="?filter={{ filter_param }}&page=1" class="btn btn-secondary btn-sm" style="border-radius: 4px; padding: 0.35rem 0.75rem; text-decoration: none;">« First</a>
+      <a href="?filter={{ filter_param }}&page={{ page_obj.previous_page_number }}" class="btn btn-secondary btn-sm" style="border-radius: 4px; padding: 0.35rem 0.75rem; text-decoration: none;">‹ Prev</a>
+    {% endif %}
+    
+    <span class="pagination-info" style="font-size: 0.9rem; color: var(--text-muted); padding: 0 0.75rem;">
+      Page <strong>{{ page_obj.number }}</strong> of {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+      <a href="?filter={{ filter_param }}&page={{ page_obj.next_page_number }}" class="btn btn-secondary btn-sm" style="border-radius: 4px; padding: 0.35rem 0.75rem; text-decoration: none;">Next ›</a>
+      <a href="?filter={{ filter_param }}&page={{ page_obj.paginator.num_pages }}" class="btn btn-secondary btn-sm" style="border-radius: 4px; padding: 0.35rem 0.75rem; text-decoration: none;">Last »</a>
     {% endif %}
   </div>
   {% endif %}
