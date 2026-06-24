@@ -109,6 +109,22 @@
       </a>
       {% endif %}
 
+      {% if user.profile.person_type == 'P9' %}
+      <a href="{% url 'singleneedle_report' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'singleneedle_report' %}active{% endif %}"
+        id="nav-person9">
+        <span class="nav-icon">🪡</span> Singleneedle
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P10' %}
+      <a href="{% url 'sewing_report' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'sewing_report' %}active{% endif %}"
+        id="nav-person10">
+        <span class="nav-icon">🧵</span> Sewing
+      </a>
+      {% endif %}
+
       <a href="{% url 'submission_list' %}"
         class="nav-item {% if request.resolver_match.url_name == 'submission_list' %}active{% endif %}"
         id="nav-submissions">

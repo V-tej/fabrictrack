@@ -166,6 +166,30 @@
   .btn-modal-cancel:hover { background: rgba(255,255,255,0.12); }
   .danger-text { color: #f87171; font-size: 0.85rem; margin-bottom: 1rem; }
 
+  /* Password show/hide */
+  .pw-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .pw-wrapper .modal-input {
+    padding-right: 2.8rem;
+  }
+  .pw-toggle {
+    position: absolute;
+    right: 0.6rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.5);
+    padding: 0.2rem;
+    line-height: 1;
+    transition: color 0.15s;
+    user-select: none;
+  }
+  .pw-toggle:hover { color: rgba(255,255,255,0.85); }
+
   .avatar-circle {
     width: 36px; height: 36px; border-radius: 50%;
     background: linear-gradient(135deg, #6c63ff, #48a7ff);
@@ -283,7 +307,10 @@
       </div>
       <div class="modal-form-group">
         <label class="modal-label">Password</label>
-        <input type="password" name="password" class="modal-input" required placeholder="Enter a strong password" id="add-password">
+        <div class="pw-wrapper">
+          <input type="password" name="password" class="modal-input" required placeholder="Enter a strong password" id="add-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('add-password', this)" title="Show/Hide password">👁</button>
+        </div>
       </div>
       <div class="modal-form-group">
         <label class="modal-label">Person Type / Role</label>
@@ -317,7 +344,10 @@
       {% csrf_token %}
       <div class="modal-form-group">
         <label class="modal-label">New Password</label>
-        <input type="password" name="new_password" class="modal-input" required placeholder="Enter new password" id="reset-password-input">
+        <div class="pw-wrapper">
+          <input type="password" name="new_password" class="modal-input" required placeholder="Enter new password" id="reset-password-input">
+          <button type="button" class="pw-toggle" onclick="togglePw('reset-password-input', this)" title="Show/Hide password">👁</button>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-modal-cancel" onclick="closeModal('resetPasswordModal')">Cancel</button>
@@ -421,5 +451,19 @@
       document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
     }
   });
+
+  function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+      btn.title = 'Hide password';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁';
+      btn.title = 'Show password';
+    }
+    input.focus();
+  }
 </script>
 {% endblock %}
