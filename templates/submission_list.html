@@ -25,9 +25,29 @@
       👔 Job Work
     </a>
     {% endif %}
+    {% if user.profile.person_type in 'P7,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p7" class="btn {% if filter_param == 'p7' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🧵 Embroidery
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P8,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p8" class="btn {% if filter_param == 'p8' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🎨 Printing
+    </a>
+    {% endif %}
     {% if user.profile.person_type in 'P6,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p6" class="btn {% if filter_param == 'p6' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       👔 Finishing Reports
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P9,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p9" class="btn {% if filter_param == 'p9' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🪡 Singleneedle
+    </a>
+    {% endif %}
+    {% if user.profile.person_type in 'P10,ADMIN' or user.is_superuser %}
+    <a href="{% url 'submission_list' %}?filter=p10" class="btn {% if filter_param == 'p10' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🧵 Sewing
     </a>
     {% endif %}
   </div>
@@ -95,7 +115,15 @@
                 —
               {% endif %}
             </td>
-            <td>{% if report.cutting_rate %}₹{{ report.cutting_rate }}{% else %}—{% endif %}</td>
+            <td>
+              {% if report.rate_name %}
+                {{ report.rate_name }} (₹{{ report.cutting_rate }})
+              {% elif report.cutting_rate %}
+                ₹{{ report.cutting_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.fabric_type_quality }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
             <td><strong>{{ report.total_pcs }}</strong></td>
@@ -169,9 +197,8 @@
             <th>Line Out</th>
             <th>Total Pcs</th>
             <th>Photos</th>
-            <th>Darji Rate</th>
-            <th>Folding Rate</th>
-            <th>Overlock Rate</th>
+            <th>Rate</th>
+            <th>Description</th>
             <th>Total Rate</th>
             <th>Option 1</th>
             <th>Signed</th>
@@ -206,10 +233,19 @@
             <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
             <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
-            <td>{% if report.darji_rate %}₹{{ report.darji_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.folding_rate %}₹{{ report.folding_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.overlock_rate %}₹{{ report.overlock_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
             <td>{{ report.option_1|default:"—" }}</td>
             <td style="text-align: center; white-space: nowrap;">
               {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
@@ -252,9 +288,8 @@
             <th>Line Out</th>
             <th>Total Pcs</th>
             <th>Photos</th>
-            <th>Darji Rate</th>
-            <th>Folding Rate</th>
-            <th>Overlock Rate</th>
+            <th>Rate</th>
+            <th>Description</th>
             <th>Total Rate</th>
             <th>Option 1</th>
             <th>Signed</th>
@@ -289,10 +324,19 @@
             <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
             <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
-            <td>{% if report.darji_rate %}₹{{ report.darji_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.folding_rate %}₹{{ report.folding_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.overlock_rate %}₹{{ report.overlock_rate }}{% else %}—{% endif %}</td>
-            <td>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
             <td>{{ report.option_1|default:"—" }}</td>
             <td style="text-align: center;">
               {% if report.signature %}<span title="Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
@@ -412,6 +456,210 @@
   </div>
   {% endif %}
 
+  {% if show_p7 and user.profile.person_type in 'P7,ADMIN' or show_p7 and user.is_superuser %}
+  <!-- Embroidery Section -->
+  <div class="section-card" id="p7SubmissionsCard" style="margin-top: 2rem;">
+    <div class="section-header-row">
+      <h2 class="section-title">Embroidery {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p7" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
+        <a href="{% url 'embroidery_report' %}" class="btn btn-primary btn-sm" id="btnNewP7Report">+ New Embroidery</a>
+      </div>
+    </div>
+
+    {% if p7_reports %}
+    <div class="table-wrapper">
+      <table class="data-table" id="p7SubmissionsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Embroidery Worker</th>
+            <th>Embroidery In/Out</th>
+            <th>Purpose</th>
+            <th>Job Card No.</th>
+            <th>Date</th>
+            <th>Any other Problem</th>
+            <th>Total Pcs short</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p7_reports %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><strong>
+              {% if report.master_name and report.embroidery_worker %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.embroidery_worker }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.embroidery_worker %}
+                {{ report.embroidery_worker }}
+              {% else %}
+                —
+              {% endif %}
+            </strong></td>
+            <td><span class="badge" style="background: var(--light-bg); color: var(--text-color);">{{ report.embroidery_type }}</span></td>
+            <td>{{ report.purpose }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.date|date:"d M Y" }}</td>
+            <td>{{ report.any_other_problem }}</td>
+            <td>{{ report.total_pcs_short }}</td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'embroidery' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'embroidery' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" id="emptyP7Submissions">
+      <div class="empty-icon">📭</div>
+      <p>No Embroidery submissions yet.</p>
+      <a href="{% url 'embroidery_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if show_p8 and user.profile.person_type in 'P8,ADMIN' or show_p8 and user.is_superuser %}
+  <!-- Printing Section -->
+  <div class="section-card" id="p8SubmissionsCard" style="margin-top: 2rem;">
+    <div class="section-header-row">
+      <h2 class="section-title">Printing {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p8" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
+        <a href="{% url 'printing_report' %}" class="btn btn-primary btn-sm" id="btnNewP8Report">+ New Printing</a>
+      </div>
+    </div>
+
+    {% if p8_reports %}
+    <div class="table-wrapper">
+      <table class="data-table" id="p8SubmissionsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Printing Worker</th>
+            <th>Printing In/Out</th>
+            <th>Purpose</th>
+            <th>Job Card No.</th>
+            <th>Date</th>
+            <th>Any other Problem</th>
+            <th>Total Pcs short</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p8_reports %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><strong>
+              {% if report.master_name and report.printing_worker %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.printing_worker }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.printing_worker %}
+                {{ report.printing_worker }}
+              {% else %}
+                —
+              {% endif %}
+            </strong></td>
+            <td><span class="badge" style="background: var(--light-bg); color: var(--text-color);">{{ report.printing_type }}</span></td>
+            <td>{{ report.purpose }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.date|date:"d M Y" }}</td>
+            <td>{{ report.any_other_problem }}</td>
+            <td>{{ report.total_pcs_short }}</td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'printing' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'printing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" id="emptyP8Submissions">
+      <div class="empty-icon">📭</div>
+      <p>No Printing submissions yet.</p>
+      <a href="{% url 'printing_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if show_p6 and user.profile.person_type in 'P6,ADMIN' or show_p6 and user.is_superuser %}
   <!-- Finishing Report Section -->
   <div class="section-card" id="p6SubmissionsCard" style="margin-top: 2rem;">
@@ -510,6 +758,436 @@
       <div class="empty-icon">📭</div>
       <p>No Finishing Report submissions yet.</p>
       <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm">Submit First Report</a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if show_p9 and user.profile.person_type in 'P9,ADMIN' or show_p9 and user.is_superuser %}
+  <!-- Singleneedle Section -->
+  <div class="section-card" id="p9SubmissionsCard" style="margin-top: 2rem;">
+    <div class="section-header-row">
+      <h2 class="section-title">Singleneedle {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p9" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
+        <a href="{% url 'singleneedle_report' %}" class="btn btn-primary btn-sm" id="btnNewP9Report">+ New Singleneedle</a>
+      </div>
+    </div>
+
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress (Pending Line Out)</h3>
+    {% if p9_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 2rem;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Singleneedle Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p9_in_progress %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.singleneedle_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.singleneedle_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.singleneedle_master_name %}
+                {{ report.singleneedle_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'singleneedle' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'singleneedle' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem; margin-bottom: 2rem;">
+      <p style="margin: 0; color: #64748b;">No In Progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed (Line Out Done)</h3>
+    {% if p9_completed %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Singleneedle Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p9_completed %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.singleneedle_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.singleneedle_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.singleneedle_master_name %}
+                {{ report.singleneedle_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'singleneedle' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'singleneedle' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No completed submissions.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if show_p10 and user.profile.person_type in 'P10,ADMIN' or show_p10 and user.is_superuser %}
+  <!-- Sewing Section -->
+  <div class="section-card" id="p10SubmissionsCard" style="margin-top: 2rem;">
+    <div class="section-header-row">
+      <h2 class="section-title">Sewing {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions">
+        {% if not filter_param %}
+        <a href="?filter=p10" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="margin-right: 0.5rem;">⬅ Back</a>
+        {% endif %}
+        <a href="{% url 'sewing_report' %}" class="btn btn-primary btn-sm" id="btnNewP10Report">+ New Sewing</a>
+      </div>
+    </div>
+
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress (Pending Line Out)</h3>
+    {% if p10_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 2rem;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Sewing Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p10_in_progress %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.sewing_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.sewing_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.sewing_master_name %}
+                {{ report.sewing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'sewing' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'sewing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem; margin-bottom: 2rem;">
+      <p style="margin: 0; color: #64748b;">No In Progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed (Line Out Done)</h3>
+    {% if p10_completed %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Sewing Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p10_completed %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.sewing_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.sewing_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.sewing_master_name %}
+                {{ report.sewing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'sewing' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'sewing' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No completed submissions.</p>
     </div>
     {% endif %}
   </div>

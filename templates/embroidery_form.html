@@ -1,22 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Stitching
-{% endblock %}
-{% block page_title %}🧵 Stitching
-{% endblock %}
+{% block title %}Embroidery{% endblock %}
+{% block page_title %}🧵 Embroidery{% endblock %}
 
 {% block content %}
 <div class="form-page fade-in">
   <div class="form-card" id="cuttingReportCard">
 
     <div class="form-card-header">
-      <h2>Submit Stitching</h2>
+      <h2>{% if is_edit %}Edit{% else %}Submit{% endif %} Embroidery Report</h2>
       <p class="form-subtitle">Fill in all required fields marked with <span class="required-star">*</span></p>
     </div>
 
-    {# Pass cutting reports data and rate definitions for JS auto-fill #}
+    {# Pass cutting reports data for JS auto-fill (admin only) #}
     <script>
       window.CUTTING_REPORTS = {{ cutting_reports_json |safe }};
-      window.RATE_DEFINITIONS = {{ rate_definitions_json |safe }};
       window.IS_ADMIN = {{ is_admin |yesno:"true,false" }};
     </script>
 
@@ -32,8 +29,8 @@
             {{ form.master_name }}
           </div>
           <div class="form-group" style="margin-bottom: 0;">
-            <label for="id_stitching_master_name" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
-            {{ form.stitching_master_name }}
+            <label for="id_embroidery_worker" class="form-label" style="font-size: 1.1rem; color: #b45309;">Or Enter Manually</label>
+            {{ form.embroidery_worker }}
           </div>
         </div>
       </div>
@@ -43,8 +40,7 @@
         <div class="form-section-title">📋 Select Cutting Report</div>
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="id_cutting_report" class="form-label">Select Cutting Report <span
-                class="required-star">*</span></label>
+            <label for="id_cutting_report" class="form-label">Select Cutting Report <span class="required-star">*</span></label>
             <div style="display: flex; gap: 10px; align-items: center;">
               {{ form.cutting_report }}
               <button type="button" class="btn btn-secondary btn-scan-qr" style="white-space: nowrap; padding: 0.5rem 1rem;">📷 Scan QR</button>
@@ -59,11 +55,28 @@
         </div>
       </div>
 
-      <!-- ── Section: Stitching Details ────────────────────────────── -->
+      <!-- ── Section: Job Details ────────────────────────────── -->
       <div class="form-section">
-        <div class="form-section-title">🧵 Stitching Details</div>
+        <div class="form-section-title">🧵 Embroidery Details</div>
 
         <div class="form-row two-col">
+          <div class="form-group">
+            <label for="id_embroidery_type" class="form-label">Embroidery In / Out <span class="required-star">*</span></label>
+            {{ form.embroidery_type }}
+            {% if form.embroidery_type.errors %}
+            <span class="field-error">{{ form.embroidery_type.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label for="id_purpose" class="form-label">Purpose <span class="required-star">*</span></label>
+            {{ form.purpose }}
+            {% if form.purpose.errors %}
+            <span class="field-error">{{ form.purpose.errors.0 }}</span>
+            {% endif %}
+          </div>
           <div class="form-group">
             <label for="id_job_card_no" class="form-label">Job Card No. <span class="required-star">*</span></label>
             {{ form.job_card_no }}
@@ -71,71 +84,38 @@
             <span class="field-error">{{ form.job_card_no.errors.0 }}</span>
             {% endif %}
           </div>
-          <div class="form-group">
-            <label for="id_item_name" class="form-label">Item Name <span class="required-star">*</span></label>
-            {{ form.item_name }}
-            {% if form.item_name.errors %}
-            <span class="field-error">{{ form.item_name.errors.0 }}</span>
-            {% endif %}
-          </div>
         </div>
 
         <div class="form-row three-col">
           <div class="form-group">
-            <label for="id_line_in_date" class="form-label">Line in Date <span class="required-star">*</span></label>
-            {{ form.line_in_date }}
-            {% if form.line_in_date.errors %}
-            <span class="field-error">{{ form.line_in_date.errors.0 }}</span>
+            <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
+            {{ form.date }}
+            {% if form.date.errors %}
+            <span class="field-error">{{ form.date.errors.0 }}</span>
             {% endif %}
           </div>
           <div class="form-group">
-            <label for="id_line_out_date" class="form-label">Line out Date <span class="required-star">*</span></label>
-            {{ form.line_out_date }}
-            {% if form.line_out_date.errors %}
-            <span class="field-error">{{ form.line_out_date.errors.0 }}</span>
+            <label for="id_total_pcs_short" class="form-label">Total Pcs short <span class="required-star">*</span></label>
+            {{ form.total_pcs_short }}
+            {% if form.total_pcs_short.errors %}
+            <span class="field-error">{{ form.total_pcs_short.errors.0 }}</span>
             {% endif %}
           </div>
           <div class="form-group">
-            <label for="id_total_pcs" class="form-label">Total Pcs</label>
+            <label for="id_total_pcs" class="form-label">Total Pcs <span class="required-star">*</span></label>
             {{ form.total_pcs }}
             {% if form.total_pcs.errors %}
             <span class="field-error">{{ form.total_pcs.errors.0 }}</span>
             {% endif %}
           </div>
         </div>
-      </div>
-
-      <!-- ── Section: Rates ──────────────────────────────────────── -->
-      <div class="form-section">
-        <div class="form-section-title">💰 Rates</div>
-
-        <div class="form-row three-col">
-          <div class="form-group">
-            <label for="id_rate_definition" class="form-label">Rate Name <span class="required-star">*</span></label>
-            {{ form.rate_definition }}
-            {% if form.rate_definition.errors %}
-            <span class="field-error">{{ form.rate_definition.errors.0 }}</span>
-            {% endif %}
-          </div>
-          <div class="form-group">
-            <label for="id_rate_description_display" class="form-label">Description</label>
-            <input type="text" id="id_rate_description_display" class="form-control" placeholder="Auto-populated" readonly value="{% if form.instance.pk %}{{ form.instance.rate_description }}{% endif %}" />
-          </div>
-          <div class="form-group">
-            <label for="id_total_rate" class="form-label">Total Rate</label>
-            {{ form.total_rate }}
-            {% if form.total_rate.errors %}
-            <span class="field-error">{{ form.total_rate.errors.0 }}</span>
-            {% endif %}
-          </div>
-        </div>
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="id_option_1" class="form-label">Option 1 <span class="required-star">*</span></label>
-            {{ form.option_1 }}
-            {% if form.option_1.errors %}
-            <span class="field-error">{{ form.option_1.errors.0 }}</span>
+            <label for="id_any_other_problem" class="form-label">Any other Problem <span class="required-star">*</span></label>
+            {{ form.any_other_problem }}
+            {% if form.any_other_problem.errors %}
+            <span class="field-error">{{ form.any_other_problem.errors.0 }}</span>
             {% endif %}
           </div>
         </div>
@@ -157,7 +137,7 @@
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
               {% for photo in report.photos.all %}
                 <div style="position: relative; width: 90px; height: 90px;">
-                  <img src="{% url 'serve_db_image' 'p4' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
+                  <img src="{% url 'serve_db_image' 'embroidery' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
                   <a href="?delete_photo={{ photo.id }}" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);" title="Delete Photo">×</a>
                 </div>
               {% endfor %}
@@ -178,6 +158,7 @@
           <div class="photo-count-display" id="photoCountDisplay"></div>
         </div>
       </div>
+
       <!-- ── Section: Signatures ──────────────────────────────────── -->
       <div class="form-section">
         <div class="form-section-title">✍️ Signatures <span class="required-star">*</span></div>
@@ -218,7 +199,7 @@
       <div class="form-actions">
         <a href="{% url 'dashboard' %}" class="btn btn-secondary" id="btnCancel">Cancel</a>
         <button type="submit" class="btn btn-primary" id="btnSubmit">
-          <span class="btn-text">Submit Report</span>
+          <span class="btn-text">{% if is_edit %}Save Changes{% else %}Submit Report{% endif %}</span>
           <span class="btn-loader" style="display:none">Submitting…</span>
         </button>
       </div>
@@ -226,5 +207,4 @@
     </form>
   </div>
 </div>
-
 {% endblock %}

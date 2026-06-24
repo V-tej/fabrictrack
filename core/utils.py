@@ -4,7 +4,7 @@ from django.conf import settings
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, FinishingReportPhoto
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, FinishingReportPhoto, EmbroideryReport, PrintingReport
 import io
 import zipfile
 
@@ -52,13 +52,20 @@ def export_to_excel(since_date=None):
         'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
         'Submitted By', 'Submitted At',
         'Jobworker', 'Job Work In / Out', 'Purpose', 'Job Work Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
-        'Line in Date', 'Line out Date', 'Total Pcs', 'Darji Rate', 'Folding Rate', 'Overlock Rate', 'Total Rate', 'Option 1',
+        'Embroidery Worker', 'Embroidery In / Out', 'Embroidery Purpose', 'Embroidery Date', 'Embroidery Pcs short', 'Embroidery Pcs', 'Embroidery Any other Problem',
+        'Printing Worker', 'Printing In / Out', 'Printing Purpose', 'Printing Date', 'Printing Pcs short', 'Printing Pcs', 'Printing Any other Problem',
+        'Line in Date', 'Line out Date', 'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
+        'Singleneedle Line in Date', 'Singleneedle Line out Date', 'Singleneedle Total Pcs', 'Singleneedle Rate', 'Singleneedle Description', 'Singleneedle Total Rate', 'Singleneedle Option 1',
+        'Sewing Line in Date', 'Sewing Line out Date', 'Sewing Total Pcs', 'Sewing Rate', 'Sewing Description', 'Sewing Total Rate', 'Sewing Option 1',
         'Finishing Date', 'Finishing Total Pcs', 'Finishing Pcs Short', 'Finishing Pcs Packed', 'Finishing Green Tape', 'Finishing Red Tape', 'Finishing Blue Tape', 'Finishing Total Tape'
     ]
     _write_header_row(ws2, headers2)
 
     
-    all_reports = CuttingReport.objects.select_related('master_entry', 'created_by').prefetch_related('photos', 'color_details').all()
+    all_reports = CuttingReport.objects.select_related('master_entry', 'created_by').prefetch_related(
+        'photos', 'color_details', 'embroidery_reports', 'printing_reports', 'stitching_reports', 'finishing_reports',
+        'singleneedle_reports', 'sewing_reports'
+    ).all()
     if since_date:
         all_reports = all_reports.filter(created_at__gt=since_date)
         
@@ -66,7 +73,11 @@ def export_to_excel(since_date=None):
 
     for i, report in enumerate(all_reports, start=1):
         job_work = report.jobwork_reports.first()
+        embroidery = report.embroidery_reports.first()
+        printing = report.printing_reports.first()
         stitching = report.stitching_reports.first()
+        singleneedle = report.singleneedle_reports.first()
+        sewing = report.sewing_reports.first()
         finishing = report.finishing_reports.first()
             
         if job_work:
@@ -81,20 +92,71 @@ def export_to_excel(since_date=None):
             ]
         else:
             jw_data = ['—', '—', '—', '—', '—', '—', '—']
+
+        if embroidery:
+            emb_data = [
+                embroidery.embroidery_worker,
+                embroidery.embroidery_type,
+                embroidery.purpose,
+                embroidery.date.strftime('%d-%b-%Y') if embroidery.date else '—',
+                embroidery.total_pcs_short if embroidery.total_pcs_short is not None else '—',
+                report.total_pcs if report.total_pcs is not None else '—',
+                embroidery.any_other_problem,
+            ]
+        else:
+            emb_data = ['—', '—', '—', '—', '—', '—', '—']
+
+        if printing:
+            print_data = [
+                printing.printing_worker,
+                printing.printing_type,
+                printing.purpose,
+                printing.date.strftime('%d-%b-%Y') if printing.date else '—',
+                printing.total_pcs_short if printing.total_pcs_short is not None else '—',
+                report.total_pcs if report.total_pcs is not None else '—',
+                printing.any_other_problem,
+            ]
+        else:
+            print_data = ['—', '—', '—', '—', '—', '—', '—']
             
         if stitching:
             stitch_data = [
                 stitching.line_in_date.strftime('%d-%b-%Y') if stitching.line_in_date else '—',
                 stitching.line_out_date.strftime('%d-%b-%Y') if stitching.line_out_date else '—',
                 stitching.total_pcs if stitching.total_pcs is not None else '—',
-                float(stitching.darji_rate) if stitching.darji_rate else '—',
-                float(stitching.folding_rate) if stitching.folding_rate else '—',
-                float(stitching.overlock_rate) if stitching.overlock_rate else '—',
+                stitching.rate_name or '—',
+                stitching.rate_description or '—',
                 float(stitching.total_rate) if stitching.total_rate else '—',
                 stitching.option_1 or '—',
             ]
         else:
-            stitch_data = ['—'] * 8
+            stitch_data = ['—'] * 7
+
+        if singleneedle:
+            singleneedle_data = [
+                singleneedle.line_in_date.strftime('%d-%b-%Y') if singleneedle.line_in_date else '—',
+                singleneedle.line_out_date.strftime('%d-%b-%Y') if singleneedle.line_out_date else '—',
+                singleneedle.total_pcs if singleneedle.total_pcs is not None else '—',
+                singleneedle.rate_name or '—',
+                singleneedle.rate_description or '—',
+                float(singleneedle.total_rate) if singleneedle.total_rate else '—',
+                singleneedle.option_1 or '—',
+            ]
+        else:
+            singleneedle_data = ['—'] * 7
+
+        if sewing:
+            sewing_data = [
+                sewing.line_in_date.strftime('%d-%b-%Y') if sewing.line_in_date else '—',
+                sewing.line_out_date.strftime('%d-%b-%Y') if sewing.line_out_date else '—',
+                sewing.total_pcs if sewing.total_pcs is not None else '—',
+                sewing.rate_name or '—',
+                sewing.rate_description or '—',
+                float(sewing.total_rate) if sewing.total_rate else '—',
+                sewing.option_1 or '—',
+            ]
+        else:
+            sewing_data = ['—'] * 7
 
         if finishing:
             finish_data = [
@@ -129,7 +191,7 @@ def export_to_excel(since_date=None):
             report.total_pcs,
             report.created_by.username if report.created_by else '—',
             report.created_at.strftime('%d-%b-%Y %H:%M'),
-        ] + jw_data + stitch_data + finish_data)
+        ] + jw_data + emb_data + print_data + stitch_data + singleneedle_data + sewing_data + finish_data)
 
     _auto_width_and_style(ws2)
 
@@ -139,7 +201,7 @@ def export_to_excel(since_date=None):
 
     headers5 = [
         '#', 'P1 Date', 'Job Card Number', 'Stitching Master', 'Item Name', 'Line In Date', 'Line Out Date',
-        'Total Pcs', 'Darji Rate', 'Folding Rate', 'Overlock Rate', 'Total Rate', 'Option 1',
+        'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws5, headers5)
@@ -158,9 +220,8 @@ def export_to_excel(since_date=None):
             report.line_in_date.strftime('%d-%b-%Y') if report.line_in_date else '—',
             report.line_out_date.strftime('%d-%b-%Y') if report.line_out_date else '—',
             report.total_pcs if report.total_pcs is not None else '—',
-            float(report.darji_rate) if report.darji_rate else '—',
-            float(report.folding_rate) if report.folding_rate else '—',
-            float(report.overlock_rate) if report.overlock_rate else '—',
+            report.rate_name or '—',
+            report.rate_description or '—',
             float(report.total_rate) if report.total_rate else '—',
             report.option_1 or '—',
             report.created_by.username if report.created_by else '—',
@@ -236,6 +297,142 @@ def export_to_excel(since_date=None):
         ])
 
     _auto_width_and_style(ws7)
+
+    # ── Sheet 8: Embroidery ───────────────────────────────────────────
+    ws8 = wb.create_sheet('Embroidery')
+    _style_sheet(ws8)
+
+    headers8 = [
+        '#', 'P1 Date', 'Job Card Number', 'Embroidery Master', 'Embroidery Worker', 'Embroidery In/Out',
+        'Purpose', 'Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws8, headers8)
+
+    emb_qs = EmbroideryReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        emb_qs = emb_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(emb_qs.order_by('-created_at'), start=1):
+        ws8.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.master_name or '—',
+            report.embroidery_worker,
+            report.embroidery_type,
+            report.purpose,
+            report.date.strftime('%d-%b-%Y') if report.date else '—',
+            report.any_other_problem,
+            report.total_pcs_short if report.total_pcs_short is not None else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws8)
+
+    # ── Sheet 9: Printing ─────────────────────────────────────────────
+    ws9 = wb.create_sheet('Printing')
+    _style_sheet(ws9)
+
+    headers9 = [
+        '#', 'P1 Date', 'Job Card Number', 'Printing Master', 'Printing Worker', 'Printing In/Out',
+        'Purpose', 'Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws9, headers9)
+
+    prt_qs = PrintingReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        prt_qs = prt_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(prt_qs.order_by('-created_at'), start=1):
+        ws9.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.master_name or '—',
+            report.printing_worker,
+            report.printing_type,
+            report.purpose,
+            report.date.strftime('%d-%b-%Y') if report.date else '—',
+            report.any_other_problem,
+            report.total_pcs_short if report.total_pcs_short is not None else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws9)
+
+    # ── Sheet 10: Singleneedle ───────────────────────────────────────────
+    ws10 = wb.create_sheet('Singleneedle')
+    _style_sheet(ws10)
+
+    headers10 = [
+        '#', 'P1 Date', 'Job Card Number', 'Singleneedle Master', 'Item Name', 'Line In Date', 'Line Out Date',
+        'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws10, headers10)
+
+    from .models import SingleneedleReport
+    p9_qs = SingleneedleReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p9_qs = p9_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p9_qs.order_by('-created_at'), start=1):
+        ws10.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.master_name or '—',
+            report.item_name,
+            report.line_in_date.strftime('%d-%b-%Y') if report.line_in_date else '—',
+            report.line_out_date.strftime('%d-%b-%Y') if report.line_out_date else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.rate_name or '—',
+            report.rate_description or '—',
+            float(report.total_rate) if report.total_rate else '—',
+            report.option_1 or '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws10)
+
+    # ── Sheet 11: Sewing ─────────────────────────────────────────────────
+    ws11 = wb.create_sheet('Sewing')
+    _style_sheet(ws11)
+
+    headers11 = [
+        '#', 'P1 Date', 'Job Card Number', 'Sewing Master', 'Item Name', 'Line In Date', 'Line Out Date',
+        'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws11, headers11)
+
+    from .models import SewingReport
+    p10_qs = SewingReport.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p10_qs = p10_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p10_qs.order_by('-created_at'), start=1):
+        ws11.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.master_name or '—',
+            report.item_name,
+            report.line_in_date.strftime('%d-%b-%Y') if report.line_in_date else '—',
+            report.line_out_date.strftime('%d-%b-%Y') if report.line_out_date else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.rate_name or '—',
+            report.rate_description or '—',
+            float(report.total_rate) if report.total_rate else '—',
+            report.option_1 or '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws11)
 
     wb.save(filepath)
     return filepath
@@ -320,6 +517,56 @@ def generate_backup_zip():
             lot_no_safe = lot_no_safe.replace(' ', '_')
             sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
             filename = f"Photos/Finishing/finishing_photo_{photo.id}_lot_{lot_no_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+            
+        # Add Stitching Report Photos
+        from .models import StitchingReportPhoto
+        for photo in StitchingReportPhoto.objects.select_related('stitching_report').all():
+            job_card = photo.stitching_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Stitching/stitching_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Embroidery Report Photos
+        from .models import EmbroideryReportPhoto
+        for photo in EmbroideryReportPhoto.objects.select_related('embroidery_report').all():
+            job_card = photo.embroidery_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Embroidery/embroidery_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Printing Report Photos
+        from .models import PrintingReportPhoto
+        for photo in PrintingReportPhoto.objects.select_related('printing_report').all():
+            job_card = photo.printing_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Printing/printing_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Singleneedle Report Photos
+        from .models import SingleneedleReportPhoto
+        for photo in SingleneedleReportPhoto.objects.select_related('singleneedle_report').all():
+            job_card = photo.singleneedle_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Singleneedle/singleneedle_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Sewing Report Photos
+        from .models import SewingReportPhoto
+        for photo in SewingReportPhoto.objects.select_related('sewing_report').all():
+            job_card = photo.sewing_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Sewing/sewing_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
             zip_file.writestr(filename, bytes(photo.photo_data))
             
     zip_buffer.seek(0)

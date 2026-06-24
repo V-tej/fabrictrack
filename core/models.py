@@ -11,10 +11,10 @@ PERSON_CHOICES = [
     ('P4', 'Stitching'),
     ('P5', 'Job Work'),
     ('P6', 'Finishing Report'),
-    ('P7', 'Person 7'),
-    ('P8', 'Person 8'),
-    ('P9', 'Person 9'),
-    ('P10', 'Person 10'),
+    ('P7', 'Embroidery'),
+    ('P8', 'Printing'),
+    ('P9', 'Singleneedle'),
+    ('P10', 'Sewing'),
     ('P11', 'Person 11'),
     ('P12', 'Person 12'),
     ('P13', 'Person 13'),
@@ -64,6 +64,10 @@ class MasterName(models.Model):
         ('Stitching', 'Stitching'),
         ('Job Work', 'Job Work'),
         ('Finishing', 'Finishing'),
+        ('Embroidery', 'Embroidery'),
+        ('Printing', 'Printing'),
+        ('Singleneedle', 'Singleneedle'),
+        ('Sewing', 'Sewing'),
     ]
     name = models.CharField(max_length=100)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
@@ -74,6 +78,21 @@ class MasterName(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.department})"
+
+
+class RateDefinition(models.Model):
+    name = models.CharField(max_length=50, unique=True, verbose_name="Rate Name (e.g. R1)")
+    description = models.CharField(max_length=300, verbose_name="Description")
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Rate")
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Rate Definition"
+        verbose_name_plural = "Rate Definitions"
+
+    def __str__(self):
+        return f"{self.name} - {self.description} (₹{self.total_rate})"
+
 
 
 class CuttingReport(models.Model):
@@ -93,6 +112,8 @@ class CuttingReport(models.Model):
     cutting_master_name = models.CharField(max_length=200, blank=True)
     master_name = models.CharField(max_length=200, blank=True, null=True)
     cutting_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    rate_name = models.CharField(max_length=50, blank=True, null=True)
     fabric_type_quality = models.CharField(max_length=300)
     item_name = models.CharField(max_length=200)
     job_card_no = models.CharField(max_length=100)
@@ -187,10 +208,13 @@ class StitchingReport(models.Model):
     total_pcs = models.PositiveIntegerField(null=True, blank=True)
     line_out_date = models.DateField(null=True, blank=True)
     item_name = models.CharField(max_length=200)
-    darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    overlock_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    rate_name = models.CharField(max_length=50, blank=True, null=True)
+    rate_description = models.CharField(max_length=300, blank=True, null=True)
+    darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    overlock_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
     option_1 = models.CharField(max_length=200, blank=True)
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
@@ -258,6 +282,216 @@ class JobWorkReport(models.Model):
         return f"Job Work — {self.jobworker} — {self.job_work_type}"
 
 
+class EmbroideryReport(models.Model):
+    """Embroidery — Form based on P1's Cutting Report."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='embroidery_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    EMBROIDERY_TYPE_CHOICES = [
+        ('Embroidery In', 'Embroidery In'),
+        ('Embroidery Out', 'Embroidery Out'),
+    ]
+    
+    embroidery_worker = models.CharField(max_length=200)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    embroidery_type = models.CharField(max_length=50, choices=EMBROIDERY_TYPE_CHOICES)
+    purpose = models.CharField(max_length=300)
+    job_card_no = models.CharField(max_length=100)
+    date = models.DateField()
+    any_other_problem = models.TextField()
+    total_pcs_short = models.PositiveIntegerField()
+    total_pcs = models.PositiveIntegerField()
+    
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Embroidery'
+        verbose_name_plural = 'Embroidery'
+
+    def __str__(self):
+        return f"Embroidery — {self.embroidery_worker} — {self.embroidery_type}"
+
+
+class EmbroideryReportPhoto(models.Model):
+    """Up to 5 job card photos per EmbroideryReport."""
+    embroidery_report = models.ForeignKey(
+        EmbroideryReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.embroidery_report}"
+
+
+class PrintingReport(models.Model):
+    """Printing — Form based on P1's Cutting Report."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='printing_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    PRINTING_TYPE_CHOICES = [
+        ('Printing In', 'Printing In'),
+        ('Printing Out', 'Printing Out'),
+    ]
+    
+    printing_worker = models.CharField(max_length=200)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    printing_type = models.CharField(max_length=50, choices=PRINTING_TYPE_CHOICES)
+    purpose = models.CharField(max_length=300)
+    job_card_no = models.CharField(max_length=100)
+    date = models.DateField()
+    any_other_problem = models.TextField()
+    total_pcs_short = models.PositiveIntegerField()
+    total_pcs = models.PositiveIntegerField()
+    
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Printing'
+        verbose_name_plural = 'Printing'
+
+    def __str__(self):
+        return f"Printing — {self.printing_worker} — {self.printing_type}"
+
+
+class PrintingReportPhoto(models.Model):
+    """Up to 5 job card photos per PrintingReport."""
+    printing_report = models.ForeignKey(
+        PrintingReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.printing_report}"
+
+
+class SingleneedleReport(models.Model):
+    """Singleneedle — Form based on P1's Cutting Report."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='singleneedle_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    singleneedle_master_name = models.CharField(max_length=200, blank=True, null=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    job_card_no = models.CharField(max_length=100)
+    line_in_date = models.DateField(null=True, blank=True)
+    total_pcs = models.PositiveIntegerField(null=True, blank=True)
+    line_out_date = models.DateField(null=True, blank=True)
+    item_name = models.CharField(max_length=200)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    rate_name = models.CharField(max_length=50, blank=True, null=True)
+    rate_description = models.CharField(max_length=300, blank=True, null=True)
+    darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    overlock_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    option_1 = models.CharField(max_length=200, blank=True)
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Singleneedle'
+        verbose_name_plural = 'Singleneedle'
+
+    def __str__(self):
+        return f"Singleneedle — {self.cutting_report.master_entry} — {self.item_name}"
+
+
+class SingleneedleReportPhoto(models.Model):
+    """Up to 5 job card photos per SingleneedleReport."""
+    singleneedle_report = models.ForeignKey(
+        SingleneedleReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.singleneedle_report}"
+
+
+class SewingReport(models.Model):
+    """Sewing — Form based on P1's Cutting Report."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='sewing_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    sewing_master_name = models.CharField(max_length=200, blank=True, null=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    job_card_no = models.CharField(max_length=100)
+    line_in_date = models.DateField(null=True, blank=True)
+    total_pcs = models.PositiveIntegerField(null=True, blank=True)
+    line_out_date = models.DateField(null=True, blank=True)
+    item_name = models.CharField(max_length=200)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    rate_name = models.CharField(max_length=50, blank=True, null=True)
+    rate_description = models.CharField(max_length=300, blank=True, null=True)
+    darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    overlock_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    option_1 = models.CharField(max_length=200, blank=True)
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Sewing'
+        verbose_name_plural = 'Sewing'
+
+    def __str__(self):
+        return f"Sewing — {self.cutting_report.master_entry} — {self.item_name}"
+
+
+class SewingReportPhoto(models.Model):
+    """Up to 5 job card photos per SewingReport."""
+    sewing_report = models.ForeignKey(
+        SewingReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.sewing_report}"
+
+
 class FinishingReport(models.Model):
     """Finishing Report — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
@@ -317,12 +551,20 @@ class JobCardRequirement(models.Model):
     requires_jobwork = models.BooleanField(default=False)
     requires_stitching = models.BooleanField(default=False)
     requires_finishing = models.BooleanField(default=False)
+    requires_embroidery = models.BooleanField(default=False)
+    requires_printing = models.BooleanField(default=False)
+    requires_singleneedle = models.BooleanField(default=False)
+    requires_sewing = models.BooleanField(default=False)
     
     # Status (Updated when reports are submitted)
     is_cutting_done = models.BooleanField(default=False)
     is_jobwork_done = models.BooleanField(default=False)
     is_stitching_done = models.BooleanField(default=False)
     is_finishing_done = models.BooleanField(default=False)
+    is_embroidery_done = models.BooleanField(default=False)
+    is_printing_done = models.BooleanField(default=False)
+    is_singleneedle_done = models.BooleanField(default=False)
+    is_sewing_done = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

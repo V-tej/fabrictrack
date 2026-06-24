@@ -102,26 +102,33 @@ document.addEventListener('DOMContentLoaded', function () {
   if (totalPcsEl)    totalPcsEl.addEventListener('input', calcAverage);
   if (totalWeightEl) totalWeightEl.addEventListener('input', calcAverage);
 
-  // ── Auto-Calculate Total Rate (P4) ───────────────────────────────
-  const darjiRateEl    = document.getElementById('id_darji_rate');
-  const foldingRateEl  = document.getElementById('id_folding_rate');
-  const overlockRateEl = document.getElementById('id_overlock_rate');
-  const totalRateEl    = document.getElementById('id_total_rate');
+  // ── Auto-populate Rate Definition ───────────────────────────────
+  const rateDefinitionEl = document.getElementById('id_rate_definition');
+  const rateDescriptionEl = document.getElementById('id_rate_description_display');
+  const totalRateEl = document.getElementById('id_total_rate') || document.getElementById('id_cutting_rate');
 
-  function calcTotalRate() {
-    if (!totalRateEl) return;
-    const darji = parseFloat(darjiRateEl?.value) || 0;
-    const folding = parseFloat(foldingRateEl?.value) || 0;
-    const overlock = parseFloat(overlockRateEl?.value) || 0;
-    
-    if (darji > 0 || folding > 0 || overlock > 0) {
-      totalRateEl.value = (darji + folding + overlock).toFixed(2);
+  function handleRateChange() {
+    if (!rateDefinitionEl || !totalRateEl) return;
+    const selectedId = rateDefinitionEl.value;
+    if (selectedId && window.RATE_DEFINITIONS && window.RATE_DEFINITIONS[selectedId]) {
+      const rd = window.RATE_DEFINITIONS[selectedId];
+      if (rateDescriptionEl) rateDescriptionEl.value = rd.description;
+      totalRateEl.value = rd.total_rate;
+    } else {
+      if (rateDescriptionEl) rateDescriptionEl.value = '';
+      totalRateEl.value = '';
     }
   }
 
-  if (darjiRateEl)    darjiRateEl.addEventListener('input', calcTotalRate);
-  if (foldingRateEl)  foldingRateEl.addEventListener('input', calcTotalRate);
-  if (overlockRateEl) overlockRateEl.addEventListener('input', calcTotalRate);
+  if (rateDefinitionEl) {
+    if (window.jQuery) {
+      $(rateDefinitionEl).on('change', handleRateChange);
+    } else {
+      rateDefinitionEl.addEventListener('change', handleRateChange);
+    }
+    // Run once on load to populate if edit mode
+    handleRateChange();
+  }
 
   // ── Select2 Initialization ─────────────────────────────────────────
   if (window.jQuery && $.fn.select2) {
@@ -326,6 +333,20 @@ document.addEventListener('DOMContentLoaded', function () {
           canvas.parentElement.style.transition = 'border-color 0.3s';
           canvas.parentElement.style.borderColor = '#ef4444';
           setTimeout(() => { canvas.parentElement.style.borderColor = ''; }, 2000);
+        }
+        return;
+      }
+
+      const sigInput2 = document.getElementById('id_signature_2');
+      if (sigInput2 && !sigInput2.value) {
+        e.preventDefault();
+        alert('Please provide the Master/Manager signature in the second signature box before submitting.');
+        const canvas2 = document.getElementById('signatureCanvas2');
+        if (canvas2) {
+          canvas2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          canvas2.parentElement.style.transition = 'border-color 0.3s';
+          canvas2.parentElement.style.borderColor = '#ef4444';
+          setTimeout(() => { canvas2.parentElement.style.borderColor = ''; }, 2000);
         }
         return;
       }
@@ -620,7 +641,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('id_master_name'),
     document.getElementById('id_cutting_master_name'),
     document.getElementById('id_stitching_master_name'),
+    document.getElementById('id_singleneedle_master_name'),
+    document.getElementById('id_sewing_master_name'),
     document.getElementById('id_jobworker'),
+    document.getElementById('id_embroidery_worker'),
+    document.getElementById('id_printing_worker'),
     document.getElementById('id_finishing_master_name')
   ].filter(el => el !== null);
 

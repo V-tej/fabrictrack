@@ -17,36 +17,76 @@
           <div class="form-group">
             <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
             {{ form.date }}
-            {% if form.date.errors %}<span class="field-error">{{ form.date.errors.0 }}</span>{% endif %}
+            {% if form.date.errors %}
+            <span class="field-error">{{ form.date.errors.0 }}</span>
+            {% endif %}
           </div>
           <div class="form-group">
             <label for="id_job_card_number" class="form-label">Job Card Number <span class="required-star">*</span></label>
             {{ form.job_card_number }}
-            {% if form.job_card_number.errors %}<span class="field-error">{{ form.job_card_number.errors.0 }}</span>{% endif %}
+            {% if form.job_card_number.errors %}
+            <span class="field-error">{{ form.job_card_number.errors.0 }}</span>
+            {% endif %}
           </div>
         </div>
 
         <h3 class="section-title" style="margin-top: 1.5rem; font-size: 1.1rem;">Require Submissions For: <span class="required-star">*</span></h3>
-        <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+        <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
           <div class="form-group">
             <label for="id_requires_cutting" class="form-label">Cutting</label>
             {{ form.requires_cutting }}
-            {% if form.requires_cutting.errors %}<span class="field-error">{{ form.requires_cutting.errors.0 }}</span>{% endif %}
+            {% if form.requires_cutting.errors %}
+            <span class="field-error">{{ form.requires_cutting.errors.0 }}</span>
+            {% endif %}
           </div>
           <div class="form-group">
             <label for="id_requires_jobwork" class="form-label">Job Work</label>
             {{ form.requires_jobwork }}
-            {% if form.requires_jobwork.errors %}<span class="field-error">{{ form.requires_jobwork.errors.0 }}</span>{% endif %}
+            {% if form.requires_jobwork.errors %}
+            <span class="field-error">{{ form.requires_jobwork.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_embroidery" class="form-label">Embroidery</label>
+            {{ form.requires_embroidery }}
+            {% if form.requires_embroidery.errors %}
+            <span class="field-error">{{ form.requires_embroidery.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_printing" class="form-label">Printing</label>
+            {{ form.requires_printing }}
+            {% if form.requires_printing.errors %}
+            <span class="field-error">{{ form.requires_printing.errors.0 }}</span>
+            {% endif %}
           </div>
           <div class="form-group">
             <label for="id_requires_stitching" class="form-label">Stitching</label>
             {{ form.requires_stitching }}
-            {% if form.requires_stitching.errors %}<span class="field-error">{{ form.requires_stitching.errors.0 }}</span>{% endif %}
+            {% if form.requires_stitching.errors %}
+            <span class="field-error">{{ form.requires_stitching.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_singleneedle" class="form-label">Singleneedle</label>
+            {{ form.requires_singleneedle }}
+            {% if form.requires_singleneedle.errors %}
+            <span class="field-error">{{ form.requires_singleneedle.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_sewing" class="form-label">Sewing</label>
+            {{ form.requires_sewing }}
+            {% if form.requires_sewing.errors %}
+            <span class="field-error">{{ form.requires_sewing.errors.0 }}</span>
+            {% endif %}
           </div>
           <div class="form-group">
             <label for="id_requires_finishing" class="form-label">Finishing</label>
             {{ form.requires_finishing }}
-            {% if form.requires_finishing.errors %}<span class="field-error">{{ form.requires_finishing.errors.0 }}</span>{% endif %}
+            {% if form.requires_finishing.errors %}
+            <span class="field-error">{{ form.requires_finishing.errors.0 }}</span>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -61,7 +101,7 @@
     <div class="form-card-header">
       <h3 style="margin: 0 0 0.5rem 0; color: #3b82f6;">Import Pending Tasks (Excel)</h3>
       <p class="form-subtitle">
-        Upload an Excel file to bulk-assign pending tasks. The file must have headers: <strong>Date, Jobcard number, Cutting, Jobworker, Stiching, Finishing</strong>.
+        Upload an Excel file to bulk-assign pending tasks. The file must have headers: <strong>Date, Jobcard number, Cutting, Jobworker, Embroidery, Printing, Stiching, Finishing</strong>.
       </p>
     </div>
     <div class="form-section">
@@ -69,7 +109,7 @@
         {% csrf_token %}
         <input type="file" name="excel_file" accept=".xlsx, .xls" required class="form-control" style="flex: 1;">
         <button type="submit" class="btn btn-primary">
-          ⬆️ Upload & Import
+          ⬆️ Upload &amp; Import
         </button>
       </form>
     </div>

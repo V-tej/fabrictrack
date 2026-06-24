@@ -11,6 +11,10 @@ urlpatterns = [
     path('cutting-report/', views.cutting_report_view, name='cutting_report'),
     path('stitching-miya-ji/', views.stitching_report_view, name='stitching_report'),
     path('job-work/', views.jobwork_report_view, name='jobwork_report'),
+    path('embroidery/', views.embroidery_report_view, name='embroidery_report'),
+    path('printing/', views.printing_report_view, name='printing_report'),
+    path('singleneedle/', views.singleneedle_report_view, name='singleneedle_report'),
+    path('sewing/', views.sewing_report_view, name='sewing_report'),
     path('finishing-report/', views.finishing_report_view, name='finishing_report'),
     path('users-reports/', views.users_reports_view, name='users_reports'),
     path('submissions/', views.submission_list_view, name='submission_list'),
@@ -28,6 +32,10 @@ urlpatterns = [
     path('cutting-report/<int:pk>/edit/', views.edit_cutting_report, name='edit_cutting_report'),
     path('stitching-miya-ji/<int:pk>/edit/', views.edit_stitching_report, name='edit_stitching_report'),
     path('job-work/<int:pk>/edit/', views.edit_jobwork_report, name='edit_jobwork_report'),
+    path('embroidery/<int:pk>/edit/', views.edit_embroidery_report, name='edit_embroidery_report'),
+    path('printing/<int:pk>/edit/', views.edit_printing_report, name='edit_printing_report'),
+    path('singleneedle/<int:pk>/edit/', views.edit_singleneedle_report, name='edit_singleneedle_report'),
+    path('sewing/<int:pk>/edit/', views.edit_sewing_report, name='edit_sewing_report'),
     path('finishing-report/<int:pk>/edit/', views.edit_finishing_report, name='edit_finishing_report'),
 
     # Delete Routes
@@ -35,6 +43,17 @@ urlpatterns = [
     path('cutting-report/<int:pk>/delete/', views.delete_cutting_report, name='delete_cutting_report'),
     path('stitching-miya-ji/<int:pk>/delete/', views.delete_stitching_report, name='delete_stitching_report'),
     path('job-work/<int:pk>/delete/', views.delete_jobwork_report, name='delete_jobwork_report'),
+    path('embroidery/<int:pk>/delete/', views.delete_embroidery_report, name='delete_embroidery_report'),
+    path('printing/<int:pk>/delete/', views.delete_printing_report, name='delete_printing_report'),
+    path('singleneedle/<int:pk>/delete/', views.delete_singleneedle_report, name='delete_singleneedle_report'),
+    path('sewing/<int:pk>/delete/', views.delete_sewing_report, name='delete_sewing_report'),
     path('finishing-report/<int:pk>/delete/', views.delete_finishing_report, name='delete_finishing_report'),
     path('pending-task/<int:pk>/delete/', views.delete_pending_task, name='delete_pending_task'),
+
+    # User Management Routes
+    path('manage-users/', views.manage_users, name='manage_users'),
+    path('manage-users/add/', views.add_user, name='add_user'),
+    path('manage-users/<int:user_id>/delete/', views.delete_user, name='delete_user'),
+    path('manage-users/<int:user_id>/reset-password/', views.reset_user_password, name='reset_user_password'),
+    path('manage-users/<int:user_id>/update-role/', views.update_user_role, name='update_user_role'),
 ]

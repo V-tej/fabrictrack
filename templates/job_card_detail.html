@@ -321,6 +321,14 @@
           <span class="data-label">Total Meters</span>
           <span class="data-value">{{ cutting_report.total_meters }} m</span>
         </div>
+        <div class="data-item">
+          <span class="data-label">Rate</span>
+          <span class="data-value">{% if cutting_report.rate_name %}{{ cutting_report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Cutting Rate</span>
+          <span class="data-value" style="font-weight: bold; color: var(--primary);">{% if cutting_report.cutting_rate %}₹{{ cutting_report.cutting_rate }}{% else %}—{% endif %}</span>
+        </div>
       </div>
 
       {% if cutting_report.color_details.all %}
@@ -661,20 +669,26 @@
           <span class="data-value">{{ stitching_report.line_out_date|date:"d M Y"|default:"—" }}</span>
         </div>
         <div class="data-item">
-          <span class="data-label">Darji Rate</span>
-          <span class="data-value">{% if stitching_report.darji_rate %}₹{{ stitching_report.darji_rate }}{% else %}—{% endif %}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Folding Rate</span>
-          <span class="data-value">{% if stitching_report.folding_rate %}₹{{ stitching_report.folding_rate }}{% else %}—{% endif %}</span>
-        </div>
-        <div class="data-item">
-          <span class="data-label">Overlock Rate</span>
-          <span class="data-value">{% if stitching_report.overlock_rate %}₹{{ stitching_report.overlock_rate }}{% else %}—{% endif %}</span>
+          <span class="data-label">Rate</span>
+          <span class="data-value">{% if stitching_report.rate_name %}{{ stitching_report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</span>
         </div>
         <div class="data-item">
           <span class="data-label">Total Rate</span>
-          <span class="data-value">{% if stitching_report.total_rate %}₹{{ stitching_report.total_rate }}{% else %}—{% endif %}</span>
+          <span class="data-value" style="font-weight: bold; color: var(--purple);">{% if stitching_report.total_rate %}₹{{ stitching_report.total_rate }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="data-item full-width">
+          <span class="data-label">Description</span>
+          <span class="data-value">
+            {% if stitching_report.rate_description %}
+              {{ stitching_report.rate_description }}
+            {% else %}
+              {% if stitching_report.darji_rate or stitching_report.folding_rate or stitching_report.overlock_rate %}
+                <span style="color:#64748b; font-size:0.9em;">D: {{ stitching_report.darji_rate }} | F: {{ stitching_report.folding_rate }} | O: {{ stitching_report.overlock_rate }}</span>
+              {% else %}
+                —
+              {% endif %}
+            {% endif %}
+          </span>
         </div>
         {% if stitching_report.option_1 %}
         <div class="data-item full-width">
@@ -683,10 +697,35 @@
         </div>
         {% endif %}
       </div>
-      {% if stitching_report.signature %}
+      {% if stitching_report.photos.all %}
       <div class="divider"></div>
-      <div class="data-label">Signature</div>
-      <div class="sig-wrap"><img src="{{ stitching_report.signature }}" alt="Signature"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in stitching_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'p4' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'p4' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if stitching_report.signature or stitching_report.signature_2 %}
+      <div class="divider"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if stitching_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ stitching_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if stitching_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ stitching_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
     {% else %}
@@ -747,14 +786,403 @@
         </div>
         {% endif %}
       </div>
-      {% if jobwork_report.signature %}
+      {% if jobwork_report.signature or jobwork_report.signature_2 %}
       <div class="divider"></div>
-      <div class="data-label">Signature</div>
-      <div class="sig-wrap"><img src="{{ jobwork_report.signature }}" alt="Signature"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if jobwork_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ jobwork_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if jobwork_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ jobwork_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
     {% else %}
     <div class="empty-state">No Job Work report submitted yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Embroidery (P7) ──────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(6,182,212,0.1);">
+      <div class="section-icon" style="background: rgba(6,182,212,0.1);">🧵</div>
+      <span class="section-title" style="color: #06b6d4;">Embroidery</span>
+      <span class="section-status {% if embroidery_report %}status-done{% else %}status-missing{% endif %}">
+        {% if embroidery_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if embroidery_report %}
+    <div class="section-body">
+      <div class="data-grid">
+        <div class="data-item full-width">
+          <span class="data-label">Embroidery Worker</span>
+          <span class="data-value">
+            {% if embroidery_report.master_name and embroidery_report.embroidery_worker %}
+              {{ embroidery_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ embroidery_report.embroidery_worker }})</span>
+            {% elif embroidery_report.master_name %}
+              {{ embroidery_report.master_name }}
+            {% elif embroidery_report.embroidery_worker %}
+              {{ embroidery_report.embroidery_worker }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Type</span>
+          <span class="data-value">{{ embroidery_report.embroidery_type }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Date</span>
+          <span class="data-value">{{ embroidery_report.date|date:"d M Y" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="color: #06b6d4;">{{ embroidery_report.total_pcs }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Pcs Short</span>
+          <span class="data-value">{{ embroidery_report.total_pcs_short }}</span>
+        </div>
+        <div class="data-item full-width">
+          <span class="data-label">Purpose</span>
+          <span class="data-value">{{ embroidery_report.purpose }}</span>
+        </div>
+        {% if embroidery_report.any_other_problem %}
+        <div class="data-item full-width">
+          <span class="data-label">Other Problem</span>
+          <span class="data-value">{{ embroidery_report.any_other_problem }}</span>
+        </div>
+        {% endif %}
+      </div>
+      
+      {% if embroidery_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in embroidery_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'embroidery' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'embroidery' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      {% if embroidery_report.signature or embroidery_report.signature_2 %}
+      <div class="divider"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if embroidery_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ embroidery_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if embroidery_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ embroidery_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">No Embroidery report submitted yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Printing (P8) ────────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(99,102,241,0.1);">
+      <div class="section-icon" style="background: rgba(99,102,241,0.1);">🎨</div>
+      <span class="section-title" style="color: #6366f1;">Printing</span>
+      <span class="section-status {% if printing_report %}status-done{% else %}status-missing{% endif %}">
+        {% if printing_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if printing_report %}
+    <div class="section-body">
+      <div class="data-grid">
+        <div class="data-item full-width">
+          <span class="data-label">Printing Worker</span>
+          <span class="data-value">
+            {% if printing_report.master_name and printing_report.printing_worker %}
+              {{ printing_report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ printing_report.printing_worker }})</span>
+            {% elif printing_report.master_name %}
+              {{ printing_report.master_name }}
+            {% elif printing_report.printing_worker %}
+              {{ printing_report.printing_worker }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Type</span>
+          <span class="data-value">{{ printing_report.printing_type }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Date</span>
+          <span class="data-value">{{ printing_report.date|date:"d M Y" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="color: #6366f1;">{{ printing_report.total_pcs }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Pcs Short</span>
+          <span class="data-value">{{ printing_report.total_pcs_short }}</span>
+        </div>
+        <div class="data-item full-width">
+          <span class="data-label">Purpose</span>
+          <span class="data-value">{{ printing_report.purpose }}</span>
+        </div>
+        {% if printing_report.any_other_problem %}
+        <div class="data-item full-width">
+          <span class="data-label">Other Problem</span>
+          <span class="data-value">{{ printing_report.any_other_problem }}</span>
+        </div>
+        {% endif %}
+      </div>
+      
+      {% if printing_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in printing_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'printing' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'printing' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      {% if printing_report.signature or printing_report.signature_2 %}
+      <div class="divider"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if printing_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ printing_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if printing_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ printing_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">No Printing report submitted yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Singleneedle (P9) ─────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(16,185,129,0.1);">
+      <div class="section-icon" style="background: rgba(16,185,129,0.1);">🪡</div>
+      <span class="section-title" style="color: #10b981;">Singleneedle</span>
+      <span class="section-status {% if singleneedle_report %}status-done{% else %}status-missing{% endif %}">
+        {% if singleneedle_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if singleneedle_report %}
+    <div class="section-body">
+      <div class="data-grid">
+        <div class="data-item full-width">
+          <span class="data-label">Item Name</span>
+          <span class="data-value">{{ singleneedle_report.item_name }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Job Card No.</span>
+          <span class="data-value">{{ singleneedle_report.job_card_no }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: #10b981;">{{ singleneedle_report.total_pcs|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Line In Date</span>
+          <span class="data-value">{{ singleneedle_report.line_in_date|date:"d M Y"|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Line Out Date</span>
+          <span class="data-value">{{ singleneedle_report.line_out_date|date:"d M Y"|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Rate</span>
+          <span class="data-value">{% if singleneedle_report.rate_name %}{{ singleneedle_report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Rate</span>
+          <span class="data-value" style="font-weight: bold; color: #10b981;">{% if singleneedle_report.total_rate %}₹{{ singleneedle_report.total_rate }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="data-item full-width">
+          <span class="data-label">Description</span>
+          <span class="data-value">
+            {% if singleneedle_report.rate_description %}
+              {{ singleneedle_report.rate_description }}
+            {% else %}
+              {% if singleneedle_report.darji_rate or singleneedle_report.folding_rate or singleneedle_report.overlock_rate %}
+                <span style="color:#64748b; font-size:0.9em;">D: {{ singleneedle_report.darji_rate }} | F: {{ singleneedle_report.folding_rate }} | O: {{ singleneedle_report.overlock_rate }}</span>
+              {% else %}
+                —
+              {% endif %}
+            {% endif %}
+          </span>
+        </div>
+        {% if singleneedle_report.option_1 %}
+        <div class="data-item full-width">
+          <span class="data-label">Option 1</span>
+          <span class="data-value">{{ singleneedle_report.option_1 }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if singleneedle_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in singleneedle_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'singleneedle' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'singleneedle' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if singleneedle_report.signature or singleneedle_report.signature_2 %}
+      <div class="divider"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if singleneedle_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ singleneedle_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if singleneedle_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ singleneedle_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">No Singleneedle report submitted yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Sewing (P10) ──────────────────────── -->
+  <div class="section">
+    <div class="section-header" style="background: rgba(59,130,246,0.1);">
+      <div class="section-icon" style="background: rgba(59,130,246,0.1);">🧵</div>
+      <span class="section-title" style="color: #3b82f6;">Sewing</span>
+      <span class="section-status {% if sewing_report %}status-done{% else %}status-missing{% endif %}">
+        {% if sewing_report %}Submitted{% else %}Pending{% endif %}
+      </span>
+    </div>
+    {% if sewing_report %}
+    <div class="section-body">
+      <div class="data-grid">
+        <div class="data-item full-width">
+          <span class="data-label">Item Name</span>
+          <span class="data-value">{{ sewing_report.item_name }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Job Card No.</span>
+          <span class="data-value">{{ sewing_report.job_card_no }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Pcs</span>
+          <span class="data-value" style="font-size:1.2rem; color: #3b82f6;">{{ sewing_report.total_pcs|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Line In Date</span>
+          <span class="data-value">{{ sewing_report.line_in_date|date:"d M Y"|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Line Out Date</span>
+          <span class="data-value">{{ sewing_report.line_out_date|date:"d M Y"|default:"—" }}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Rate</span>
+          <span class="data-value">{% if sewing_report.rate_name %}{{ sewing_report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</span>
+        </div>
+        <div class="data-item">
+          <span class="data-label">Total Rate</span>
+          <span class="data-value" style="font-weight: bold; color: #3b82f6;">{% if sewing_report.total_rate %}₹{{ sewing_report.total_rate }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="data-item full-width">
+          <span class="data-label">Description</span>
+          <span class="data-value">
+            {% if sewing_report.rate_description %}
+              {{ sewing_report.rate_description }}
+            {% else %}
+              {% if sewing_report.darji_rate or sewing_report.folding_rate or sewing_report.overlock_rate %}
+                <span style="color:#64748b; font-size:0.9em;">D: {{ sewing_report.darji_rate }} | F: {{ sewing_report.folding_rate }} | O: {{ sewing_report.overlock_rate }}</span>
+              {% else %}
+                —
+              {% endif %}
+            {% endif %}
+          </span>
+        </div>
+        {% if sewing_report.option_1 %}
+        <div class="data-item full-width">
+          <span class="data-label">Option 1</span>
+          <span class="data-value">{{ sewing_report.option_1 }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if sewing_report.photos.all %}
+      <div class="divider"></div>
+      <div class="data-label">Photos</div>
+      <div class="photo-grid">
+        {% for photo in sewing_report.photos.all %}
+        <a href="{% url 'serve_db_image' 'sewing' photo.id %}" target="_blank">
+          <img src="{% url 'serve_db_image' 'sewing' photo.id %}" alt="Photo">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if sewing_report.signature or sewing_report.signature_2 %}
+      <div class="divider"></div>
+      <div class="data-label">Signatures</div>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% if sewing_report.signature %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Worker Signature</span>
+          <div class="sig-wrap"><img src="{{ sewing_report.signature }}" alt="Worker Signature"></div>
+        </div>
+        {% endif %}
+        {% if sewing_report.signature_2 %}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="data-label" style="font-size: 0.65rem;">Master Signature</span>
+          <div class="sig-wrap"><img src="{{ sewing_report.signature_2 }}" alt="Master Signature"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">No Sewing report submitted yet.</div>
     {% endif %}
   </div>
 

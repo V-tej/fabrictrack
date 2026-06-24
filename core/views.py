@@ -9,8 +9,8 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 import json
 
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement
-from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition
+from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm, EmbroideryReportForm, PrintingReportForm, SingleneedleReportForm, SewingReportForm
 from .utils import export_to_excel, generate_backup_zip
 
 
@@ -80,13 +80,41 @@ def dashboard_view(request):
         ).prefetch_related('photos')[:5]
         context['user_submissions_count'] = FinishingReport.objects.filter(created_by=request.user).count()
 
+    elif person_type == 'P7':
+        context['recent_reports'] = EmbroideryReport.objects.filter(created_by=request.user).select_related(
+            'cutting_report__master_entry', 'created_by'
+        )[:5]
+        context['user_submissions_count'] = EmbroideryReport.objects.filter(created_by=request.user).count()
+
+    elif person_type == 'P8':
+        context['recent_reports'] = PrintingReport.objects.filter(created_by=request.user).select_related(
+            'cutting_report__master_entry', 'created_by'
+        )[:5]
+        context['user_submissions_count'] = PrintingReport.objects.filter(created_by=request.user).count()
+
+    elif person_type == 'P9':
+        context['recent_reports'] = SingleneedleReport.objects.filter(created_by=request.user).select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).prefetch_related('photos')[:5]
+        context['user_submissions_count'] = SingleneedleReport.objects.filter(created_by=request.user).count()
+
+    elif person_type == 'P10':
+        context['recent_reports'] = SewingReport.objects.filter(created_by=request.user).select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).prefetch_related('photos')[:5]
+        context['user_submissions_count'] = SewingReport.objects.filter(created_by=request.user).count()
+
     # Fetch pending tasks
     if person_type == 'ADMIN' or request.user.is_superuser:
         context['pending_tasks'] = JobCardRequirement.objects.filter(
             Q(requires_cutting=True, is_cutting_done=False) |
             Q(requires_jobwork=True, is_jobwork_done=False) |
             Q(requires_stitching=True, is_stitching_done=False) |
-            Q(requires_finishing=True, is_finishing_done=False)
+            Q(requires_finishing=True, is_finishing_done=False) |
+            Q(requires_embroidery=True, is_embroidery_done=False) |
+            Q(requires_printing=True, is_printing_done=False) |
+            Q(requires_singleneedle=True, is_singleneedle_done=False) |
+            Q(requires_sewing=True, is_sewing_done=False)
         )
     elif person_type in ['P1', 'P2', 'P3']:
         context['pending_tasks'] = JobCardRequirement.objects.filter(requires_cutting=True, is_cutting_done=False)
@@ -96,6 +124,14 @@ def dashboard_view(request):
         context['pending_tasks'] = JobCardRequirement.objects.filter(requires_jobwork=True, is_jobwork_done=False)
     elif person_type == 'P6':
         context['pending_tasks'] = JobCardRequirement.objects.filter(requires_finishing=True, is_finishing_done=False)
+    elif person_type == 'P7':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_embroidery=True, is_embroidery_done=False)
+    elif person_type == 'P8':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_printing=True, is_printing_done=False)
+    elif person_type == 'P9':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_singleneedle=True, is_singleneedle_done=False)
+    elif person_type == 'P10':
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_sewing=True, is_sewing_done=False)
     else:
         context['pending_tasks'] = []
 
@@ -139,13 +175,154 @@ def manage_masters(request):
                     messages.success(request, 'Master name deleted successfully.')
             return redirect('manage_masters')
 
-    from .models import MasterName
+        elif 'add_rate' in request.POST:
+            name = request.POST.get('rate_name')
+            description = request.POST.get('rate_description')
+            total_rate = request.POST.get('rate_total')
+            if name and description and total_rate:
+                from .models import RateDefinition
+                rd, created = RateDefinition.objects.get_or_create(
+                    name=name.strip(),
+                    defaults={'description': description.strip(), 'total_rate': total_rate}
+                )
+                if not created:
+                    rd.description = description.strip()
+                    rd.total_rate = total_rate
+                    rd.save()
+                    messages.success(request, f'Successfully updated rate {name}!')
+                else:
+                    messages.success(request, f'Successfully added rate {name}!')
+            return redirect('manage_masters')
+
+        elif 'delete_rate' in request.POST:
+            rate_id = request.POST.get('rate_id')
+            if rate_id:
+                from .models import RateDefinition
+                rate = RateDefinition.objects.filter(id=rate_id).first()
+                if rate:
+                    rate.delete()
+                    messages.success(request, 'Rate definition deleted successfully.')
+            return redirect('manage_masters')
+
+    from .models import MasterName, RateDefinition
     masters = MasterName.objects.all().order_by('department', 'name')
+    rate_definitions = RateDefinition.objects.all().order_by('name')
     context = {
         'masters': masters,
+        'rate_definitions': rate_definitions,
         'person_type': person_type
     }
     return render(request, 'manage_masters.html', context)
+
+# ── Manage Users (Admin Only) ────────────────────────────────────────────────
+
+@login_required
+def manage_users(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('dashboard')
+
+    from django.contrib.auth.models import User
+    users = User.objects.select_related('profile').order_by('username')
+    context = {
+        'users': users,
+        'person_choices': UserProfile.PERSON_CHOICES if hasattr(UserProfile, 'PERSON_CHOICES') else [],
+    }
+    # Load PERSON_CHOICES from models
+    from .models import PERSON_CHOICES
+    context['person_choices'] = PERSON_CHOICES
+    return render(request, 'manage_users.html', context)
+
+
+@login_required
+def add_user(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        from django.contrib.auth.models import User
+        from .models import PERSON_CHOICES
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        person_type = request.POST.get('person_type', 'P1')
+        is_superuser = request.POST.get('is_superuser') == 'on'
+
+        if not username or not password:
+            messages.error(request, 'Username and password are required.')
+            return redirect('manage_users')
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f'Username "{username}" already exists.')
+            return redirect('manage_users')
+
+        user = User.objects.create_user(username=username, password=password)
+        user.is_superuser = is_superuser
+        user.is_staff = is_superuser
+        user.save()
+
+        UserProfile.objects.get_or_create(user=user, defaults={'person_type': person_type})
+        messages.success(request, f'User "{username}" created successfully!')
+    return redirect('manage_users')
+
+
+@login_required
+def delete_user(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission.')
+        return redirect('dashboard')
+
+    from django.contrib.auth.models import User
+    if request.method == 'POST':
+        target_user = get_object_or_404(User, pk=user_id)
+        if target_user == request.user:
+            messages.error(request, 'You cannot delete your own account.')
+        else:
+            uname = target_user.username
+            target_user.delete()
+            messages.success(request, f'User "{uname}" deleted successfully.')
+    return redirect('manage_users')
+
+
+@login_required
+def reset_user_password(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission.')
+        return redirect('dashboard')
+
+    from django.contrib.auth.models import User
+    if request.method == 'POST':
+        target_user = get_object_or_404(User, pk=user_id)
+        new_password = request.POST.get('new_password', '').strip()
+        if not new_password:
+            messages.error(request, 'Password cannot be empty.')
+        else:
+            target_user.set_password(new_password)
+            target_user.save()
+            messages.success(request, f'Password for "{target_user.username}" reset successfully.')
+    return redirect('manage_users')
+
+
+@login_required
+def update_user_role(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, 'You do not have permission.')
+        return redirect('dashboard')
+
+    from django.contrib.auth.models import User
+    if request.method == 'POST':
+        target_user = get_object_or_404(User, pk=user_id)
+        person_type = request.POST.get('person_type', 'P1')
+        is_superuser = request.POST.get('is_superuser') == 'on'
+        profile, _ = UserProfile.objects.get_or_create(user=target_user)
+        profile.person_type = person_type
+        profile.save()
+        target_user.is_superuser = is_superuser
+        target_user.is_staff = is_superuser
+        target_user.save()
+        messages.success(request, f'Role for "{target_user.username}" updated successfully.')
+    return redirect('manage_users')
+
 
 # ── Master Entry (Admin) ─────────────────────────────────────────────────────
 
@@ -167,6 +344,10 @@ def create_master_entry(request):
                     'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
                     'requires_stitching': form.cleaned_data.get('requires_stitching', True),
                     'requires_finishing': form.cleaned_data.get('requires_finishing', True),
+                    'requires_embroidery': form.cleaned_data.get('requires_embroidery', True),
+                    'requires_printing': form.cleaned_data.get('requires_printing', True),
+                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', True),
+                    'requires_sewing': form.cleaned_data.get('requires_sewing', True),
                 }
             )
 
@@ -202,6 +383,16 @@ def cutting_report_view(request):
         str(e.id): e.job_card_number for e in master_entries_qs
     })
 
+    from .models import RateDefinition
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     if request.method == 'POST':
         form = CuttingReportForm(request.POST, request.FILES)
         form.fields['master_entry'].queryset = master_entries_qs
@@ -214,6 +405,7 @@ def cutting_report_view(request):
                 'form': form,
                 'master_entries': master_entries_qs,
                 'master_entries_json': master_entries_json,
+                'rate_definitions_json': rate_definitions_json,
                 'is_admin': is_admin,
             })
 
@@ -223,6 +415,7 @@ def cutting_report_view(request):
                 'form': form,
                 'master_entries': master_entries_qs,
                 'master_entries_json': master_entries_json,
+                'rate_definitions_json': rate_definitions_json,
                 'is_admin': is_admin,
             })
 
@@ -236,7 +429,9 @@ def cutting_report_view(request):
                 if ptype in ['P1', 'P2', 'P3']:
                     report.report_type = ptype
 
-            
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.cutting_rate = report.rate_definition.total_rate
             
             report.save()
 
@@ -270,8 +465,6 @@ def cutting_report_view(request):
                     photo_content_type=photo_file.content_type
                 )
 
-
-
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=True)
 
@@ -287,6 +480,7 @@ def cutting_report_view(request):
         'form': form,
         'master_entries': master_entries_qs,
         'master_entries_json': master_entries_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -313,6 +507,15 @@ def stitching_report_view(request):
         } for cr in cutting_reports_qs
     })
 
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     if request.method == 'POST':
         form = StitchingReportForm(request.POST, request.FILES)
         form.fields['cutting_report'].queryset = cutting_reports_qs
@@ -325,6 +528,10 @@ def stitching_report_view(request):
 
             report = form.save(commit=False)
             report.created_by = request.user
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos[:5]:
@@ -334,8 +541,6 @@ def stitching_report_view(request):
                     photo_name=p.name,
                     photo_content_type=p.content_type
                 )
-
-
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=True)
@@ -352,6 +557,7 @@ def stitching_report_view(request):
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -404,6 +610,286 @@ def jobwork_report_view(request):
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'is_admin': is_admin,
+    })
+
+
+# ── P7: Embroidery Report ──────────────────────────────────────────────
+
+@login_required
+def embroidery_report_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+
+    cutting_reports_qs = CuttingReport.objects.filter(
+        embroidery_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_embroidery=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
+
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    if request.method == 'POST':
+        form = EmbroideryReportForm(request.POST, request.FILES)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+        if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('embroidery_report')
+
+            report = form.save(commit=False)
+            report.created_by = request.user
+            report.save()
+
+            for p in photos[:5]:
+                EmbroideryReportPhoto.objects.create(
+                    embroidery_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_embroidery_done=True)
+
+            messages.success(request, 'Embroidery submitted successfully!')
+            return redirect('submission_list')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = EmbroideryReportForm()
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+    return render(request, 'embroidery_form.html', {
+        'form': form,
+        'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'is_admin': is_admin,
+    })
+
+
+# ── P8: Printing Report ────────────────────────────────────────────────
+
+@login_required
+def printing_report_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+
+    cutting_reports_qs = CuttingReport.objects.filter(
+        printing_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_printing=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
+
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    if request.method == 'POST':
+        form = PrintingReportForm(request.POST, request.FILES)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+        if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('printing_report')
+
+            report = form.save(commit=False)
+            report.created_by = request.user
+            report.save()
+
+            for p in photos[:5]:
+                PrintingReportPhoto.objects.create(
+                    printing_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_printing_done=True)
+
+            messages.success(request, 'Printing submitted successfully!')
+            return redirect('submission_list')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = PrintingReportForm()
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+    return render(request, 'printing_form.html', {
+        'form': form,
+        'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'is_admin': is_admin,
+    })
+
+
+# ── P9: Singleneedle Report ───────────────────────────────────────────
+
+@login_required
+def singleneedle_report_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+
+    cutting_reports_qs = CuttingReport.objects.filter(
+        singleneedle_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_singleneedle=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
+
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
+    if request.method == 'POST':
+        form = SingleneedleReportForm(request.POST, request.FILES)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+        if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('singleneedle_report')
+
+            report = form.save(commit=False)
+            report.created_by = request.user
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
+            report.save()
+
+            for p in photos[:5]:
+                SingleneedleReportPhoto.objects.create(
+                    singleneedle_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_singleneedle_done=True)
+
+            messages.success(request, 'Singleneedle submitted successfully!')
+            return redirect('submission_list')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = SingleneedleReportForm()
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+    return render(request, 'singleneedle_form.html', {
+        'form': form,
+        'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin,
+    })
+
+
+# ── P10: Sewing Report ───────────────────────────────────────────────────
+
+@login_required
+def sewing_report_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+
+    cutting_reports_qs = CuttingReport.objects.filter(
+        sewing_reports__isnull=True,
+        job_card_no__in=JobCardRequirement.objects.filter(requires_sewing=True).values('job_card_no')
+    ).select_related('master_entry').order_by('-created_at')
+
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
+    if request.method == 'POST':
+        form = SewingReportForm(request.POST, request.FILES)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+        if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('sewing_report')
+
+            report = form.save(commit=False)
+            report.created_by = request.user
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
+            report.save()
+
+            for p in photos[:5]:
+                SewingReportPhoto.objects.create(
+                    sewing_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            # Mark pending task as done
+            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_sewing_done=True)
+
+            messages.success(request, 'Sewing submitted successfully!')
+            return redirect('submission_list')
+        else:
+            messages.error(request, 'Please fix the errors below.')
+    else:
+        form = SewingReportForm()
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+
+    return render(request, 'sewing_form.html', {
+        'form': form,
+        'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -507,6 +993,10 @@ def submission_list_view(request):
         p4_qs = StitchingReport.objects.none()
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
     elif person_type == 'P4' and not request.user.is_superuser:
         reports_qs = CuttingReport.objects.none()
         p4_qs = StitchingReport.objects.filter(
@@ -514,6 +1004,10 @@ def submission_list_view(request):
         ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
     elif person_type == 'P5' and not request.user.is_superuser:
         reports_qs = CuttingReport.objects.none()
         p4_qs = StitchingReport.objects.none()
@@ -521,11 +1015,63 @@ def submission_list_view(request):
             created_by=request.user
         ).select_related('cutting_report__master_entry').order_by('-created_at')
         p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
     elif person_type == 'P6' and not request.user.is_superuser:
         reports_qs = CuttingReport.objects.none()
         p4_qs = StitchingReport.objects.none()
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.filter(
+            created_by=request.user
+        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
+    elif person_type == 'P7' and not request.user.is_superuser:
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.filter(
+            created_by=request.user
+        ).select_related('cutting_report__master_entry').order_by('-created_at')
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
+    elif person_type == 'P8' and not request.user.is_superuser:
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.filter(
+            created_by=request.user
+        ).select_related('cutting_report__master_entry').order_by('-created_at')
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.none()
+    elif person_type == 'P9' and not request.user.is_superuser:
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.filter(
+            created_by=request.user
+        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        p10_qs = SewingReport.objects.none()
+    elif person_type == 'P10' and not request.user.is_superuser:
+        reports_qs = CuttingReport.objects.none()
+        p4_qs = StitchingReport.objects.none()
+        p5_qs = JobWorkReport.objects.none()
+        p6_qs = FinishingReport.objects.none()
+        p7_qs = EmbroideryReport.objects.none()
+        p8_qs = PrintingReport.objects.none()
+        p9_qs = SingleneedleReport.objects.none()
+        p10_qs = SewingReport.objects.filter(
             created_by=request.user
         ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
     else:
@@ -542,12 +1088,30 @@ def submission_list_view(request):
         p6_qs = FinishingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
+        p7_qs = EmbroideryReport.objects.select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).order_by('-created_at')
+        p8_qs = PrintingReport.objects.select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).order_by('-created_at')
+        p9_qs = SingleneedleReport.objects.select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).prefetch_related('photos').order_by('-created_at')
+        p10_qs = SewingReport.objects.select_related(
+            'cutting_report__master_entry', 'created_by'
+        ).prefetch_related('photos').order_by('-created_at')
 
     reports = []
     p4_in_progress = []
     p4_completed = []
     p5_reports = []
     p6_reports = []
+    p7_reports = []
+    p8_reports = []
+    p9_in_progress = []
+    p9_completed = []
+    p10_in_progress = []
+    p10_completed = []
     is_paginated = False
     page_obj = None
 
@@ -573,6 +1137,24 @@ def submission_list_view(request):
             paginator = Paginator(p6_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
             p6_reports = page_obj
+        elif filter_param == 'p7':
+            paginator = Paginator(p7_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p7_reports = page_obj
+        elif filter_param == 'p8':
+            paginator = Paginator(p8_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p8_reports = page_obj
+        elif filter_param == 'p9':
+            paginator = Paginator(p9_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p9_in_progress = [r for r in page_obj if not r.line_out_date]
+            p9_completed = [r for r in page_obj if r.line_out_date]
+        elif filter_param == 'p10':
+            paginator = Paginator(p10_qs, ITEMS_PER_PAGE)
+            page_obj = paginator.get_page(page_number)
+            p10_in_progress = [r for r in page_obj if not r.line_out_date]
+            p10_completed = [r for r in page_obj if r.line_out_date]
     else:
         # Overview mode: show latest 10 items for each list to ensure fast rendering
         reports = reports_qs[:ITEMS_OVERVIEW]
@@ -581,6 +1163,14 @@ def submission_list_view(request):
         p4_completed = [r for r in p4_overview if r.line_out_date]
         p5_reports = p5_qs[:ITEMS_OVERVIEW]
         p6_reports = p6_qs[:ITEMS_OVERVIEW]
+        p7_reports = p7_qs[:ITEMS_OVERVIEW]
+        p8_reports = p8_qs[:ITEMS_OVERVIEW]
+        p9_overview = p9_qs[:ITEMS_OVERVIEW]
+        p9_in_progress = [r for r in p9_overview if not r.line_out_date]
+        p9_completed = [r for r in p9_overview if r.line_out_date]
+        p10_overview = p10_qs[:ITEMS_OVERVIEW]
+        p10_in_progress = [r for r in p10_overview if not r.line_out_date]
+        p10_completed = [r for r in p10_overview if r.line_out_date]
 
     return render(request, 'submission_list.html', {
         'reports': reports,
@@ -588,6 +1178,12 @@ def submission_list_view(request):
         'p4_completed': p4_completed,
         'p5_reports': p5_reports,
         'p6_reports': p6_reports,
+        'p7_reports': p7_reports,
+        'p8_reports': p8_reports,
+        'p9_in_progress': p9_in_progress,
+        'p9_completed': p9_completed,
+        'p10_in_progress': p10_in_progress,
+        'p10_completed': p10_completed,
         'person_type': person_type,
         'filter_param': filter_param,
         'is_paginated': is_paginated,
@@ -598,6 +1194,10 @@ def submission_list_view(request):
         'show_p4': not filter_param or filter_param == 'p4',
         'show_p5': not filter_param or filter_param == 'p5',
         'show_p6': not filter_param or filter_param == 'p6',
+        'show_p7': not filter_param or filter_param == 'p7',
+        'show_p8': not filter_param or filter_param == 'p8',
+        'show_p9': not filter_param or filter_param == 'p9',
+        'show_p10': not filter_param or filter_param == 'p10',
     })
 
 
@@ -613,11 +1213,19 @@ def users_reports_view(request):
     p4_qs = StitchingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
     p5_qs = JobWorkReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
     p6_qs = FinishingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p7_qs = EmbroideryReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
+    p8_qs = PrintingReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
+    p9_qs = SingleneedleReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p10_qs = SewingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
 
     if query:
         p4_qs = p4_qs.filter(job_card_no__icontains=query)
         p5_qs = p5_qs.filter(job_card_no__icontains=query)
         p6_qs = p6_qs.filter(cutting_report__job_card_no__icontains=query)
+        p7_qs = p7_qs.filter(job_card_no__icontains=query)
+        p8_qs = p8_qs.filter(job_card_no__icontains=query)
+        p9_qs = p9_qs.filter(job_card_no__icontains=query)
+        p10_qs = p10_qs.filter(job_card_no__icontains=query)
         limit = 50
     else:
         limit = 5
@@ -625,6 +1233,12 @@ def users_reports_view(request):
     # Split P4 reports
     p4_in_progress = [r for r in p4_qs if not r.line_out_date][:limit]
     p4_completed = [r for r in p4_qs if r.line_out_date][:limit]
+    # Split P9 reports
+    p9_in_progress = [r for r in p9_qs if not r.line_out_date][:limit]
+    p9_completed = [r for r in p9_qs if r.line_out_date][:limit]
+    # Split P10 reports
+    p10_in_progress = [r for r in p10_qs if not r.line_out_date][:limit]
+    p10_completed = [r for r in p10_qs if r.line_out_date][:limit]
 
     context = {
         'search_query': query,
@@ -634,10 +1248,20 @@ def users_reports_view(request):
         'stitching_reports_count': StitchingReport.objects.count(),
         'jobwork_reports_count': JobWorkReport.objects.count(),
         'finishing_reports_count': FinishingReport.objects.count(),
+        'embroidery_reports_count': EmbroideryReport.objects.count(),
+        'printing_reports_count': PrintingReport.objects.count(),
+        'singleneedle_reports_count': SingleneedleReport.objects.count(),
+        'sewing_reports_count': SewingReport.objects.count(),
         'recent_p4_in_progress': p4_in_progress,
         'recent_p4_completed': p4_completed,
         'recent_jobwork_reports': p5_qs[:limit],
         'recent_finishing_reports': p6_qs[:limit],
+        'recent_embroidery_reports': p7_qs[:limit],
+        'recent_printing_reports': p8_qs[:limit],
+        'recent_p9_in_progress': p9_in_progress,
+        'recent_p9_completed': p9_completed,
+        'recent_p10_in_progress': p10_in_progress,
+        'recent_p10_completed': p10_completed,
     }
     return render(request, 'users_reports.html', context)
 
@@ -658,11 +1282,15 @@ def job_card_detail_view(request, pk):
     p2_report = all_cutting.filter(report_type='P2').first() if (show_all or report_type == 'P2') else None
     p3_report = all_cutting.filter(report_type='P3').first() if (show_all or report_type == 'P3') else None
 
-    # Link subsequent reports (P4, P5, P6) to whatever cutting report was submitted
+    # Link subsequent reports (P4, P5, P6, P7, P8, P9, P10) to whatever cutting report was submitted
     base_cutting = all_cutting.first()
     stitching_report = base_cutting.stitching_reports.first() if (base_cutting and (show_all or report_type == 'P4')) else None
     jobwork_report = base_cutting.jobwork_reports.first() if (base_cutting and (show_all or report_type == 'P5')) else None
     finishing_report = base_cutting.finishing_reports.first() if (base_cutting and (show_all or report_type == 'P6')) else None
+    embroidery_report = base_cutting.embroidery_reports.first() if (base_cutting and (show_all or report_type == 'P7')) else None
+    printing_report = base_cutting.printing_reports.first() if (base_cutting and (show_all or report_type == 'P8')) else None
+    singleneedle_report = base_cutting.singleneedle_reports.first() if (base_cutting and (show_all or report_type == 'P9')) else None
+    sewing_report = base_cutting.sewing_reports.first() if (base_cutting and (show_all or report_type == 'P10')) else None
 
     return render(request, 'job_card_detail.html', {
         'master_entry': master_entry,
@@ -672,6 +1300,10 @@ def job_card_detail_view(request, pk):
         'stitching_report': stitching_report,
         'jobwork_report': jobwork_report,
         'finishing_report': finishing_report,
+        'embroidery_report': embroidery_report,
+        'printing_report': printing_report,
+        'singleneedle_report': singleneedle_report,
+        'sewing_report': sewing_report,
         'report_type': report_type,
     })
 
@@ -790,6 +1422,10 @@ def import_job_cards_view(request):
                 jobwork_req = is_yes(get_val('jobwork', 'jobworker'))
                 stitching_req = is_yes(get_val('stitching', 'stiching'))
                 finishing_req = is_yes(get_val('finishing'))
+                embroidery_req = is_yes(get_val('embroidery'))
+                printing_req = is_yes(get_val('printing'))
+                singleneedle_req = is_yes(get_val('singleneedle'))
+                sewing_req = is_yes(get_val('sewing'))
                 
                 # Parse date if possible
                 date_val = row[header_map.get('date', -1)]
@@ -811,6 +1447,10 @@ def import_job_cards_view(request):
                         'requires_jobwork': jobwork_req,
                         'requires_stitching': stitching_req,
                         'requires_finishing': finishing_req,
+                        'requires_embroidery': embroidery_req,
+                        'requires_printing': printing_req,
+                        'requires_singleneedle': singleneedle_req,
+                        'requires_sewing': sewing_req,
                     }
                 )
 
@@ -877,6 +1517,10 @@ def edit_master_entry(request, pk):
                     'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
                     'requires_stitching': form.cleaned_data.get('requires_stitching', True),
                     'requires_finishing': form.cleaned_data.get('requires_finishing', True),
+                    'requires_embroidery': form.cleaned_data.get('requires_embroidery', True),
+                    'requires_printing': form.cleaned_data.get('requires_printing', True),
+                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', True),
+                    'requires_sewing': form.cleaned_data.get('requires_sewing', True),
                 }
             )
             
@@ -892,6 +1536,10 @@ def edit_master_entry(request, pk):
                 'requires_jobwork': 'True' if req.requires_jobwork else 'False',
                 'requires_stitching': 'True' if req.requires_stitching else 'False',
                 'requires_finishing': 'True' if req.requires_finishing else 'False',
+                'requires_embroidery': 'True' if req.requires_embroidery else 'False',
+                'requires_printing': 'True' if req.requires_printing else 'False',
+                'requires_singleneedle': 'True' if req.requires_singleneedle else 'False',
+                'requires_sewing': 'True' if req.requires_sewing else 'False',
             }
         form = MasterEntryForm(instance=entry, initial=initial_data)
     return render(request, 'master_entry_form.html', {'form': form, 'is_edit': True})
@@ -933,11 +1581,24 @@ def edit_cutting_report(request, pk):
         } for c in colors_qs
     ])
     
+    from .models import RateDefinition
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+    
     if request.method == 'POST':
         form = CuttingReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.cutting_rate = report.rate_definition.total_rate
             report.save()
             
             # Re-save dynamic color size breakdown
@@ -977,7 +1638,8 @@ def edit_cutting_report(request, pk):
     return render(request, 'person1_form.html', {
         'form': form, 'master_entries': master_entries_qs,
         'master_entries_json': master_entries_json, 'is_admin': is_admin, 'is_edit': True, 'report': report,
-        'colors_json': colors_json
+        'colors_json': colors_json,
+        'rate_definitions_json': rate_definitions_json
     })
 
 @login_required
@@ -985,6 +1647,7 @@ def delete_cutting_report(request, pk):
     report = get_object_or_404(CuttingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=False)
         report.delete()
         messages.success(request, 'Cutting Report deleted.')
         return redirect('submission_list')
@@ -1004,6 +1667,16 @@ def edit_stitching_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
         photo_to_delete = get_object_or_404(StitchingReportPhoto, pk=delete_photo_id, stitching_report=report)
@@ -1022,6 +1695,10 @@ def edit_stitching_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos:
@@ -1039,7 +1716,9 @@ def edit_stitching_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
     return render(request, 'stitching_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
-        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
@@ -1047,10 +1726,171 @@ def delete_stitching_report(request, pk):
     report = get_object_or_404(StitchingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=False)
         report.delete()
         messages.success(request, 'Stitching deleted.')
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
+@login_required
+def edit_singleneedle_report(request, pk):
+    report = get_object_or_404(SingleneedleReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(singleneedle_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(SingleneedleReportPhoto, pk=delete_photo_id, singleneedle_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_singleneedle_report', pk=report.id)
+
+    if request.method == 'POST':
+        form = SingleneedleReportForm(request.POST, request.FILES, instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_singleneedle_report', pk=report.id)
+
+        if form.is_valid():
+            report = form.save(commit=False)
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
+            report.save()
+
+            for p in photos:
+                SingleneedleReportPhoto.objects.create(
+                    singleneedle_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            messages.success(request, 'Singleneedle updated.')
+            return redirect('submission_list')
+    else:
+        form = SingleneedleReportForm(instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+    return render(request, 'singleneedle_form.html', {
+        'form': form, 'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
+    })
+
+@login_required
+def delete_singleneedle_report(request, pk):
+    report = get_object_or_404(SingleneedleReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_singleneedle_done=False)
+        report.delete()
+        messages.success(request, 'Singleneedle deleted.')
+        return redirect('submission_list')
+    return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
+
+@login_required
+def edit_sewing_report(request, pk):
+    report = get_object_or_404(SewingReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(sewing_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(SewingReportPhoto, pk=delete_photo_id, sewing_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_sewing_report', pk=report.id)
+
+    if request.method == 'POST':
+        form = SewingReportForm(request.POST, request.FILES, instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_sewing_report', pk=report.id)
+
+        if form.is_valid():
+            report = form.save(commit=False)
+            if report.rate_definition:
+                report.rate_name = report.rate_definition.name
+                report.rate_description = report.rate_definition.description
+                report.total_rate = report.rate_definition.total_rate
+            report.save()
+
+            for p in photos:
+                SewingReportPhoto.objects.create(
+                    sewing_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            messages.success(request, 'Sewing updated.')
+            return redirect('submission_list')
+    else:
+        form = SewingReportForm(instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+    return render(request, 'sewing_form.html', {
+        'form': form, 'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
+    })
+
+@login_required
+def delete_sewing_report(request, pk):
+    report = get_object_or_404(SewingReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_sewing_done=False)
+        report.delete()
+        messages.success(request, 'Sewing deleted.')
+        return redirect('submission_list')
+    return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
 
 @login_required
 def edit_jobwork_report(request, pk):
@@ -1088,8 +1928,137 @@ def delete_jobwork_report(request, pk):
     report = get_object_or_404(JobWorkReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=False)
         report.delete()
         messages.success(request, 'Job Work deleted.')
+        return redirect('submission_list')
+    return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
+@login_required
+def edit_embroidery_report(request, pk):
+    report = get_object_or_404(EmbroideryReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(embroidery_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(EmbroideryReportPhoto, pk=delete_photo_id, embroidery_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_embroidery_report', pk=report.id)
+
+    if request.method == 'POST':
+        form = EmbroideryReportForm(request.POST, request.FILES, instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_embroidery_report', pk=report.id)
+
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
+
+            for p in photos:
+                EmbroideryReportPhoto.objects.create(
+                    embroidery_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            messages.success(request, 'Embroidery updated.')
+            return redirect('submission_list')
+    else:
+        form = EmbroideryReportForm(instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+    return render(request, 'embroidery_form.html', {
+        'form': form, 'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+    })
+
+@login_required
+def delete_embroidery_report(request, pk):
+    report = get_object_or_404(EmbroideryReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_embroidery_done=False)
+        report.delete()
+        messages.success(request, 'Embroidery deleted.')
+        return redirect('submission_list')
+    return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
+
+@login_required
+def edit_printing_report(request, pk):
+    report = get_object_or_404(PrintingReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN')
+    cutting_reports_qs = CuttingReport.objects.filter(Q(printing_reports__isnull=True) | Q(id=report.cutting_report_id)).distinct().select_related('master_entry').order_by('-created_at')
+    cutting_reports_json = json.dumps({
+        str(cr.id): {
+            'master_entry_id': cr.master_entry_id,
+            'job_card_no': cr.job_card_no,
+            'item_name': cr.item_name,
+            'total_pcs': cr.total_pcs
+        } for cr in cutting_reports_qs
+    })
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(PrintingReportPhoto, pk=delete_photo_id, printing_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_printing_report', pk=report.id)
+
+    if request.method == 'POST':
+        form = PrintingReportForm(request.POST, request.FILES, instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_printing_report', pk=report.id)
+
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.created_at = timezone.now()
+            report.save()
+
+            for p in photos:
+                PrintingReportPhoto.objects.create(
+                    printing_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
+            messages.success(request, 'Printing updated.')
+            return redirect('submission_list')
+    else:
+        form = PrintingReportForm(instance=report)
+        form.fields['cutting_report'].queryset = cutting_reports_qs
+    return render(request, 'printing_form.html', {
+        'form': form, 'cutting_reports': cutting_reports_qs,
+        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+    })
+
+@login_required
+def delete_printing_report(request, pk):
+    report = get_object_or_404(PrintingReport, pk=pk)
+    if not check_edit_permission(request, report): raise PermissionDenied
+    if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_printing_done=False)
+        report.delete()
+        messages.success(request, 'Printing deleted.')
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -1147,6 +2116,7 @@ def delete_finishing_report(request, pk):
     report = get_object_or_404(FinishingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_finishing_done=False)
         report.delete()
         messages.success(request, 'Finishing Report deleted.')
         return redirect('submission_list')
@@ -1182,6 +2152,14 @@ def serve_db_image(request, model_name, photo_id):
         photo = get_object_or_404(FinishingReportPhoto, pk=photo_id)
     elif model_name == 'p4':
         photo = get_object_or_404(StitchingReportPhoto, pk=photo_id)
+    elif model_name == 'embroidery':
+        photo = get_object_or_404(EmbroideryReportPhoto, pk=photo_id)
+    elif model_name == 'printing':
+        photo = get_object_or_404(PrintingReportPhoto, pk=photo_id)
+    elif model_name == 'singleneedle':
+        photo = get_object_or_404(SingleneedleReportPhoto, pk=photo_id)
+    elif model_name == 'sewing':
+        photo = get_object_or_404(SewingReportPhoto, pk=photo_id)
     else:
         raise Http404("Invalid photo model")
     

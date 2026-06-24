@@ -53,6 +53,38 @@
       </a>
       {% endif %}
 
+      {% if user.profile.person_type == 'P7' %}
+      <a href="{% url 'embroidery_report' %}" class="action-card primary" id="action-embroidery">
+        <div class="action-icon">🧵</div>
+        <div class="action-label">Embroidery Report</div>
+        <div class="action-desc">Submit a new embroidery report</div>
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P8' %}
+      <a href="{% url 'printing_report' %}" class="action-card primary" id="action-printing">
+        <div class="action-icon">🎨</div>
+        <div class="action-label">Printing Report</div>
+        <div class="action-desc">Submit a new printing report</div>
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P9' %}
+      <a href="{% url 'singleneedle_report' %}" class="action-card primary" id="action-singleneedle">
+        <div class="action-icon">🪡</div>
+        <div class="action-label">Singleneedle Report</div>
+        <div class="action-desc">Submit a new singleneedle report</div>
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P10' %}
+      <a href="{% url 'sewing_report' %}" class="action-card primary" id="action-sewing">
+        <div class="action-icon">🧵</div>
+        <div class="action-label">Sewing Report</div>
+        <div class="action-desc">Submit a new sewing report</div>
+      </a>
+      {% endif %}
+
       <a href="{% url 'submission_list' %}" class="action-card" id="action-submissions">
         <div class="action-icon">📊</div>
         <div class="action-label">View Submissions</div>
@@ -87,7 +119,11 @@
             {% if person_type == 'ADMIN' or user.is_superuser %}
               <th>Cutting</th>
               <th>Jobwork</th>
+              <th>Embroidery</th>
+              <th>Printing</th>
               <th>Stitching</th>
+              <th>Singleneedle</th>
+              <th>Sewing</th>
               <th>Finishing</th>
             {% endif %}
             <th>Action</th>
@@ -110,8 +146,28 @@
                 {% else %}—{% endif %}
               </td>
               <td>
+                {% if task.requires_embroidery %}
+                  {% if task.is_embroidery_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_printing %}
+                  {% if task.is_printing_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
                 {% if task.requires_stitching %}
                   {% if task.is_stitching_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_singleneedle %}
+                  {% if task.is_singleneedle_done %}✅ Done{% else %}❌ Pending{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_sewing %}
+                  {% if task.is_sewing_done %}✅ Done{% else %}❌ Pending{% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
@@ -129,11 +185,35 @@
                 {% else %}
                   <a href="{% url 'stitching_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
+              {% elif person_type == 'P9' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start singleneedle until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'singleneedle_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P10' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start sewing until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'sewing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
               {% elif person_type == 'P5' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start job work until cutting is done.'); return false;">Start Report →</a>
                 {% else %}
                   <a href="{% url 'jobwork_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P7' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start embroidery until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'embroidery_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P8' %}
+                {% if task.requires_cutting and not task.is_cutting_done %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start printing until cutting is done.'); return false;">Start Report →</a>
+                {% else %}
+                  <a href="{% url 'printing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P6' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
@@ -176,10 +256,14 @@
               <th>Item</th><th>CR Lakshay Master</th>
             {% elif person_type == 'P3' %}
               <th>Item</th><th>CR Rahul Master</th>
-            {% elif person_type == 'P4' %}
+            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' %}
               <th>Item</th><th>Total Rate</th>
             {% elif person_type == 'P5' %}
               <th>Jobworker</th><th>Type</th>
+            {% elif person_type == 'P7' %}
+              <th>Embroidery Worker</th><th>Type</th>
+            {% elif person_type == 'P8' %}
+              <th>Printing Worker</th><th>Type</th>
             {% elif person_type == 'P6' %}
               <th>Date</th><th>Packed</th>
             {% endif %}
@@ -194,7 +278,7 @@
             <td>
               {% if person_type == 'P6' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.lot_no }}</span>
-              {% elif person_type == 'P5' or person_type == 'P4' %}
+              {% elif person_type == 'P5' or person_type == 'P4' or person_type == 'P7' or person_type == 'P8' or person_type == 'P9' or person_type == 'P10' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.job_card_no }}</span>
               {% elif person_type == 'P2' or person_type == 'P3' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.master_entry.job_card_number }}</span>
@@ -229,7 +313,7 @@
                   —
                 {% endif %}
               </td>
-            {% elif person_type == 'P4' %}
+            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' %}
               <td>{{ report.item_name }}</td><td>₹{{ report.total_rate }}</td>
             {% elif person_type == 'P5' %}
               <td>
@@ -243,6 +327,30 @@
                   —
                 {% endif %}
               </td><td>{{ report.job_work_type }}</td>
+            {% elif person_type == 'P7' %}
+              <td>
+                {% if report.master_name and report.embroidery_worker %}
+                  {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.embroidery_worker }})</span>
+                {% elif report.master_name %}
+                  {{ report.master_name }}
+                {% elif report.embroidery_worker %}
+                  {{ report.embroidery_worker }}
+                {% else %}
+                  —
+                {% endif %}
+              </td><td>{{ report.embroidery_type }}</td>
+            {% elif person_type == 'P8' %}
+              <td>
+                {% if report.master_name and report.printing_worker %}
+                  {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.printing_worker }})</span>
+                {% elif report.master_name %}
+                  {{ report.master_name }}
+                {% elif report.printing_worker %}
+                  {{ report.printing_worker }}
+                {% else %}
+                  —
+                {% endif %}
+              </td><td>{{ report.printing_type }}</td>
             {% elif person_type == 'P6' %}
               <td>{{ report.date|date:"d-b-Y" }}</td><td>{{ report.total_pcs_packed }}</td>
             {% endif %}
