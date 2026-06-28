@@ -45,7 +45,7 @@
       🪡 Singleneedle
     </a>
     {% endif %}
-    {% if user.profile.person_type in 'P10,ADMIN' or user.is_superuser %}
+    {% if user.profile.person_type == 'P10' or user.profile.person_type == 'ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p10" class="btn {% if filter_param == 'p10' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🧵 Sewing
     </a>
@@ -978,7 +978,7 @@
   </div>
   {% endif %}
 
-  {% if show_p10 and user.profile.person_type in 'P10,ADMIN' or show_p10 and user.is_superuser %}
+  {% if show_p10 and user.profile.person_type == 'P10' or show_p10 and user.profile.person_type == 'ADMIN' or show_p10 and user.is_superuser %}
   <!-- Sewing Section -->
   <div class="section-card" id="p10SubmissionsCard" style="margin-top: 2rem;">
     <div class="section-header-row">
