@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     UserProfile, MasterEntry, CuttingReport, CuttingReportPhoto,
-    StitchingReport, StitchingReportPhoto, JobWorkReport,
+    StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto,
     FinishingReport, FinishingReportPhoto, EmbroideryReport,
     EmbroideryReportPhoto, PrintingReport, PrintingReportPhoto,
     SingleneedleReport, SingleneedleReportPhoto, SewingReport,
@@ -86,15 +86,27 @@ class StitchingReportPhotoAdmin(admin.ModelAdmin):
     list_display = ['stitching_report', 'photo_name', 'uploaded_at']
 
 
+class JobWorkReportPhotoInline(admin.TabularInline):
+    model = JobWorkReportPhoto
+    extra = 0
+    readonly_fields = ['uploaded_at']
+
+
 @admin.register(JobWorkReport)
 class JobWorkReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'master_name', 'jobworker', 'job_work_type',
+        'cutting_report', 'master_name', 'jobworker', 'jobwork_in', 'jobwork_out',
         'job_card_no', 'total_pcs', 'created_by', 'created_at'
     ]
-    list_filter = ['date', 'job_work_type', 'created_by']
+    list_filter = ['jobwork_in', 'jobwork_out', 'created_by']
     search_fields = ['master_name', 'finishing_master_name', 'job_card_no']
+    inlines = [JobWorkReportPhotoInline]
     readonly_fields = ['created_at']
+
+
+@admin.register(JobWorkReportPhoto)
+class JobWorkReportPhotoAdmin(admin.ModelAdmin):
+    list_display = ['job_work_report', 'photo_name', 'uploaded_at']
 
 
 class FinishingReportPhotoInline(admin.TabularInline):
@@ -129,10 +141,10 @@ class EmbroideryReportPhotoInline(admin.TabularInline):
 @admin.register(EmbroideryReport)
 class EmbroideryReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'master_name', 'embroidery_worker', 'embroidery_type',
+        'cutting_report', 'master_name', 'embroidery_worker', 'embroidery_in', 'embroidery_out',
         'job_card_no', 'total_pcs', 'created_by', 'created_at'
     ]
-    list_filter = ['date', 'embroidery_type', 'created_by']
+    list_filter = ['embroidery_in', 'embroidery_out', 'created_by']
     search_fields = ['master_name', 'embroidery_worker', 'job_card_no']
     inlines = [EmbroideryReportPhotoInline]
     readonly_fields = ['created_at']
@@ -152,10 +164,10 @@ class PrintingReportPhotoInline(admin.TabularInline):
 @admin.register(PrintingReport)
 class PrintingReportAdmin(admin.ModelAdmin):
     list_display = [
-        'cutting_report', 'master_name', 'printing_worker', 'printing_type',
+        'cutting_report', 'master_name', 'printing_worker', 'printing_in', 'printing_out',
         'job_card_no', 'total_pcs', 'created_by', 'created_at'
     ]
-    list_filter = ['date', 'printing_type', 'created_by']
+    list_filter = ['printing_in', 'printing_out', 'created_by']
     search_fields = ['master_name', 'printing_worker', 'job_card_no']
     inlines = [PrintingReportPhotoInline]
     readonly_fields = ['created_at']

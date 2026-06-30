@@ -359,16 +359,17 @@ class JobWorkReportForm(forms.ModelForm):
             pass
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['jobworker'].required = False
+        self.fields['jobwork_out'].required = False
     class Meta:
         model = JobWorkReport
         fields = [
             'cutting_report',
             'master_name',
             'jobworker',
-            'job_work_type',
             'purpose',
             'job_card_no',
-            'date',
+            'jobwork_in',
+            'jobwork_out',
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
@@ -377,10 +378,10 @@ class JobWorkReportForm(forms.ModelForm):
         ]
         widgets = {
             'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
-                        'job_work_type': forms.Select(attrs={'class': 'form-control'}),
             'purpose': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Purpose'}),
             'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'jobwork_in': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'jobwork_out': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
@@ -390,10 +391,10 @@ class JobWorkReportForm(forms.ModelForm):
         labels = {
             'cutting_report': 'Select Cutting Report',
             'jobworker': 'Jobworker',
-            'job_work_type': 'Job Work In / Out',
             'purpose': 'Purpose',
             'job_card_no': 'Job Card No.',
-            'date': 'Date',
+            'jobwork_in': 'Jobwork In Date',
+            'jobwork_out': 'Jobwork Out Date',
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
@@ -410,6 +411,17 @@ class JobWorkReportForm(forms.ModelForm):
         if not signature_2:
             raise forms.ValidationError("Please provide a second signature.")
         return signature_2
+
+    def clean(self):
+        cleaned_data = super().clean()
+        jobwork_in = cleaned_data.get('jobwork_in')
+        jobwork_out = cleaned_data.get('jobwork_out')
+        if jobwork_in and jobwork_out and jobwork_in >= jobwork_out:
+            if jobwork_in == jobwork_out:
+                self.add_error('jobwork_out', "Job Work Out Date cannot be the same as Job Work In Date.")
+            else:
+                self.add_error('jobwork_out', "Job Work Out Date cannot be before Job Work In Date.")
+        return cleaned_data
 
 class FinishingReportForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -481,16 +493,17 @@ class EmbroideryReportForm(forms.ModelForm):
             pass
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['embroidery_worker'].required = False
+        self.fields['embroidery_out'].required = False
     class Meta:
         model = EmbroideryReport
         fields = [
             'cutting_report',
             'master_name',
             'embroidery_worker',
-            'embroidery_type',
             'purpose',
             'job_card_no',
-            'date',
+            'embroidery_in',
+            'embroidery_out',
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
@@ -499,10 +512,10 @@ class EmbroideryReportForm(forms.ModelForm):
         ]
         widgets = {
             'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
-            'embroidery_type': forms.Select(attrs={'class': 'form-control'}),
             'purpose': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Purpose'}),
             'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'embroidery_in': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'embroidery_out': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
@@ -512,10 +525,10 @@ class EmbroideryReportForm(forms.ModelForm):
         labels = {
             'cutting_report': 'Select Cutting Report',
             'embroidery_worker': 'Embroidery Worker',
-            'embroidery_type': 'Embroidery In / Out',
             'purpose': 'Purpose',
             'job_card_no': 'Job Card No.',
-            'date': 'Date',
+            'embroidery_in': 'Embroidery In Date',
+            'embroidery_out': 'Embroidery Out Date',
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
@@ -532,6 +545,17 @@ class EmbroideryReportForm(forms.ModelForm):
         if not signature_2:
             raise forms.ValidationError("Please provide a second signature.")
         return signature_2
+
+    def clean(self):
+        cleaned_data = super().clean()
+        embroidery_in = cleaned_data.get('embroidery_in')
+        embroidery_out = cleaned_data.get('embroidery_out')
+        if embroidery_in and embroidery_out and embroidery_in >= embroidery_out:
+            if embroidery_in == embroidery_out:
+                self.add_error('embroidery_out', "Embroidery Out Date cannot be the same as Embroidery In Date.")
+            else:
+                self.add_error('embroidery_out', "Embroidery Out Date cannot be before Embroidery In Date.")
+        return cleaned_data
 
 
 class PrintingReportForm(forms.ModelForm):
@@ -544,16 +568,17 @@ class PrintingReportForm(forms.ModelForm):
             pass
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['printing_worker'].required = False
+        self.fields['printing_out'].required = False
     class Meta:
         model = PrintingReport
         fields = [
             'cutting_report',
             'master_name',
             'printing_worker',
-            'printing_type',
             'purpose',
             'job_card_no',
-            'date',
+            'printing_in',
+            'printing_out',
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
@@ -562,10 +587,10 @@ class PrintingReportForm(forms.ModelForm):
         ]
         widgets = {
             'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
-            'printing_type': forms.Select(attrs={'class': 'form-control'}),
             'purpose': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Purpose'}),
             'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'printing_in': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'printing_out': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
@@ -575,10 +600,10 @@ class PrintingReportForm(forms.ModelForm):
         labels = {
             'cutting_report': 'Select Cutting Report',
             'printing_worker': 'Printing Worker',
-            'printing_type': 'Printing In / Out',
             'purpose': 'Purpose',
             'job_card_no': 'Job Card No.',
-            'date': 'Date',
+            'printing_in': 'Printing In Date',
+            'printing_out': 'Printing Out Date',
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
@@ -595,3 +620,14 @@ class PrintingReportForm(forms.ModelForm):
         if not signature_2:
             raise forms.ValidationError("Please provide a second signature.")
         return signature_2
+
+    def clean(self):
+        cleaned_data = super().clean()
+        printing_in = cleaned_data.get('printing_in')
+        printing_out = cleaned_data.get('printing_out')
+        if printing_in and printing_out and printing_in >= printing_out:
+            if printing_in == printing_out:
+                self.add_error('printing_out', "Printing Out Date cannot be the same as Printing In Date.")
+            else:
+                self.add_error('printing_out', "Printing Out Date cannot be before Printing In Date.")
+        return cleaned_data

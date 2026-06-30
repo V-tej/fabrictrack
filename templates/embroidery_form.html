@@ -61,16 +61,6 @@
 
         <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_embroidery_type" class="form-label">Embroidery In / Out <span class="required-star">*</span></label>
-            {{ form.embroidery_type }}
-            {% if form.embroidery_type.errors %}
-            <span class="field-error">{{ form.embroidery_type.errors.0 }}</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="form-row two-col">
-          <div class="form-group">
             <label for="id_purpose" class="form-label">Purpose <span class="required-star">*</span></label>
             {{ form.purpose }}
             {% if form.purpose.errors %}
@@ -86,14 +76,24 @@
           </div>
         </div>
 
-        <div class="form-row three-col">
+        <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
-            {{ form.date }}
-            {% if form.date.errors %}
-            <span class="field-error">{{ form.date.errors.0 }}</span>
+            <label for="id_embroidery_in" class="form-label">Embroidery In Date <span class="required-star">*</span></label>
+            {{ form.embroidery_in }}
+            {% if form.embroidery_in.errors %}
+            <span class="field-error">{{ form.embroidery_in.errors.0 }}</span>
             {% endif %}
           </div>
+          <div class="form-group">
+            <label for="id_embroidery_out" class="form-label">Embroidery Out Date</label>
+            {{ form.embroidery_out }}
+            {% if form.embroidery_out.errors %}
+            <span class="field-error">{{ form.embroidery_out.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row two-col">
           <div class="form-group">
             <label for="id_total_pcs_short" class="form-label">Total Pcs short <span class="required-star">*</span></label>
             {{ form.total_pcs_short }}

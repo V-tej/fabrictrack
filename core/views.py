@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 import json
 
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition
 from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm, EmbroideryReportForm, PrintingReportForm, SingleneedleReportForm, SewingReportForm
 from .utils import export_to_excel, generate_backup_zip
 
@@ -589,11 +589,22 @@ def jobwork_report_view(request):
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
         if form.is_valid():
+            photos = request.FILES.getlist('photos')
+            if len(photos) > 5:
+                messages.error(request, 'You can upload a maximum of 5 photos.')
+                return redirect('jobwork_report')
+
             report = form.save(commit=False)
             report.created_by = request.user
             report.save()
 
-
+            for p in photos[:5]:
+                JobWorkReportPhoto.objects.create(
+                    job_work_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
 
             # Mark pending task as done
             JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=True)
@@ -1101,13 +1112,46 @@ def submission_list_view(request):
             'cutting_report__master_entry', 'created_by'
         ).prefetch_related('photos').order_by('-created_at')
 
+    # Apply Department-Specific Master/Worker Filters if present
+    master_name_cutting = request.GET.get('master_name_cutting')
+    master_name_stitching = request.GET.get('master_name_stitching')
+    master_name_job_work = request.GET.get('master_name_job_work')
+    master_name_finishing = request.GET.get('master_name_finishing')
+    master_name_embroidery = request.GET.get('master_name_embroidery')
+    master_name_printing = request.GET.get('master_name_printing')
+    master_name_singleneedle = request.GET.get('master_name_singleneedle')
+    master_name_sewing = request.GET.get('master_name_sewing')
+
+    if master_name_cutting:
+        reports_qs = reports_qs.filter(Q(master_name=master_name_cutting) | Q(cutting_master_name=master_name_cutting))
+    if master_name_stitching:
+        p4_qs = p4_qs.filter(Q(master_name=master_name_stitching) | Q(stitching_master_name=master_name_stitching))
+    if master_name_job_work:
+        p5_qs = p5_qs.filter(Q(master_name=master_name_job_work) | Q(jobworker=master_name_job_work))
+    if master_name_finishing:
+        p6_qs = p6_qs.filter(Q(master_name=master_name_finishing) | Q(finishing_master_name=master_name_finishing))
+    if master_name_embroidery:
+        p7_qs = p7_qs.filter(Q(master_name=master_name_embroidery) | Q(embroidery_worker=master_name_embroidery))
+    if master_name_printing:
+        p8_qs = p8_qs.filter(Q(master_name=master_name_printing) | Q(printing_worker=master_name_printing))
+    if master_name_singleneedle:
+        p9_qs = p9_qs.filter(Q(master_name=master_name_singleneedle) | Q(singleneedle_master_name=master_name_singleneedle))
+    if master_name_sewing:
+        p10_qs = p10_qs.filter(Q(master_name=master_name_sewing) | Q(sewing_master_name=master_name_sewing))
+
+    from core.models import MasterName
+    master_names = MasterName.objects.all().order_by('department', 'name')
+
     reports = []
     p4_in_progress = []
     p4_completed = []
-    p5_reports = []
+    p5_in_progress = []
+    p5_completed = []
     p6_reports = []
-    p7_reports = []
-    p8_reports = []
+    p7_in_progress = []
+    p7_completed = []
+    p8_in_progress = []
+    p8_completed = []
     p9_in_progress = []
     p9_completed = []
     p10_in_progress = []
@@ -1132,7 +1176,8 @@ def submission_list_view(request):
         elif filter_param == 'p5':
             paginator = Paginator(p5_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
-            p5_reports = page_obj
+            p5_in_progress = [r for r in page_obj if not r.jobwork_out]
+            p5_completed = [r for r in page_obj if r.jobwork_out]
         elif filter_param == 'p6':
             paginator = Paginator(p6_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
@@ -1140,11 +1185,13 @@ def submission_list_view(request):
         elif filter_param == 'p7':
             paginator = Paginator(p7_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
-            p7_reports = page_obj
+            p7_in_progress = [r for r in page_obj if not r.embroidery_out]
+            p7_completed = [r for r in page_obj if r.embroidery_out]
         elif filter_param == 'p8':
             paginator = Paginator(p8_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
-            p8_reports = page_obj
+            p8_in_progress = [r for r in page_obj if not r.printing_out]
+            p8_completed = [r for r in page_obj if r.printing_out]
         elif filter_param == 'p9':
             paginator = Paginator(p9_qs, ITEMS_PER_PAGE)
             page_obj = paginator.get_page(page_number)
@@ -1161,10 +1208,21 @@ def submission_list_view(request):
         p4_overview = p4_qs[:ITEMS_OVERVIEW]
         p4_in_progress = [r for r in p4_overview if not r.line_out_date]
         p4_completed = [r for r in p4_overview if r.line_out_date]
-        p5_reports = p5_qs[:ITEMS_OVERVIEW]
+        
+        p5_overview = p5_qs[:ITEMS_OVERVIEW]
+        p5_in_progress = [r for r in p5_overview if not r.jobwork_out]
+        p5_completed = [r for r in p5_overview if r.jobwork_out]
+        
         p6_reports = p6_qs[:ITEMS_OVERVIEW]
-        p7_reports = p7_qs[:ITEMS_OVERVIEW]
-        p8_reports = p8_qs[:ITEMS_OVERVIEW]
+        
+        p7_overview = p7_qs[:ITEMS_OVERVIEW]
+        p7_in_progress = [r for r in p7_overview if not r.embroidery_out]
+        p7_completed = [r for r in p7_overview if r.embroidery_out]
+        
+        p8_overview = p8_qs[:ITEMS_OVERVIEW]
+        p8_in_progress = [r for r in p8_overview if not r.printing_out]
+        p8_completed = [r for r in p8_overview if r.printing_out]
+        
         p9_overview = p9_qs[:ITEMS_OVERVIEW]
         p9_in_progress = [r for r in p9_overview if not r.line_out_date]
         p9_completed = [r for r in p9_overview if r.line_out_date]
@@ -1176,10 +1234,13 @@ def submission_list_view(request):
         'reports': reports,
         'p4_in_progress': p4_in_progress,
         'p4_completed': p4_completed,
-        'p5_reports': p5_reports,
+        'p5_in_progress': p5_in_progress,
+        'p5_completed': p5_completed,
         'p6_reports': p6_reports,
-        'p7_reports': p7_reports,
-        'p8_reports': p8_reports,
+        'p7_in_progress': p7_in_progress,
+        'p7_completed': p7_completed,
+        'p8_in_progress': p8_in_progress,
+        'p8_completed': p8_completed,
         'p9_in_progress': p9_in_progress,
         'p9_completed': p9_completed,
         'p10_in_progress': p10_in_progress,
@@ -1198,6 +1259,15 @@ def submission_list_view(request):
         'show_p8': not filter_param or filter_param == 'p8',
         'show_p9': not filter_param or filter_param == 'p9',
         'show_p10': not filter_param or filter_param == 'p10',
+        'master_names': master_names,
+        'master_name_cutting': master_name_cutting,
+        'master_name_stitching': master_name_stitching,
+        'master_name_job_work': master_name_job_work,
+        'master_name_finishing': master_name_finishing,
+        'master_name_embroidery': master_name_embroidery,
+        'master_name_printing': master_name_printing,
+        'master_name_singleneedle': master_name_singleneedle,
+        'master_name_sewing': master_name_sewing,
     })
 
 
@@ -1906,13 +1976,35 @@ def edit_jobwork_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(JobWorkReportPhoto, pk=delete_photo_id, job_work_report=report)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('edit_jobwork_report', pk=report.id)
+
     if request.method == 'POST':
         form = JobWorkReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
+        photos = request.FILES.getlist('photos')
+
+        if len(photos) + report.photos.count() > 5:
+            messages.error(request, 'You can upload a maximum of 5 photos total.')
+            return redirect('edit_jobwork_report', pk=report.id)
+
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
             report.save()
+
+            for p in photos:
+                JobWorkReportPhoto.objects.create(
+                    job_work_report=report,
+                    photo_data=p.read(),
+                    photo_name=p.name,
+                    photo_content_type=p.content_type
+                )
+
             messages.success(request, 'Job Work updated.')
             return redirect('submission_list')
     else:
@@ -2152,6 +2244,8 @@ def serve_db_image(request, model_name, photo_id):
         photo = get_object_or_404(FinishingReportPhoto, pk=photo_id)
     elif model_name == 'p4':
         photo = get_object_or_404(StitchingReportPhoto, pk=photo_id)
+    elif model_name == 'jobwork':
+        photo = get_object_or_404(JobWorkReportPhoto, pk=photo_id)
     elif model_name == 'embroidery':
         photo = get_object_or_404(EmbroideryReportPhoto, pk=photo_id)
     elif model_name == 'printing':

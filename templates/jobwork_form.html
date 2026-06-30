@@ -64,17 +64,6 @@
 
         <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_job_work_type" class="form-label">Job Work In / Out <span
-                class="required-star">*</span></label>
-            {{ form.job_work_type }}
-            {% if form.job_work_type.errors %}
-            <span class="field-error">{{ form.job_work_type.errors.0 }}</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="form-row two-col">
-          <div class="form-group">
             <label for="id_purpose" class="form-label">Purpose <span class="required-star">*</span></label>
             {{ form.purpose }}
             {% if form.purpose.errors %}
@@ -90,14 +79,24 @@
           </div>
         </div>
 
-        <div class="form-row three-col">
+        <div class="form-row two-col">
           <div class="form-group">
-            <label for="id_date" class="form-label">Date <span class="required-star">*</span></label>
-            {{ form.date }}
-            {% if form.date.errors %}
-            <span class="field-error">{{ form.date.errors.0 }}</span>
+            <label for="id_jobwork_in" class="form-label">Jobwork In Date <span class="required-star">*</span></label>
+            {{ form.jobwork_in }}
+            {% if form.jobwork_in.errors %}
+            <span class="field-error">{{ form.jobwork_in.errors.0 }}</span>
             {% endif %}
           </div>
+          <div class="form-group">
+            <label for="id_jobwork_out" class="form-label">Jobwork Out Date</label>
+            {{ form.jobwork_out }}
+            {% if form.jobwork_out.errors %}
+            <span class="field-error">{{ form.jobwork_out.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row two-col">
           <div class="form-group">
             <label for="id_total_pcs_short" class="form-label">Total Pcs short <span
                 class="required-star">*</span></label>
@@ -127,7 +126,43 @@
         </div>
       </div>
 
+      <!-- ── Section: Photos ─────────────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">📷 Job Card Photos</div>
 
+        <div class="form-group">
+          <label for="id_photos" class="form-label">
+            Job Card Photos
+            <span class="file-count-badge">Up to 5 files • Max 100 MB each</span>
+          </label>
+
+          {% if is_edit and report.photos.all %}
+          <div class="existing-photos" style="margin-bottom: 1.5rem;">
+            <label class="form-label" style="font-weight:600; font-size: 0.95rem; margin-bottom: 0.75rem; display:block;">Current Photos (Click red cross to delete):</label>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              {% for photo in report.photos.all %}
+                <div style="position: relative; width: 90px; height: 90px;">
+                  <img src="{% url 'serve_db_image' 'jobwork' photo.id %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" />
+                  <a href="?delete_photo={{ photo.id }}" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid var(--card-bg, #1e293b);" title="Delete Photo">×</a>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="file-upload-zone" id="fileUploadZone">
+            <div class="file-upload-inner">
+              <div class="upload-icon">📸</div>
+              <p class="upload-text">Click to select photos or drag &amp; drop here</p>
+              <p class="upload-hint">JPG, PNG, HEIC supported • Up to 5 photos</p>
+              <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
+            </div>
+          </div>
+
+          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+          <div class="photo-count-display" id="photoCountDisplay"></div>
+        </div>
+      </div>
 
       <!-- ── Section: Signatures ──────────────────────────────────── -->
       <div class="form-section">

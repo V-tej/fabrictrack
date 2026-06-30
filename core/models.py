@@ -254,17 +254,12 @@ class JobWorkReport(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     
-    JOB_WORK_CHOICES = [
-        ('Job Work In', 'Job Work In'),
-        ('Job work Out', 'Job work Out'),
-    ]
-    
     jobworker = models.CharField(max_length=200)
     master_name = models.CharField(max_length=200, blank=True, null=True)
-    job_work_type = models.CharField(max_length=50, choices=JOB_WORK_CHOICES)
     purpose = models.CharField(max_length=300)
     job_card_no = models.CharField(max_length=100)
-    date = models.DateField()
+    jobwork_in = models.DateField(null=True, blank=True)
+    jobwork_out = models.DateField(null=True, blank=True)
     any_other_problem = models.TextField()
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
@@ -279,7 +274,23 @@ class JobWorkReport(models.Model):
         verbose_name_plural = 'Job Work'
 
     def __str__(self):
-        return f"Job Work — {self.jobworker} — {self.job_work_type}"
+        return f"Job Work — {self.jobworker} — {self.job_card_no}"
+
+
+class JobWorkReportPhoto(models.Model):
+    """Up to 5 job card photos per JobWorkReport."""
+    job_work_report = models.ForeignKey(
+        JobWorkReport,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.job_work_report}"
 
 
 class EmbroideryReport(models.Model):
@@ -291,17 +302,12 @@ class EmbroideryReport(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     
-    EMBROIDERY_TYPE_CHOICES = [
-        ('Embroidery In', 'Embroidery In'),
-        ('Embroidery Out', 'Embroidery Out'),
-    ]
-    
     embroidery_worker = models.CharField(max_length=200)
     master_name = models.CharField(max_length=200, blank=True, null=True)
-    embroidery_type = models.CharField(max_length=50, choices=EMBROIDERY_TYPE_CHOICES)
     purpose = models.CharField(max_length=300)
     job_card_no = models.CharField(max_length=100)
-    date = models.DateField()
+    embroidery_in = models.DateField(null=True, blank=True)
+    embroidery_out = models.DateField(null=True, blank=True)
     any_other_problem = models.TextField()
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
@@ -316,7 +322,7 @@ class EmbroideryReport(models.Model):
         verbose_name_plural = 'Embroidery'
 
     def __str__(self):
-        return f"Embroidery — {self.embroidery_worker} — {self.embroidery_type}"
+        return f"Embroidery — {self.embroidery_worker} — {self.job_card_no}"
 
 
 class EmbroideryReportPhoto(models.Model):
@@ -344,17 +350,12 @@ class PrintingReport(models.Model):
     )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     
-    PRINTING_TYPE_CHOICES = [
-        ('Printing In', 'Printing In'),
-        ('Printing Out', 'Printing Out'),
-    ]
-    
     printing_worker = models.CharField(max_length=200)
     master_name = models.CharField(max_length=200, blank=True, null=True)
-    printing_type = models.CharField(max_length=50, choices=PRINTING_TYPE_CHOICES)
     purpose = models.CharField(max_length=300)
     job_card_no = models.CharField(max_length=100)
-    date = models.DateField()
+    printing_in = models.DateField(null=True, blank=True)
+    printing_out = models.DateField(null=True, blank=True)
     any_other_problem = models.TextField()
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
@@ -369,7 +370,7 @@ class PrintingReport(models.Model):
         verbose_name_plural = 'Printing'
 
     def __str__(self):
-        return f"Printing — {self.printing_worker} — {self.printing_type}"
+        return f"Printing — {self.printing_worker} — {self.job_card_no}"
 
 
 class PrintingReportPhoto(models.Model):
