@@ -51,9 +51,9 @@ def export_to_excel(since_date=None):
         '#', 'Date & Lot No.', 'Report Type', 'Cutting Master Name', 'Cutting Rate', 'Fabric', 'Item Name', 'Job Card No.',
         'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
         'Submitted By', 'Submitted At',
-        'Jobworker', 'Job Work In / Out', 'Purpose', 'Job Work Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
-        'Embroidery Worker', 'Embroidery In / Out', 'Embroidery Purpose', 'Embroidery Date', 'Embroidery Pcs short', 'Embroidery Pcs', 'Embroidery Any other Problem',
-        'Printing Worker', 'Printing In / Out', 'Printing Purpose', 'Printing Date', 'Printing Pcs short', 'Printing Pcs', 'Printing Any other Problem',
+        'Jobworker', 'Purpose', 'Job Work In Date', 'Job Work Out Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
+        'Embroidery Worker', 'Embroidery Purpose', 'Embroidery In Date', 'Embroidery Out Date', 'Embroidery Pcs short', 'Embroidery Pcs', 'Embroidery Any other Problem',
+        'Printing Worker', 'Printing Purpose', 'Printing In Date', 'Printing Out Date', 'Printing Pcs short', 'Printing Pcs', 'Printing Any other Problem',
         'Line in Date', 'Line out Date', 'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
         'Singleneedle Line in Date', 'Singleneedle Line out Date', 'Singleneedle Total Pcs', 'Singleneedle Rate', 'Singleneedle Description', 'Singleneedle Total Rate', 'Singleneedle Option 1',
         'Sewing Line in Date', 'Sewing Line out Date', 'Sewing Total Pcs', 'Sewing Rate', 'Sewing Description', 'Sewing Total Rate', 'Sewing Option 1',
@@ -83,11 +83,11 @@ def export_to_excel(since_date=None):
         if job_work:
             jw_data = [
                 job_work.jobworker,
-                job_work.job_work_type,
                 job_work.purpose,
-                job_work.date.strftime('%d-%b-%Y') if job_work.date else '—',
+                job_work.jobwork_in.strftime('%d-%b-%Y') if job_work.jobwork_in else '—',
+                job_work.jobwork_out.strftime('%d-%b-%Y') if job_work.jobwork_out else '—',
                 job_work.total_pcs_short if job_work.total_pcs_short is not None else '—',
-                report.total_pcs if report.total_pcs is not None else '—',
+                job_work.total_pcs if job_work.total_pcs is not None else '—',
                 job_work.any_other_problem,
             ]
         else:
@@ -96,11 +96,11 @@ def export_to_excel(since_date=None):
         if embroidery:
             emb_data = [
                 embroidery.embroidery_worker,
-                embroidery.embroidery_type,
                 embroidery.purpose,
-                embroidery.date.strftime('%d-%b-%Y') if embroidery.date else '—',
+                embroidery.embroidery_in.strftime('%d-%b-%Y') if embroidery.embroidery_in else '—',
+                embroidery.embroidery_out.strftime('%d-%b-%Y') if embroidery.embroidery_out else '—',
                 embroidery.total_pcs_short if embroidery.total_pcs_short is not None else '—',
-                report.total_pcs if report.total_pcs is not None else '—',
+                embroidery.total_pcs if embroidery.total_pcs is not None else '—',
                 embroidery.any_other_problem,
             ]
         else:
@@ -109,11 +109,11 @@ def export_to_excel(since_date=None):
         if printing:
             print_data = [
                 printing.printing_worker,
-                printing.printing_type,
                 printing.purpose,
-                printing.date.strftime('%d-%b-%Y') if printing.date else '—',
+                printing.printing_in.strftime('%d-%b-%Y') if printing.printing_in else '—',
+                printing.printing_out.strftime('%d-%b-%Y') if printing.printing_out else '—',
                 printing.total_pcs_short if printing.total_pcs_short is not None else '—',
-                report.total_pcs if report.total_pcs is not None else '—',
+                printing.total_pcs if printing.total_pcs is not None else '—',
                 printing.any_other_problem,
             ]
         else:
@@ -235,8 +235,8 @@ def export_to_excel(since_date=None):
     _style_sheet(ws6)
 
     headers6 = [
-        '#', 'P1 Date', 'Job Card Number', 'Jobworker', 'Job Work In/Out', 'Purpose',
-        'Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        '#', 'P1 Date', 'Job Card Number', 'Jobworker', 'Purpose',
+        'In Date', 'Out Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws6, headers6)
@@ -251,9 +251,9 @@ def export_to_excel(since_date=None):
             report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
             report.job_card_no,
             report.jobworker,
-            report.job_work_type,
             report.purpose,
-            report.date.strftime('%d-%b-%Y') if report.date else '—',
+            report.jobwork_in.strftime('%d-%b-%Y') if report.jobwork_in else '—',
+            report.jobwork_out.strftime('%d-%b-%Y') if report.jobwork_out else '—',
             report.any_other_problem,
             report.total_pcs_short if report.total_pcs_short is not None else '—',
             report.total_pcs if report.total_pcs is not None else '—',
@@ -303,8 +303,8 @@ def export_to_excel(since_date=None):
     _style_sheet(ws8)
 
     headers8 = [
-        '#', 'P1 Date', 'Job Card Number', 'Embroidery Master', 'Embroidery Worker', 'Embroidery In/Out',
-        'Purpose', 'Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        '#', 'P1 Date', 'Job Card Number', 'Embroidery Master', 'Embroidery Worker',
+        'Purpose', 'In Date', 'Out Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws8, headers8)
@@ -319,9 +319,9 @@ def export_to_excel(since_date=None):
             report.job_card_no,
             report.master_name or '—',
             report.embroidery_worker,
-            report.embroidery_type,
             report.purpose,
-            report.date.strftime('%d-%b-%Y') if report.date else '—',
+            report.embroidery_in.strftime('%d-%b-%Y') if report.embroidery_in else '—',
+            report.embroidery_out.strftime('%d-%b-%Y') if report.embroidery_out else '—',
             report.any_other_problem,
             report.total_pcs_short if report.total_pcs_short is not None else '—',
             report.total_pcs if report.total_pcs is not None else '—',
@@ -336,8 +336,8 @@ def export_to_excel(since_date=None):
     _style_sheet(ws9)
 
     headers9 = [
-        '#', 'P1 Date', 'Job Card Number', 'Printing Master', 'Printing Worker', 'Printing In/Out',
-        'Purpose', 'Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        '#', 'P1 Date', 'Job Card Number', 'Printing Master', 'Printing Worker',
+        'Purpose', 'In Date', 'Out Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws9, headers9)
@@ -352,9 +352,9 @@ def export_to_excel(since_date=None):
             report.job_card_no,
             report.master_name or '—',
             report.printing_worker,
-            report.printing_type,
             report.purpose,
-            report.date.strftime('%d-%b-%Y') if report.date else '—',
+            report.printing_in.strftime('%d-%b-%Y') if report.printing_in else '—',
+            report.printing_out.strftime('%d-%b-%Y') if report.printing_out else '—',
             report.any_other_problem,
             report.total_pcs_short if report.total_pcs_short is not None else '—',
             report.total_pcs if report.total_pcs is not None else '—',

@@ -585,6 +585,31 @@ code {
 
 .form-control::placeholder { color: var(--text-muted); }
 
+/* ── Date input: restore native calendar icon suppressed by -webkit-appearance: none ── */
+input[type="date"].form-control,
+input[type="date"] {
+  -webkit-appearance: auto;        /* override the global "none" so the icon shows */
+  color-scheme: dark;              /* tells browser to render its native UI in dark mode */
+  color: var(--text-primary);
+  padding-right: 10px;
+  cursor: pointer;
+}
+
+/* Make the calendar icon clearly visible, white, with hover glow */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(1);  /* force pure white icon */
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: brightness(0) invert(1) drop-shadow(0 0 4px var(--accent));
+}
+
 select.form-control {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
