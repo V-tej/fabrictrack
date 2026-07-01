@@ -1,5 +1,5 @@
 import os
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -53,13 +53,17 @@ def dashboard_view(request):
     if person_type == 'ADMIN' or request.user.is_superuser:
         context['recent_reports'] = CuttingReport.objects.select_related(
             'master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
+        ).prefetch_related(
+            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
+        )[:5]
         context['user_submissions_count'] = CuttingReport.objects.filter(created_by=request.user).count()
 
     elif person_type in ['P1', 'P2', 'P3']:
         context['recent_reports'] = CuttingReport.objects.filter(created_by=request.user).select_related(
             'master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
+        ).prefetch_related(
+            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
+        )[:5]
         context['user_submissions_count'] = CuttingReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P4':
@@ -77,7 +81,9 @@ def dashboard_view(request):
     elif person_type == 'P6':
         context['recent_reports'] = FinishingReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
+        ).prefetch_related(
+            Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
+        )[:5]
         context['user_submissions_count'] = FinishingReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P7':
@@ -95,13 +101,17 @@ def dashboard_view(request):
     elif person_type == 'P9':
         context['recent_reports'] = SingleneedleReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
+        ).prefetch_related(
+            Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
+        )[:5]
         context['user_submissions_count'] = SingleneedleReport.objects.filter(created_by=request.user).count()
 
     elif person_type == 'P10':
         context['recent_reports'] = SewingReport.objects.filter(created_by=request.user).select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos')[:5]
+        ).prefetch_related(
+            Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
+        )[:5]
         context['user_submissions_count'] = SewingReport.objects.filter(created_by=request.user).count()
 
     # Fetch pending tasks
@@ -1116,7 +1126,9 @@ def submission_list_view(request):
     if person_type in ['P1', 'P2', 'P3'] and not request.user.is_superuser:
         reports_qs = CuttingReport.objects.filter(
             created_by=request.user
-        ).select_related('master_entry').prefetch_related('photos').order_by('-created_at')
+        ).select_related('master_entry').prefetch_related(
+            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p4_qs = StitchingReport.objects.none()
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.none()
@@ -1128,7 +1140,9 @@ def submission_list_view(request):
         reports_qs = CuttingReport.objects.none()
         p4_qs = StitchingReport.objects.filter(
             created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        ).select_related('cutting_report__master_entry').prefetch_related(
+            Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.none()
         p7_qs = EmbroideryReport.objects.none()
@@ -1152,7 +1166,9 @@ def submission_list_view(request):
         p5_qs = JobWorkReport.objects.none()
         p6_qs = FinishingReport.objects.filter(
             created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        ).select_related('cutting_report__master_entry').prefetch_related(
+            Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p7_qs = EmbroideryReport.objects.none()
         p8_qs = PrintingReport.objects.none()
         p9_qs = SingleneedleReport.objects.none()
@@ -1188,7 +1204,9 @@ def submission_list_view(request):
         p8_qs = PrintingReport.objects.none()
         p9_qs = SingleneedleReport.objects.filter(
             created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        ).select_related('cutting_report__master_entry').prefetch_related(
+            Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p10_qs = SewingReport.objects.none()
     elif person_type == 'P10' and not request.user.is_superuser:
         reports_qs = CuttingReport.objects.none()
@@ -1200,21 +1218,29 @@ def submission_list_view(request):
         p9_qs = SingleneedleReport.objects.none()
         p10_qs = SewingReport.objects.filter(
             created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related('photos').order_by('-created_at')
+        ).select_related('cutting_report__master_entry').prefetch_related(
+            Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
     else:
         # Admin or Superuser sees all querysets
         reports_qs = CuttingReport.objects.select_related(
             'master_entry', 'created_by'
-        ).prefetch_related('photos').order_by('-created_at')
+        ).prefetch_related(
+            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p4_qs = StitchingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos').order_by('-created_at')
+        ).prefetch_related(
+            Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p5_qs = JobWorkReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).order_by('-created_at')
         p6_qs = FinishingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos').order_by('-created_at')
+        ).prefetch_related(
+            Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p7_qs = EmbroideryReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
         ).order_by('-created_at')
@@ -1223,10 +1249,14 @@ def submission_list_view(request):
         ).order_by('-created_at')
         p9_qs = SingleneedleReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos').order_by('-created_at')
+        ).prefetch_related(
+            Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
         p10_qs = SewingReport.objects.select_related(
             'cutting_report__master_entry', 'created_by'
-        ).prefetch_related('photos').order_by('-created_at')
+        ).prefetch_related(
+            Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
+        ).order_by('-created_at')
 
     # Apply Department-Specific Master/Worker Filters if present
     master_name_cutting = request.GET.get('master_name_cutting')
@@ -1321,30 +1351,26 @@ def submission_list_view(request):
     else:
         # Overview mode: show latest 10 items for each list to ensure fast rendering
         reports = reports_qs[:ITEMS_OVERVIEW]
-        p4_overview = p4_qs[:ITEMS_OVERVIEW]
-        p4_in_progress = [r for r in p4_overview if not r.line_out_date]
-        p4_completed = [r for r in p4_overview if r.line_out_date]
         
-        p5_overview = p5_qs[:ITEMS_OVERVIEW]
-        p5_in_progress = [r for r in p5_overview if not r.jobwork_out]
-        p5_completed = [r for r in p5_overview if r.jobwork_out]
+        p4_in_progress = p4_qs.filter(line_out_date__isnull=True)[:ITEMS_OVERVIEW]
+        p4_completed = p4_qs.filter(line_out_date__isnull=False)[:ITEMS_OVERVIEW]
+        
+        p5_in_progress = p5_qs.filter(jobwork_out__isnull=True)[:ITEMS_OVERVIEW]
+        p5_completed = p5_qs.filter(jobwork_out__isnull=False)[:ITEMS_OVERVIEW]
         
         p6_reports = p6_qs[:ITEMS_OVERVIEW]
         
-        p7_overview = p7_qs[:ITEMS_OVERVIEW]
-        p7_in_progress = [r for r in p7_overview if not r.embroidery_out]
-        p7_completed = [r for r in p7_overview if r.embroidery_out]
+        p7_in_progress = p7_qs.filter(embroidery_out__isnull=True)[:ITEMS_OVERVIEW]
+        p7_completed = p7_qs.filter(embroidery_out__isnull=False)[:ITEMS_OVERVIEW]
         
-        p8_overview = p8_qs[:ITEMS_OVERVIEW]
-        p8_in_progress = [r for r in p8_overview if not r.printing_out]
-        p8_completed = [r for r in p8_overview if r.printing_out]
+        p8_in_progress = p8_qs.filter(printing_out__isnull=True)[:ITEMS_OVERVIEW]
+        p8_completed = p8_qs.filter(printing_out__isnull=False)[:ITEMS_OVERVIEW]
         
-        p9_overview = p9_qs[:ITEMS_OVERVIEW]
-        p9_in_progress = [r for r in p9_overview if not r.line_out_date]
-        p9_completed = [r for r in p9_overview if r.line_out_date]
-        p10_overview = p10_qs[:ITEMS_OVERVIEW]
-        p10_in_progress = [r for r in p10_overview if not r.line_out_date]
-        p10_completed = [r for r in p10_overview if r.line_out_date]
+        p9_in_progress = p9_qs.filter(line_out_date__isnull=True)[:ITEMS_OVERVIEW]
+        p9_completed = p9_qs.filter(line_out_date__isnull=False)[:ITEMS_OVERVIEW]
+
+        p10_in_progress = p10_qs.filter(line_out_date__isnull=True)[:ITEMS_OVERVIEW]
+        p10_completed = p10_qs.filter(line_out_date__isnull=False)[:ITEMS_OVERVIEW]
 
     return render(request, 'submission_list.html', {
         'reports': reports,
@@ -1396,13 +1422,21 @@ def users_reports_view(request):
 
     query = request.GET.get('q', '').strip()
 
-    p4_qs = StitchingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p4_qs = StitchingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related(
+        Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
+    ).order_by('-created_at')
     p5_qs = JobWorkReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
-    p6_qs = FinishingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p6_qs = FinishingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related(
+        Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
+    ).order_by('-created_at')
     p7_qs = EmbroideryReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
     p8_qs = PrintingReport.objects.select_related('cutting_report__master_entry', 'created_by').order_by('-created_at')
-    p9_qs = SingleneedleReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
-    p10_qs = SewingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related('photos').order_by('-created_at')
+    p9_qs = SingleneedleReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related(
+        Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
+    ).order_by('-created_at')
+    p10_qs = SewingReport.objects.select_related('cutting_report__master_entry', 'created_by').prefetch_related(
+        Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
+    ).order_by('-created_at')
 
     if query:
         p4_qs = p4_qs.filter(job_card_no__icontains=query)
@@ -1417,14 +1451,14 @@ def users_reports_view(request):
         limit = 5
 
     # Split P4 reports
-    p4_in_progress = [r for r in p4_qs if not r.line_out_date][:limit]
-    p4_completed = [r for r in p4_qs if r.line_out_date][:limit]
+    p4_in_progress = p4_qs.filter(line_out_date__isnull=True)[:limit]
+    p4_completed = p4_qs.filter(line_out_date__isnull=False)[:limit]
     # Split P9 reports
-    p9_in_progress = [r for r in p9_qs if not r.line_out_date][:limit]
-    p9_completed = [r for r in p9_qs if r.line_out_date][:limit]
+    p9_in_progress = p9_qs.filter(line_out_date__isnull=True)[:limit]
+    p9_completed = p9_qs.filter(line_out_date__isnull=False)[:limit]
     # Split P10 reports
-    p10_in_progress = [r for r in p10_qs if not r.line_out_date][:limit]
-    p10_completed = [r for r in p10_qs if r.line_out_date][:limit]
+    p10_in_progress = p10_qs.filter(line_out_date__isnull=True)[:limit]
+    p10_completed = p10_qs.filter(line_out_date__isnull=False)[:limit]
 
     context = {
         'search_query': query,
