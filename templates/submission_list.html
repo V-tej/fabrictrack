@@ -269,7 +269,15 @@
             <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
             <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
-            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'p4' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'p4' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
             <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
             <td style="max-width: 250px; font-size: 0.9em;">
               {% if report.rate_description %}
@@ -360,7 +368,15 @@
             <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
             <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
-            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'p4' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'p4' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
             <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
             <td style="max-width: 250px; font-size: 0.9em;">
               {% if report.rate_description %}

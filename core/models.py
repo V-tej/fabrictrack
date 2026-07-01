@@ -48,6 +48,7 @@ class MasterEntry(models.Model):
     date = models.DateField()
     job_card_number = models.CharField(max_length=100, verbose_name='Job Card Number')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-date', '-created_at']
@@ -133,6 +134,7 @@ class CuttingReport(models.Model):
     avg_per_pcs = models.DecimalField(max_digits=10, decimal_places=3)
     signature = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         self.total_pcs = (
@@ -141,6 +143,7 @@ class CuttingReport(models.Model):
         )
         super().save(*args, **kwargs)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -219,6 +222,7 @@ class StitchingReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -267,6 +271,7 @@ class JobWorkReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -315,6 +320,7 @@ class EmbroideryReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -363,6 +369,7 @@ class PrintingReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -415,6 +422,7 @@ class SingleneedleReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -467,6 +475,7 @@ class SewingReport(models.Model):
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -517,6 +526,7 @@ class FinishingReport(models.Model):
     
     signature = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -567,6 +577,14 @@ class JobCardRequirement(models.Model):
     is_singleneedle_done = models.BooleanField(default=False)
     is_sewing_done = models.BooleanField(default=False)
 
+    # In-Progress: In date submitted but Out date not yet filled
+    is_jobwork_in_progress = models.BooleanField(default=False)
+    is_embroidery_in_progress = models.BooleanField(default=False)
+    is_printing_in_progress = models.BooleanField(default=False)
+    is_stitching_in_progress = models.BooleanField(default=False)
+    is_singleneedle_in_progress = models.BooleanField(default=False)
+    is_sewing_in_progress = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -578,3 +596,81 @@ class JobCardRequirement(models.Model):
         from .models import MasterEntry # ensure no circular import if needed, though they are in same file
         me = MasterEntry.objects.filter(job_card_number=self.job_card_no).first()
         return me.id if me else None
+
+    @property
+    def stitching_report_id(self):
+        from .models import StitchingReport
+        r = StitchingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def jobwork_report_id(self):
+        from .models import JobWorkReport
+        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def embroidery_report_id(self):
+        from .models import EmbroideryReport
+        r = EmbroideryReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def printing_report_id(self):
+        from .models import PrintingReport
+        r = PrintingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def singleneedle_report_id(self):
+        from .models import SingleneedleReport
+        r = SingleneedleReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def sewing_report_id(self):
+        from .models import SewingReport
+        r = SewingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def finishing_report_id(self):
+        from .models import FinishingReport
+        r = FinishingReport.objects.filter(lot_no=self.job_card_no).first()
+        return r.id if r else None
+
+    @property
+    def stitching_created_by(self):
+        from .models import StitchingReport
+        r = StitchingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None
+
+    @property
+    def jobwork_created_by(self):
+        from .models import JobWorkReport
+        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None
+
+    @property
+    def embroidery_created_by(self):
+        from .models import EmbroideryReport
+        r = EmbroideryReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None
+
+    @property
+    def printing_created_by(self):
+        from .models import PrintingReport
+        r = PrintingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None
+
+    @property
+    def singleneedle_created_by(self):
+        from .models import SingleneedleReport
+        r = SingleneedleReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None
+
+    @property
+    def sewing_created_by(self):
+        from .models import SewingReport
+        r = SewingReport.objects.filter(job_card_no=self.job_card_no).first()
+        return r.created_by if r else None

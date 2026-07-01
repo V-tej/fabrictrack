@@ -5,6 +5,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from .models import MasterEntry, CuttingReport, CuttingReportPhoto, FinishingReportPhoto, EmbroideryReport, PrintingReport
+from django.db.models import Q
 import io
 import zipfile
 
@@ -31,7 +32,7 @@ def export_to_excel(since_date=None):
 
     me_qs = MasterEntry.objects.all()
     if since_date:
-        me_qs = me_qs.filter(created_at__gt=since_date)
+        me_qs = me_qs.filter(Q(created_at__gt=since_date) | Q(updated_at__gt=since_date))
     for i, entry in enumerate(me_qs.order_by('-date'), start=1):
         ws1.append([
             i,
@@ -67,7 +68,16 @@ def export_to_excel(since_date=None):
         'singleneedle_reports', 'sewing_reports'
     ).all()
     if since_date:
-        all_reports = all_reports.filter(created_at__gt=since_date)
+        all_reports = all_reports.filter(
+            Q(created_at__gt=since_date) | Q(updated_at__gt=since_date) |
+            Q(jobwork_reports__created_at__gt=since_date) | Q(jobwork_reports__updated_at__gt=since_date) |
+            Q(stitching_reports__created_at__gt=since_date) | Q(stitching_reports__updated_at__gt=since_date) |
+            Q(embroidery_reports__created_at__gt=since_date) | Q(embroidery_reports__updated_at__gt=since_date) |
+            Q(printing_reports__created_at__gt=since_date) | Q(printing_reports__updated_at__gt=since_date) |
+            Q(singleneedle_reports__created_at__gt=since_date) | Q(singleneedle_reports__updated_at__gt=since_date) |
+            Q(sewing_reports__created_at__gt=since_date) | Q(sewing_reports__updated_at__gt=since_date) |
+            Q(finishing_reports__created_at__gt=since_date) | Q(finishing_reports__updated_at__gt=since_date)
+        ).distinct()
         
     all_reports = list(all_reports.order_by('-created_at'))
 

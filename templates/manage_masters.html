@@ -8,16 +8,17 @@
   <!-- COLUMN 1: MASTERS / WORKERS -->
   <div>
     <div class="section-card" style="margin-bottom: 2rem;">
-      <h2 class="section-title">Add New Master / Worker</h2>
-      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
+      <h2 class="section-title" id="masterFormCardTitle">Add New Master / Worker</h2>
+      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;" id="masterForm">
         {% csrf_token %}
+        <input type="hidden" name="master_id" id="editMasterId" value="">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Name (e.g., C1, Stitching 2)</label>
-          <input type="text" name="name" class="form-control" required placeholder="Enter name...">
+          <input type="text" name="name" id="masterNameInput" class="form-control" required placeholder="Enter name...">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Department</label>
-          <select name="department" class="form-control" required>
+          <select name="department" id="masterDeptSelect" class="form-control" required>
             <option value="">Select Department...</option>
             <option value="Cutting">Cutting</option>
             <option value="Stitching">Stitching</option>
@@ -29,8 +30,9 @@
             <option value="Finishing">Finishing</option>
           </select>
         </div>
-        <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem;">
-          <button type="submit" name="add_master" class="btn btn-primary" style="width: 100%;">Add Master</button>
+        <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem; display: flex; gap: 10px;">
+          <button type="submit" name="add_master" id="btnSaveMaster" class="btn btn-primary" style="flex: 1;">Add Master</button>
+          <button type="button" id="btnCancelEditMaster" class="btn btn-secondary" style="display: none; background: #475569; border-color: #475569;">Cancel</button>
         </div>
       </form>
     </div>
@@ -66,6 +68,9 @@
                 </td>
                 <td style="font-weight: 600;">{{ master.name }}</td>
                 <td>
+                  <button type="button" class="btn btn-sm btn-edit-master" data-id="{{ master.id }}" data-name="{{ master.name }}" data-dept="{{ master.department }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
+                    Edit
+                  </button>
                   <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ master.name }}?');">
                     {% csrf_token %}
                     <input type="hidden" name="master_id" value="{{ master.id }}">
@@ -91,23 +96,25 @@
   <!-- COLUMN 2: PRE-DEFINED RATES (R1, R2, etc.) -->
   <div>
     <div class="section-card" style="margin-bottom: 2rem;">
-      <h2 class="section-title">Add / Update Pre-defined Rate</h2>
-      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
+      <h2 class="section-title" id="rateFormCardTitle">Add / Update Pre-defined Rate</h2>
+      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;" id="rateForm">
         {% csrf_token %}
+        <input type="hidden" name="rate_id" id="editRateId" value="">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Rate Name (e.g. R1, R2)</label>
-          <input type="text" name="rate_name" class="form-control" required placeholder="e.g., R1" max_length="50">
+          <input type="text" name="rate_name" id="rateNameInput" class="form-control" required placeholder="e.g., R1" max_length="50">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Description (Worker Rate breakdown)</label>
-          <input type="text" name="rate_description" class="form-control" required placeholder="e.g., Overlock + Folding + Darji" max_length="300">
+          <input type="text" name="rate_description" id="rateDescInput" class="form-control" required placeholder="e.g., Overlock + Folding + Darji" max_length="300">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Total Rate (₹)</label>
-          <input type="number" step="0.01" name="rate_total" class="form-control" required placeholder="e.g., 22.00">
+          <input type="number" step="0.01" name="rate_total" id="rateTotalInput" class="form-control" required placeholder="e.g., 22.00">
         </div>
-        <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem;">
-          <button type="submit" name="add_rate" class="btn btn-primary" style="width: 100%; background: #10b981; border-color: #10b981;">Save Rate Definition</button>
+        <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem; display: flex; gap: 10px;">
+          <button type="submit" name="add_rate" id="btnSaveRate" class="btn btn-primary" style="flex: 1; background: #10b981; border-color: #10b981;">Save Rate Definition</button>
+          <button type="button" id="btnCancelEditRate" class="btn btn-secondary" style="display: none; background: #475569; border-color: #475569;">Cancel</button>
         </div>
       </form>
     </div>
@@ -132,6 +139,9 @@
                 <td style="font-size: 0.9rem;">{{ rd.description }}</td>
                 <td style="font-weight: 600;">₹{{ rd.total_rate }}</td>
                 <td>
+                  <button type="button" class="btn btn-sm btn-edit-rate" data-id="{{ rd.id }}" data-name="{{ rd.name }}" data-desc="{{ rd.description }}" data-total="{{ rd.total_rate }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
+                    Edit
+                  </button>
                   <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete rate {{ rd.name }}?');">
                     {% csrf_token %}
                     <input type="hidden" name="rate_id" value="{{ rd.id }}">
@@ -155,4 +165,88 @@
   </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit Master
+    const btnEditMasters = document.querySelectorAll('.btn-edit-master');
+    const masterFormTitle = document.querySelector('#masterFormCardTitle');
+    const editMasterIdInput = document.querySelector('#editMasterId');
+    const masterNameInput = document.querySelector('#masterNameInput');
+    const masterDeptSelect = document.querySelector('#masterDeptSelect');
+    const btnSaveMaster = document.querySelector('#btnSaveMaster');
+    const btnCancelEditMaster = document.querySelector('#btnCancelEditMaster');
+
+    btnEditMasters.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            const dept = this.getAttribute('data-dept');
+
+            editMasterIdInput.value = id;
+            masterNameInput.value = name;
+            masterDeptSelect.value = dept;
+
+            masterFormTitle.textContent = 'Edit Master / Worker';
+            btnSaveMaster.textContent = 'Save Master';
+            btnCancelEditMaster.style.display = 'inline-block';
+            
+            // Scroll to the form
+            document.querySelector('#masterForm').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    btnCancelEditMaster.addEventListener('click', function() {
+        editMasterIdInput.value = '';
+        masterNameInput.value = '';
+        masterDeptSelect.value = '';
+
+        masterFormTitle.textContent = 'Add New Master / Worker';
+        btnSaveMaster.textContent = 'Add Master';
+        btnCancelEditMaster.style.display = 'none';
+    });
+
+    // Edit Rate
+    const btnEditRates = document.querySelectorAll('.btn-edit-rate');
+    const rateFormTitle = document.querySelector('#rateFormCardTitle');
+    const editRateIdInput = document.querySelector('#editRateId');
+    const rateNameInput = document.querySelector('#rateNameInput');
+    const rateDescInput = document.querySelector('#rateDescInput');
+    const rateTotalInput = document.querySelector('#rateTotalInput');
+    const btnSaveRate = document.querySelector('#btnSaveRate');
+    const btnCancelEditRate = document.querySelector('#btnCancelEditRate');
+
+    btnEditRates.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            const desc = this.getAttribute('data-desc');
+            const total = this.getAttribute('data-total');
+
+            editRateIdInput.value = id;
+            rateNameInput.value = name;
+            rateDescInput.value = desc;
+            rateTotalInput.value = total;
+
+            rateFormTitle.textContent = 'Edit Pre-defined Rate';
+            btnSaveRate.textContent = 'Save Rate Definition';
+            btnCancelEditRate.style.display = 'inline-block';
+
+            // Scroll to the form
+            document.querySelector('#rateForm').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    btnCancelEditRate.addEventListener('click', function() {
+        editRateIdInput.value = '';
+        rateNameInput.value = '';
+        rateDescInput.value = '';
+        rateTotalInput.value = '';
+
+        rateFormTitle.textContent = 'Add / Update Pre-defined Rate';
+        btnSaveRate.textContent = 'Save Rate Definition';
+        btnCancelEditRate.style.display = 'none';
+    });
+});
+</script>
 {% endblock %}

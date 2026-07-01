@@ -142,32 +142,68 @@
               </td>
               <td>
                 {% if task.requires_jobwork %}
-                  {% if task.is_jobwork_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_jobwork_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_jobwork_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if task.requires_embroidery %}
-                  {% if task.is_embroidery_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_embroidery_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_embroidery_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if task.requires_printing %}
-                  {% if task.is_printing_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_printing_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_printing_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if task.requires_stitching %}
-                  {% if task.is_stitching_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_stitching_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_stitching_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if task.requires_singleneedle %}
-                  {% if task.is_singleneedle_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_singleneedle_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_singleneedle_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
                 {% if task.requires_sewing %}
-                  {% if task.is_sewing_done %}✅ Done{% else %}❌ Pending{% endif %}
+                  {% if task.is_sewing_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_sewing_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending</span>
+                  {% endif %}
                 {% else %}—{% endif %}
               </td>
               <td>
@@ -182,36 +218,72 @@
               {% elif person_type == 'P4' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start stitching until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_stitching_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.stitching_created_by == user %}
+                    <a href="{% url 'edit_stitching_report' task.stitching_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.stitching_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'stitching_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P9' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start singleneedle until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_singleneedle_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.singleneedle_created_by == user %}
+                    <a href="{% url 'edit_singleneedle_report' task.singleneedle_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.singleneedle_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'singleneedle_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P10' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start sewing until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_sewing_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.sewing_created_by == user %}
+                    <a href="{% url 'edit_sewing_report' task.sewing_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.sewing_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'sewing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P5' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start job work until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_jobwork_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.jobwork_created_by == user %}
+                    <a href="{% url 'edit_jobwork_report' task.jobwork_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.jobwork_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'jobwork_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P7' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start embroidery until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_embroidery_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.embroidery_created_by == user %}
+                    <a href="{% url 'edit_embroidery_report' task.embroidery_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.embroidery_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'embroidery_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
               {% elif person_type == 'P8' %}
                 {% if task.requires_cutting and not task.is_cutting_done %}
                   <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Cutting Masters have not yet submitted the report for Job Card {{ task.job_card_no }}. You cannot start printing until cutting is done.'); return false;">Start Report →</a>
+                {% elif task.is_printing_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.printing_created_by == user %}
+                    <a href="{% url 'edit_printing_report' task.printing_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;" title="Only the creator can update this report.">Locked (Created by: {{ task.printing_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
                 {% else %}
                   <a href="{% url 'printing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}

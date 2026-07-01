@@ -159,10 +159,19 @@ def manage_masters(request):
         if 'add_master' in request.POST:
             name = request.POST.get('name')
             department = request.POST.get('department')
+            master_id = request.POST.get('master_id')
             if name and department:
                 from .models import MasterName
-                MasterName.objects.get_or_create(name=name.strip(), department=department)
-                messages.success(request, f'Successfully added {name} to {department}!')
+                if master_id:
+                    master = MasterName.objects.filter(id=master_id).first()
+                    if master:
+                        master.name = name.strip()
+                        master.department = department
+                        master.save()
+                        messages.success(request, f'Successfully updated master {name}!')
+                else:
+                    MasterName.objects.get_or_create(name=name.strip(), department=department)
+                    messages.success(request, f'Successfully added {name} to {department}!')
             return redirect('manage_masters')
             
         elif 'delete_master' in request.POST:
@@ -179,19 +188,29 @@ def manage_masters(request):
             name = request.POST.get('rate_name')
             description = request.POST.get('rate_description')
             total_rate = request.POST.get('rate_total')
+            rate_id = request.POST.get('rate_id')
             if name and description and total_rate:
                 from .models import RateDefinition
-                rd, created = RateDefinition.objects.get_or_create(
-                    name=name.strip(),
-                    defaults={'description': description.strip(), 'total_rate': total_rate}
-                )
-                if not created:
-                    rd.description = description.strip()
-                    rd.total_rate = total_rate
-                    rd.save()
-                    messages.success(request, f'Successfully updated rate {name}!')
+                if rate_id:
+                    rd = RateDefinition.objects.filter(id=rate_id).first()
+                    if rd:
+                        rd.name = name.strip()
+                        rd.description = description.strip()
+                        rd.total_rate = total_rate
+                        rd.save()
+                        messages.success(request, f'Successfully updated rate {name}!')
                 else:
-                    messages.success(request, f'Successfully added rate {name}!')
+                    rd, created = RateDefinition.objects.get_or_create(
+                        name=name.strip(),
+                        defaults={'description': description.strip(), 'total_rate': total_rate}
+                    )
+                    if not created:
+                        rd.description = description.strip()
+                        rd.total_rate = total_rate
+                        rd.save()
+                        messages.success(request, f'Successfully updated rate {name}!')
+                    else:
+                        messages.success(request, f'Successfully added rate {name}!')
             return redirect('manage_masters')
 
         elif 'delete_rate' in request.POST:
@@ -542,8 +561,15 @@ def stitching_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=True)
+            # Mark pending task: in-progress if only Line In, done if Line Out also filled
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_stitching_done=True, is_stitching_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_stitching_in_progress=True, is_stitching_done=False
+                )
 
             messages.success(request, 'Stitching submitted successfully!')
             return redirect('submission_list')
@@ -590,9 +616,22 @@ def jobwork_report_view(request):
 
         if form.is_valid():
             photos = request.FILES.getlist('photos')
+            if len(photos) == 0:
+                messages.error(request, 'Please upload at least one Job Card Photo.')
+                return render(request, 'jobwork_form.html', {
+                    'form': form,
+                    'cutting_reports': cutting_reports_qs,
+                    'cutting_reports_json': cutting_reports_json,
+                    'is_admin': is_admin,
+                })
             if len(photos) > 5:
                 messages.error(request, 'You can upload a maximum of 5 photos.')
-                return redirect('jobwork_report')
+                return render(request, 'jobwork_form.html', {
+                    'form': form,
+                    'cutting_reports': cutting_reports_qs,
+                    'cutting_reports_json': cutting_reports_json,
+                    'is_admin': is_admin,
+                })
 
             report = form.save(commit=False)
             report.created_by = request.user
@@ -606,8 +645,16 @@ def jobwork_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=True)
+            # Mark pending task: in-progress if only In date, done if Out date also filled
+            job_card_no = report.cutting_report.job_card_no
+            if report.jobwork_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_jobwork_done=True, is_jobwork_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_jobwork_in_progress=True, is_jobwork_done=False
+                )
 
             messages.success(request, 'Job Work submitted successfully!')
             return redirect('submission_list')
@@ -669,8 +716,16 @@ def embroidery_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_embroidery_done=True)
+            # Mark pending task: in-progress if only In date, done if Out date also filled
+            job_card_no = report.cutting_report.job_card_no
+            if report.embroidery_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_embroidery_done=True, is_embroidery_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_embroidery_in_progress=True, is_embroidery_done=False
+                )
 
             messages.success(request, 'Embroidery submitted successfully!')
             return redirect('submission_list')
@@ -732,8 +787,16 @@ def printing_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_printing_done=True)
+            # Mark pending task: in-progress if only In date, done if Out date also filled
+            job_card_no = report.cutting_report.job_card_no
+            if report.printing_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_printing_done=True, is_printing_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_printing_in_progress=True, is_printing_done=False
+                )
 
             messages.success(request, 'Printing submitted successfully!')
             return redirect('submission_list')
@@ -808,8 +871,15 @@ def singleneedle_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_singleneedle_done=True)
+            # Mark pending task: in-progress if only Line In, done if Line Out also filled
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_singleneedle_done=True, is_singleneedle_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_singleneedle_in_progress=True, is_singleneedle_done=False
+                )
 
             messages.success(request, 'Singleneedle submitted successfully!')
             return redirect('submission_list')
@@ -885,8 +955,15 @@ def sewing_report_view(request):
                     photo_content_type=p.content_type
                 )
 
-            # Mark pending task as done
-            JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_sewing_done=True)
+            # Mark pending task: in-progress if only Line In, done if Line Out also filled
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_sewing_done=True, is_sewing_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_sewing_in_progress=True, is_sewing_done=False
+                )
 
             messages.success(request, 'Sewing submitted successfully!')
             return redirect('submission_list')
@@ -1779,6 +1856,16 @@ def edit_stitching_report(request, pk):
                     photo_content_type=p.content_type
                 )
 
+            # Update pending task status based on Line In/Out dates
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_stitching_done=True, is_stitching_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_stitching_in_progress=True, is_stitching_done=False
+                )
+
             messages.success(request, 'Stitching updated.')
             return redirect('submission_list')
     else:
@@ -1796,7 +1883,9 @@ def delete_stitching_report(request, pk):
     report = get_object_or_404(StitchingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_stitching_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+            is_stitching_done=False, is_stitching_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Stitching deleted.')
         return redirect('submission_list')
@@ -1858,6 +1947,16 @@ def edit_singleneedle_report(request, pk):
                     photo_content_type=p.content_type
                 )
 
+            # Update pending task status based on Line In/Out dates
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_singleneedle_done=True, is_singleneedle_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_singleneedle_in_progress=True, is_singleneedle_done=False
+                )
+
             messages.success(request, 'Singleneedle updated.')
             return redirect('submission_list')
     else:
@@ -1875,7 +1974,9 @@ def delete_singleneedle_report(request, pk):
     report = get_object_or_404(SingleneedleReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_singleneedle_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+            is_singleneedle_done=False, is_singleneedle_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Singleneedle deleted.')
         return redirect('submission_list')
@@ -1938,6 +2039,16 @@ def edit_sewing_report(request, pk):
                     photo_content_type=p.content_type
                 )
 
+            # Update pending task status based on Line In/Out dates
+            if report.line_out_date:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_sewing_done=True, is_sewing_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+                    is_sewing_in_progress=True, is_sewing_done=False
+                )
+
             messages.success(request, 'Sewing updated.')
             return redirect('submission_list')
     else:
@@ -1955,7 +2066,9 @@ def delete_sewing_report(request, pk):
     report = get_object_or_404(SewingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_sewing_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+            is_sewing_done=False, is_sewing_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Sewing deleted.')
         return redirect('submission_list')
@@ -1978,9 +2091,12 @@ def edit_jobwork_report(request, pk):
     })
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
-        photo_to_delete = get_object_or_404(JobWorkReportPhoto, pk=delete_photo_id, job_work_report=report)
-        photo_to_delete.delete()
-        messages.success(request, 'Photo deleted successfully.')
+        if report.photos.count() <= 1:
+            messages.error(request, 'Cannot delete. At least one Job Card Photo is required.')
+        else:
+            photo_to_delete = get_object_or_404(JobWorkReportPhoto, pk=delete_photo_id, job_work_report=report)
+            photo_to_delete.delete()
+            messages.success(request, 'Photo deleted successfully.')
         return redirect('edit_jobwork_report', pk=report.id)
 
     if request.method == 'POST':
@@ -1988,9 +2104,19 @@ def edit_jobwork_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
 
+        if len(photos) + report.photos.count() == 0:
+            messages.error(request, 'At least one Job Card Photo is required.')
+            return render(request, 'jobwork_form.html', {
+                'form': form, 'cutting_reports': cutting_reports_qs,
+                'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+            })
+
         if len(photos) + report.photos.count() > 5:
             messages.error(request, 'You can upload a maximum of 5 photos total.')
-            return redirect('edit_jobwork_report', pk=report.id)
+            return render(request, 'jobwork_form.html', {
+                'form': form, 'cutting_reports': cutting_reports_qs,
+                'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+            })
 
         if form.is_valid():
             report = form.save(commit=False)
@@ -2003,6 +2129,17 @@ def edit_jobwork_report(request, pk):
                     photo_data=p.read(),
                     photo_name=p.name,
                     photo_content_type=p.content_type
+                )
+
+            # Update pending task status based on In/Out dates
+            job_card_no = report.cutting_report.job_card_no
+            if report.jobwork_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_jobwork_done=True, is_jobwork_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_jobwork_in_progress=True, is_jobwork_done=False
                 )
 
             messages.success(request, 'Job Work updated.')
@@ -2020,7 +2157,9 @@ def delete_jobwork_report(request, pk):
     report = get_object_or_404(JobWorkReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_jobwork_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+            is_jobwork_done=False, is_jobwork_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Job Work deleted.')
         return redirect('submission_list')
@@ -2069,6 +2208,17 @@ def edit_embroidery_report(request, pk):
                     photo_content_type=p.content_type
                 )
 
+            # Update pending task status based on In/Out dates
+            job_card_no = report.cutting_report.job_card_no
+            if report.embroidery_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_embroidery_done=True, is_embroidery_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_embroidery_in_progress=True, is_embroidery_done=False
+                )
+
             messages.success(request, 'Embroidery updated.')
             return redirect('submission_list')
     else:
@@ -2084,7 +2234,9 @@ def delete_embroidery_report(request, pk):
     report = get_object_or_404(EmbroideryReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_embroidery_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+            is_embroidery_done=False, is_embroidery_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Embroidery deleted.')
         return redirect('submission_list')
@@ -2133,6 +2285,17 @@ def edit_printing_report(request, pk):
                     photo_content_type=p.content_type
                 )
 
+            # Update pending task status based on In/Out dates
+            job_card_no = report.cutting_report.job_card_no
+            if report.printing_out:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_printing_done=True, is_printing_in_progress=False
+                )
+            else:
+                JobCardRequirement.objects.filter(job_card_no=job_card_no).update(
+                    is_printing_in_progress=True, is_printing_done=False
+                )
+
             messages.success(request, 'Printing updated.')
             return redirect('submission_list')
     else:
@@ -2148,7 +2311,9 @@ def delete_printing_report(request, pk):
     report = get_object_or_404(PrintingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_printing_done=False)
+        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+            is_printing_done=False, is_printing_in_progress=False
+        )
         report.delete()
         messages.success(request, 'Printing deleted.')
         return redirect('submission_list')
