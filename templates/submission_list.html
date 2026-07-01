@@ -463,6 +463,8 @@
             <th>Jobworker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -497,6 +499,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_jobwork|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.jobwork_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.jobwork_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>
@@ -548,6 +560,8 @@
             <th>Jobworker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -582,6 +596,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_jobwork|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.jobwork_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.jobwork_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>
@@ -668,6 +692,8 @@
             <th>Embroidery Worker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -702,6 +728,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_embroidery|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.embroidery_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.embroidery_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>
@@ -753,6 +789,8 @@
             <th>Embroidery Worker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -787,6 +825,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_embroidery|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.embroidery_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.embroidery_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>
@@ -873,6 +921,8 @@
             <th>Printing Worker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -907,6 +957,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_printing|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.printing_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.printing_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>
@@ -958,6 +1018,8 @@
             <th>Printing Worker</th>
             <th>Purpose</th>
             <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
             <th>Date In</th>
             <th>Date Out</th>
             <th>Any other Problem</th>
@@ -992,6 +1054,16 @@
             </strong></td>
             <td>{{ report.purpose }}</td>
             <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_printing|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ report.printing_in|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.printing_out|date:"d M Y"|default:"—" }}</td>
             <td>{{ report.any_other_problem }}</td>

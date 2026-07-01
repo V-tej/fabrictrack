@@ -268,6 +268,11 @@ class JobWorkReport(models.Model):
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
     
+    # New fields: Design and Rates
+    design_jobwork = models.CharField(max_length=200, blank=True, null=True)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -317,6 +322,11 @@ class EmbroideryReport(models.Model):
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
     
+    # New fields: Design and Rates
+    design_embroidery = models.CharField(max_length=200, blank=True, null=True)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -365,6 +375,11 @@ class PrintingReport(models.Model):
     any_other_problem = models.TextField()
     total_pcs_short = models.PositiveIntegerField()
     total_pcs = models.PositiveIntegerField()
+    
+    # New fields: Design and Rates
+    design_printing = models.CharField(max_length=200, blank=True, null=True)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     signature = models.TextField(blank=True, null=True)
     signature_2 = models.TextField(blank=True, null=True)

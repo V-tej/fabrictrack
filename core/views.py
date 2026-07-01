@@ -635,6 +635,9 @@ def jobwork_report_view(request):
 
             report = form.save(commit=False)
             report.created_by = request.user
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos[:5]:
@@ -664,10 +667,20 @@ def jobwork_report_view(request):
         form = JobWorkReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     return render(request, 'jobwork_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -706,6 +719,9 @@ def embroidery_report_view(request):
 
             report = form.save(commit=False)
             report.created_by = request.user
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos[:5]:
@@ -735,10 +751,20 @@ def embroidery_report_view(request):
         form = EmbroideryReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     return render(request, 'embroidery_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -777,6 +803,9 @@ def printing_report_view(request):
 
             report = form.save(commit=False)
             report.created_by = request.user
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos[:5]:
@@ -806,10 +835,20 @@ def printing_report_view(request):
         form = PrintingReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     return render(request, 'printing_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -2089,6 +2128,14 @@ def edit_jobwork_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
         if report.photos.count() <= 1:
@@ -2121,6 +2168,9 @@ def edit_jobwork_report(request, pk):
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos:
@@ -2149,7 +2199,9 @@ def edit_jobwork_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
     return render(request, 'jobwork_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
-        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
@@ -2179,6 +2231,14 @@ def edit_embroidery_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
         photo_to_delete = get_object_or_404(EmbroideryReportPhoto, pk=delete_photo_id, embroidery_report=report)
@@ -2198,6 +2258,9 @@ def edit_embroidery_report(request, pk):
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos:
@@ -2226,7 +2289,9 @@ def edit_embroidery_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
     return render(request, 'embroidery_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
-        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required
@@ -2256,6 +2321,14 @@ def edit_printing_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
     delete_photo_id = request.GET.get('delete_photo')
     if delete_photo_id:
         photo_to_delete = get_object_or_404(PrintingReportPhoto, pk=delete_photo_id, printing_report=report)
@@ -2275,6 +2348,9 @@ def edit_printing_report(request, pk):
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for p in photos:
@@ -2303,7 +2379,9 @@ def edit_printing_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
     return render(request, 'printing_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
-        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required

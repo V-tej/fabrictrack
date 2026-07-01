@@ -11,4 +11,4 @@ python manage.py migrate
 python manage.py create_initial_users
 
 # Run backfill to populate in-progress & done states for existing reports
-python manage.py backfill_in_progress
+# python manage.py backfill_in_progress

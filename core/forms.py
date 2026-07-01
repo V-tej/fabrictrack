@@ -360,6 +360,9 @@ class JobWorkReportForm(forms.ModelForm):
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['jobworker'].required = False
         self.fields['jobwork_out'].required = False
+        self.fields['design_jobwork'].required = False
+        self.fields['rate_definition'].required = False
+        self.fields['total_rate'].required = False
     class Meta:
         model = JobWorkReport
         fields = [
@@ -373,6 +376,9 @@ class JobWorkReportForm(forms.ModelForm):
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
+            'design_jobwork',
+            'rate_definition',
+            'total_rate',
             'signature',
             'signature_2',
         ]
@@ -385,6 +391,9 @@ class JobWorkReportForm(forms.ModelForm):
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'design_jobwork': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Design Jobwork'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_rate', 'step': '0.01', 'placeholder': '0.00'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
             'signature_2': forms.HiddenInput(attrs={'id': 'id_signature_2'}),
         }
@@ -398,6 +407,9 @@ class JobWorkReportForm(forms.ModelForm):
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
+            'design_jobwork': 'Design Jobwork',
+            'rate_definition': 'Rate Name',
+            'total_rate': 'Rate (₹)',
         }
 
     def clean_signature(self):
@@ -494,6 +506,9 @@ class EmbroideryReportForm(forms.ModelForm):
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['embroidery_worker'].required = False
         self.fields['embroidery_out'].required = False
+        self.fields['design_embroidery'].required = False
+        self.fields['rate_definition'].required = False
+        self.fields['total_rate'].required = False
     class Meta:
         model = EmbroideryReport
         fields = [
@@ -507,6 +522,9 @@ class EmbroideryReportForm(forms.ModelForm):
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
+            'design_embroidery',
+            'rate_definition',
+            'total_rate',
             'signature',
             'signature_2',
         ]
@@ -519,6 +537,9 @@ class EmbroideryReportForm(forms.ModelForm):
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'design_embroidery': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Design Embroidery'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_rate', 'step': '0.01', 'placeholder': '0.00'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
             'signature_2': forms.HiddenInput(attrs={'id': 'id_signature_2'}),
         }
@@ -532,6 +553,9 @@ class EmbroideryReportForm(forms.ModelForm):
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
+            'design_embroidery': 'Design Embroidery',
+            'rate_definition': 'Rate Name',
+            'total_rate': 'Rate (₹)',
         }
 
     def clean_signature(self):
@@ -569,6 +593,9 @@ class PrintingReportForm(forms.ModelForm):
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['printing_worker'].required = False
         self.fields['printing_out'].required = False
+        self.fields['design_printing'].required = False
+        self.fields['rate_definition'].required = False
+        self.fields['total_rate'].required = False
     class Meta:
         model = PrintingReport
         fields = [
@@ -582,6 +609,9 @@ class PrintingReportForm(forms.ModelForm):
             'any_other_problem',
             'total_pcs_short',
             'total_pcs',
+            'design_printing',
+            'rate_definition',
+            'total_rate',
             'signature',
             'signature_2',
         ]
@@ -594,6 +624,9 @@ class PrintingReportForm(forms.ModelForm):
             'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
             'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
             'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'design_printing': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Design Printing'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_rate', 'step': '0.01', 'placeholder': '0.00'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
             'signature_2': forms.HiddenInput(attrs={'id': 'id_signature_2'}),
         }
@@ -607,6 +640,9 @@ class PrintingReportForm(forms.ModelForm):
             'any_other_problem': 'Any other Problem',
             'total_pcs_short': 'Total Pcs short',
             'total_pcs': 'Total Pcs',
+            'design_printing': 'Design Printing',
+            'rate_definition': 'Rate Name',
+            'total_rate': 'Rate (₹)',
         }
 
     def clean_signature(self):

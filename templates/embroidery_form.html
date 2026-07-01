@@ -14,6 +14,7 @@
     {# Pass cutting reports data for JS auto-fill (admin only) #}
     <script>
       window.CUTTING_REPORTS = {{ cutting_reports_json |safe }};
+      window.RATE_DEFINITIONS = {{ rate_definitions_json |safe }};
       window.IS_ADMIN = {{ is_admin |yesno:"true,false" }};
     </script>
 
@@ -59,7 +60,7 @@
       <div class="form-section">
         <div class="form-section-title">🧵 Embroidery Details</div>
 
-        <div class="form-row two-col">
+        <div class="form-row three-col">
           <div class="form-group">
             <label for="id_purpose" class="form-label">Purpose <span class="required-star">*</span></label>
             {{ form.purpose }}
@@ -72,6 +73,13 @@
             {{ form.job_card_no }}
             {% if form.job_card_no.errors %}
             <span class="field-error">{{ form.job_card_no.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_design_embroidery" class="form-label">Design Embroidery</label>
+            {{ form.design_embroidery }}
+            {% if form.design_embroidery.errors %}
+            <span class="field-error">{{ form.design_embroidery.errors.0 }}</span>
             {% endif %}
           </div>
         </div>
@@ -116,6 +124,28 @@
             {{ form.any_other_problem }}
             {% if form.any_other_problem.errors %}
             <span class="field-error">{{ form.any_other_problem.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section: Rates ──────────────────────────────────────── -->
+      <div class="form-section">
+        <div class="form-section-title">💰 Rates (Optional)</div>
+
+        <div class="form-row two-col">
+          <div class="form-group">
+            <label for="id_rate_definition" class="form-label">Rate Name</label>
+            {{ form.rate_definition }}
+            {% if form.rate_definition.errors %}
+            <span class="field-error">{{ form.rate_definition.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_total_rate" class="form-label">Rate</label>
+            {{ form.total_rate }}
+            {% if form.total_rate.errors %}
+            <span class="field-error">{{ form.total_rate.errors.0 }}</span>
             {% endif %}
           </div>
         </div>

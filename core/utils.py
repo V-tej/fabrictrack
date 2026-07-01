@@ -53,8 +53,11 @@ def export_to_excel(since_date=None):
         'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', 'Grand Total',
         'Submitted By', 'Submitted At',
         'Jobworker', 'Purpose', 'Job Work In Date', 'Job Work Out Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
+        'Design Jobwork', 'Job Work Rate',
         'Embroidery Worker', 'Embroidery Purpose', 'Embroidery In Date', 'Embroidery Out Date', 'Embroidery Pcs short', 'Embroidery Pcs', 'Embroidery Any other Problem',
+        'Design Embroidery', 'Embroidery Rate',
         'Printing Worker', 'Printing Purpose', 'Printing In Date', 'Printing Out Date', 'Printing Pcs short', 'Printing Pcs', 'Printing Any other Problem',
+        'Design Printing', 'Printing Rate',
         'Line in Date', 'Line out Date', 'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
         'Singleneedle Line in Date', 'Singleneedle Line out Date', 'Singleneedle Total Pcs', 'Singleneedle Rate', 'Singleneedle Description', 'Singleneedle Total Rate', 'Singleneedle Option 1',
         'Sewing Line in Date', 'Sewing Line out Date', 'Sewing Total Pcs', 'Sewing Rate', 'Sewing Description', 'Sewing Total Rate', 'Sewing Option 1',
@@ -99,9 +102,11 @@ def export_to_excel(since_date=None):
                 job_work.total_pcs_short if job_work.total_pcs_short is not None else '—',
                 job_work.total_pcs if job_work.total_pcs is not None else '—',
                 job_work.any_other_problem,
+                job_work.design_jobwork or '—',
+                float(job_work.total_rate) if job_work.total_rate else '—',
             ]
         else:
-            jw_data = ['—', '—', '—', '—', '—', '—', '—']
+            jw_data = ['—'] * 9
 
         if embroidery:
             emb_data = [
@@ -112,9 +117,11 @@ def export_to_excel(since_date=None):
                 embroidery.total_pcs_short if embroidery.total_pcs_short is not None else '—',
                 embroidery.total_pcs if embroidery.total_pcs is not None else '—',
                 embroidery.any_other_problem,
+                embroidery.design_embroidery or '—',
+                float(embroidery.total_rate) if embroidery.total_rate else '—',
             ]
         else:
-            emb_data = ['—', '—', '—', '—', '—', '—', '—']
+            emb_data = ['—'] * 9
 
         if printing:
             print_data = [
@@ -125,9 +132,11 @@ def export_to_excel(since_date=None):
                 printing.total_pcs_short if printing.total_pcs_short is not None else '—',
                 printing.total_pcs if printing.total_pcs is not None else '—',
                 printing.any_other_problem,
+                printing.design_printing or '—',
+                float(printing.total_rate) if printing.total_rate else '—',
             ]
         else:
-            print_data = ['—', '—', '—', '—', '—', '—', '—']
+            print_data = ['—'] * 9
             
         if stitching:
             stitch_data = [
