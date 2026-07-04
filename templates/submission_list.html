@@ -1148,6 +1148,7 @@
             <th>Date</th>
             <th>Lot No.</th>
             <th>Finishing Master</th>
+            <th>Rate</th>
             <th>Total Pcs</th>
             <th>Short</th>
             <th>Packed</th>
@@ -1179,6 +1180,15 @@
                 {{ report.master_name }}
               {% elif report.finishing_master_name %}
                 {{ report.finishing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
               {% else %}
                 —
               {% endif %}

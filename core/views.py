@@ -1079,9 +1079,21 @@ def finishing_report_view(request):
                 'is_admin': is_admin,
             })
 
+        rate_definitions = RateDefinition.objects.all()
+        rate_definitions_json = json.dumps({
+            str(r.id): {
+                'name': r.name,
+                'description': r.description,
+                'total_rate': str(r.total_rate)
+            } for r in rate_definitions
+        })
+
         if form.is_valid():
             report = form.save(commit=False)
             report.created_by = request.user
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
 
             for photo_file in photos:
@@ -1105,10 +1117,20 @@ def finishing_report_view(request):
         form = FinishingReportForm()
         form.fields['cutting_report'].queryset = cutting_reports_qs
 
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     return render(request, 'finishing_form.html', {
         'form': form,
         'cutting_reports': cutting_reports_qs,
         'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
         'is_admin': is_admin,
     })
 
@@ -2454,12 +2476,25 @@ def edit_finishing_report(request, pk):
             'total_pcs': cr.total_pcs
         } for cr in cutting_reports_qs
     })
+
+    rate_definitions = RateDefinition.objects.all()
+    rate_definitions_json = json.dumps({
+        str(r.id): {
+            'name': r.name,
+            'description': r.description,
+            'total_rate': str(r.total_rate)
+        } for r in rate_definitions
+    })
+
     if request.method == 'POST':
         form = FinishingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
             report = form.save(commit=False)
             report.created_at = timezone.now()
+            if report.rate_definition:
+                if not report.total_rate:
+                    report.total_rate = report.rate_definition.total_rate
             report.save()
             photos = request.FILES.getlist('photos')
             for photo_file in photos:
@@ -2477,7 +2512,9 @@ def edit_finishing_report(request, pk):
         form.fields['cutting_report'].queryset = cutting_reports_qs
     return render(request, 'finishing_form.html', {
         'form': form, 'cutting_reports': cutting_reports_qs,
-        'cutting_reports_json': cutting_reports_json, 'is_admin': is_admin, 'is_edit': True, 'report': report
+        'cutting_reports_json': cutting_reports_json,
+        'rate_definitions_json': rate_definitions_json,
+        'is_admin': is_admin, 'is_edit': True, 'report': report
     })
 
 @login_required

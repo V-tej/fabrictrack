@@ -445,6 +445,8 @@ class FinishingReportForm(forms.ModelForm):
             pass
         self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
         self.fields['finishing_master_name'].required = False
+        self.fields['rate_definition'].required = False
+        self.fields['total_rate'].required = False
     class Meta:
         model = FinishingReport
         fields = [
@@ -460,6 +462,8 @@ class FinishingReportForm(forms.ModelForm):
             'red_tape',
             'blue_tape',
             'total_tape',
+            'rate_definition',
+            'total_rate',
             'signature',
         ]
         widgets = {
@@ -473,6 +477,8 @@ class FinishingReportForm(forms.ModelForm):
             'red_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_red_tape'}),
             'blue_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_blue_tape'}),
             'total_tape': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0', 'id': 'id_total_tape', 'readonly': 'readonly'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_rate', 'step': '0.01', 'placeholder': '0.00'}),
             'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
         }
         labels = {
@@ -486,6 +492,8 @@ class FinishingReportForm(forms.ModelForm):
             'red_tape': 'Red Tape',
             'blue_tape': 'Blue Tape',
             'total_tape': 'Total Tape',
+            'rate_definition': 'Rate Name',
+            'total_rate': 'Rate',
         }
 
     def clean_signature(self):

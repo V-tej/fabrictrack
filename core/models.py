@@ -539,6 +539,10 @@ class FinishingReport(models.Model):
     blue_tape = models.PositiveIntegerField()
     total_tape = models.PositiveIntegerField()
     
+    # Rates logic
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
     signature = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

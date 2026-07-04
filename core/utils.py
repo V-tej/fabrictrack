@@ -61,7 +61,7 @@ def export_to_excel(since_date=None):
         'Line in Date', 'Line out Date', 'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
         'Singleneedle Line in Date', 'Singleneedle Line out Date', 'Singleneedle Total Pcs', 'Singleneedle Rate', 'Singleneedle Description', 'Singleneedle Total Rate', 'Singleneedle Option 1',
         'Sewing Line in Date', 'Sewing Line out Date', 'Sewing Total Pcs', 'Sewing Rate', 'Sewing Description', 'Sewing Total Rate', 'Sewing Option 1',
-        'Finishing Date', 'Finishing Total Pcs', 'Finishing Pcs Short', 'Finishing Pcs Packed', 'Finishing Green Tape', 'Finishing Red Tape', 'Finishing Blue Tape', 'Finishing Total Tape'
+        'Finishing Date', 'Finishing Total Pcs', 'Finishing Pcs Short', 'Finishing Pcs Packed', 'Finishing Green Tape', 'Finishing Red Tape', 'Finishing Blue Tape', 'Finishing Total Tape', 'Finishing Rate'
     ]
     _write_header_row(ws2, headers2)
 
@@ -187,9 +187,10 @@ def export_to_excel(since_date=None):
                 finishing.red_tape if finishing.red_tape is not None else '—',
                 finishing.blue_tape if finishing.blue_tape is not None else '—',
                 finishing.total_tape if finishing.total_tape is not None else '—',
+                float(finishing.total_rate) if finishing.total_rate else '—',
             ]
         else:
-            finish_data = ['—'] * 8
+            finish_data = ['—'] * 9
 
         ws2.append([
             i,
@@ -288,7 +289,7 @@ def export_to_excel(since_date=None):
 
     headers7 = [
         '#', 'P1 Date', 'Lot No', 'Finishing Master', 'Date', 'Total Pcs', 'Total Pcs Short',
-        'Total Pcs Packed', 'Green Tape', 'Red Tape', 'Blue Tape', 'Total Tape',
+        'Total Pcs Packed', 'Green Tape', 'Red Tape', 'Blue Tape', 'Total Tape', 'Rate',
         'Submitted By', 'Submitted At'
     ]
     _write_header_row(ws7, headers7)
@@ -311,6 +312,7 @@ def export_to_excel(since_date=None):
             report.red_tape if report.red_tape is not None else '—',
             report.blue_tape if report.blue_tape is not None else '—',
             report.total_tape if report.total_tape is not None else '—',
+            float(report.total_rate) if report.total_rate else '—',
             report.created_by.username if report.created_by else '—',
             report.created_at.strftime('%d-%b-%Y %H:%M'),
         ])
