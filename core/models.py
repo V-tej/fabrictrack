@@ -72,6 +72,7 @@ class MasterName(models.Model):
     ]
     name = models.CharField(max_length=100)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
+    upi_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="UPI ID / VPA")
 
     class Meta:
         ordering = ['department', 'name']
@@ -79,6 +80,33 @@ class MasterName(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.department})"
+
+
+class MasterPayment(models.Model):
+    PAYMENT_MODE_CHOICES = [
+        ('UPI', 'UPI / NetBanking'),
+        ('Cash', 'Cash'),
+        ('Cheque', 'Cheque'),
+        ('Other', 'Other'),
+    ]
+    master = models.ForeignKey(MasterName, on_delete=models.CASCADE, related_name='payments')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, default='UPI')
+    reference_no = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ref No / UPI ID")
+    remarks = models.TextField(blank=True, null=True)
+    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+        verbose_name = 'Master Payment'
+        verbose_name_plural = 'Master Payments'
+
+    def __str__(self):
+        return f"Payment of ₹{self.amount} to {self.master.name} on {self.date}"
 
 
 class RateDefinition(models.Model):

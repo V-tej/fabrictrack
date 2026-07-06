@@ -169,6 +169,7 @@ def manage_masters(request):
         if 'add_master' in request.POST:
             name = request.POST.get('name')
             department = request.POST.get('department')
+            upi_id = request.POST.get('upi_id', '').strip() or None
             master_id = request.POST.get('master_id')
             if name and department:
                 from .models import MasterName
@@ -177,10 +178,18 @@ def manage_masters(request):
                     if master:
                         master.name = name.strip()
                         master.department = department
+                        master.upi_id = upi_id
                         master.save()
                         messages.success(request, f'Successfully updated master {name}!')
                 else:
-                    MasterName.objects.get_or_create(name=name.strip(), department=department)
+                    master, created = MasterName.objects.get_or_create(
+                        name=name.strip(),
+                        department=department,
+                        defaults={'upi_id': upi_id}
+                    )
+                    if not created:
+                        master.upi_id = upi_id
+                        master.save()
                     messages.success(request, f'Successfully added {name} to {department}!')
             return redirect('manage_masters')
             
@@ -2597,3 +2606,191 @@ def reset_database_view(request):
         return redirect('dashboard')
         
     return render(request, 'confirm_reset.html')
+
+
+from django.db.models import Sum
+from .forms import MasterPaymentForm
+from .models import MasterPayment, MasterName
+from .utils import calculate_master_earnings
+
+@login_required
+def master_ledger_list_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied("Only administrators can view the ledger.")
+
+    masters = MasterName.objects.all().order_by('department', 'name')
+    ledger_data = []
+
+    for master in masters:
+        total_earnings = calculate_master_earnings(master.name)
+        total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+        balance = total_earnings - total_paid
+        ledger_data.append({
+            'master': master,
+            'total_earnings': total_earnings,
+            'total_paid': total_paid,
+            'balance': balance,
+        })
+
+    return render(request, 'master_ledger_list.html', {
+        'ledger_data': ledger_data,
+        'is_admin': is_admin,
+    })
+
+
+@login_required
+def master_ledger_detail_view(request, pk):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied("Only administrators can view the ledger.")
+
+    master = get_object_or_404(MasterName, pk=pk)
+
+    from .models import (
+        CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
+        PrintingReport, SingleneedleReport, SewingReport, FinishingReport
+    )
+
+    events = []
+
+    # 1. Cutting Report
+    for r in CuttingReport.objects.filter(master_name=master.name).select_related('master_entry'):
+        rate = float(r.cutting_rate or 0.0)
+        pcs = int(r.total_pcs or 0)
+        amount = rate * pcs
+        if amount > 0:
+            events.append({
+                'date': r.master_entry.date,
+                'created_at': r.created_at,
+                'type': 'earning',
+                'description': f"Cutting: {pcs} Pcs @ ₹{rate:.2f} (Job Card: {r.job_card_no})",
+                'amount': amount
+            })
+
+    # Helper for standard reports
+    def add_reports(qs, label, date_field, rate_field='total_rate', jc_field='job_card_no'):
+        for r in qs:
+            rate = float(getattr(r, rate_field) or 0.0)
+            pcs = int(r.total_pcs or 0)
+            amount = rate * pcs
+            if amount > 0:
+                d = getattr(r, date_field) or r.created_at.date()
+                jc = getattr(r, jc_field, '')
+                events.append({
+                    'date': d,
+                    'created_at': r.created_at,
+                    'type': 'earning',
+                    'description': f"{label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card/Lot: {jc})",
+                    'amount': amount
+                })
+
+    add_reports(StitchingReport.objects.filter(master_name=master.name), "Stitching", "line_in_date")
+    add_reports(JobWorkReport.objects.filter(master_name=master.name), "Job Work", "jobwork_in")
+    add_reports(EmbroideryReport.objects.filter(master_name=master.name), "Embroidery", "embroidery_in")
+    add_reports(PrintingReport.objects.filter(master_name=master.name), "Printing", "printing_in")
+    add_reports(SingleneedleReport.objects.filter(master_name=master.name), "Singleneedle", "line_in_date")
+    add_reports(SewingReport.objects.filter(master_name=master.name), "Sewing", "line_in_date")
+    add_reports(FinishingReport.objects.filter(master_name=master.name), "Finishing", "date", jc_field='lot_no')
+
+    # Payments
+    for p in MasterPayment.objects.filter(master=master):
+        events.append({
+            'date': p.date,
+            'created_at': p.created_at,
+            'type': 'payment',
+            'description': f"Paid via {p.get_payment_mode_display()}" + (f" (Ref: {p.reference_no})" if p.reference_no else "") + (f" - {p.remarks}" if p.remarks else ""),
+            'amount': float(p.amount),
+            'payment_id': p.id
+        })
+
+    # Sort chronologically
+    events = sorted(events, key=lambda x: (x['date'], x['created_at']))
+
+    running_balance = 0.0
+    for e in events:
+        if e['type'] == 'earning':
+            running_balance += e['amount']
+        else:
+            running_balance -= e['amount']
+        e['balance'] = running_balance
+
+    total_earnings = calculate_master_earnings(master.name)
+    total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+    current_balance = total_earnings - total_paid
+
+    return render(request, 'master_ledger_detail.html', {
+        'master': master,
+        'events': reversed(events),  # Show newest first in table
+        'total_earnings': total_earnings,
+        'total_paid': total_paid,
+        'current_balance': current_balance,
+        'is_admin': is_admin,
+    })
+
+
+@login_required
+def record_payment_view(request, pk=None):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied("Only administrators can record payments.")
+
+    initial_data = {}
+    master = None
+    if pk:
+        master = get_object_or_404(MasterName, pk=pk)
+        initial_data['master'] = master
+        initial_data['date'] = timezone.now().date()
+        total_earnings = calculate_master_earnings(master.name)
+        total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+        initial_data['amount'] = max(0.0, total_earnings - total_paid)
+
+    if request.method == 'POST':
+        form = MasterPaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.created_by = request.user
+            payment.save()
+            messages.success(request, f"Successfully recorded payment of ₹{payment.amount} to {payment.master.name}!")
+            return redirect('master_ledger_detail', pk=payment.master.pk)
+    else:
+        form = MasterPaymentForm(initial=initial_data)
+
+    masters_json = json.dumps({
+        str(m.id): {
+            'name': m.name,
+            'upi_id': m.upi_id or '',
+            'outstanding': max(0.0, calculate_master_earnings(m.name) - float(m.payments.aggregate(total=Sum('amount'))['total'] or 0.0))
+        } for m in MasterName.objects.all()
+    })
+
+    return render(request, 'record_payment.html', {
+        'form': form,
+        'master': master,
+        'masters_json': masters_json,
+        'is_admin': is_admin,
+    })
+
+
+@login_required
+def delete_payment_view(request, pk):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied("Only administrators can delete payments.")
+
+    payment = get_object_or_404(MasterPayment, pk=pk)
+    master_pk = payment.master.pk
+    if request.method == 'POST':
+        payment.delete()
+        messages.success(request, "Payment deleted successfully.")
+        return redirect('master_ledger_detail', pk=master_pk)
+    return render(request, 'confirm_delete.html', {'object': payment, 'cancel_url': 'master_ledger_detail'})
+

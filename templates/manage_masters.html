@@ -30,6 +30,10 @@
             <option value="Finishing">Finishing</option>
           </select>
         </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">UPI ID / VPA (Optional - for payments)</label>
+          <input type="text" name="upi_id" id="masterUpiInput" class="form-control" placeholder="e.g., master@upi">
+        </div>
         <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem; display: flex; gap: 10px;">
           <button type="submit" name="add_master" id="btnSaveMaster" class="btn btn-primary" style="flex: 1;">Add Master</button>
           <button type="button" id="btnCancelEditMaster" class="btn btn-secondary" style="display: none; background: #475569; border-color: #475569;">Cancel</button>
@@ -46,6 +50,7 @@
               <tr>
                 <th>Department</th>
                 <th>Name</th>
+                <th>UPI ID / VPA</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -67,8 +72,9 @@
                   </span>
                 </td>
                 <td style="font-weight: 600;">{{ master.name }}</td>
+                <td style="font-size: 0.9rem; color: var(--text-muted);">{{ master.upi_id|default:"—" }}</td>
                 <td>
-                  <button type="button" class="btn btn-sm btn-edit-master" data-id="{{ master.id }}" data-name="{{ master.name }}" data-dept="{{ master.department }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
+                  <button type="button" class="btn btn-sm btn-edit-master" data-id="{{ master.id }}" data-name="{{ master.name }}" data-dept="{{ master.department }}" data-upi="{{ master.upi_id|default:'' }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
                     Edit
                   </button>
                   <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ master.name }}?');">
@@ -174,6 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const editMasterIdInput = document.querySelector('#editMasterId');
     const masterNameInput = document.querySelector('#masterNameInput');
     const masterDeptSelect = document.querySelector('#masterDeptSelect');
+    const masterUpiInput = document.querySelector('#masterUpiInput');
     const btnSaveMaster = document.querySelector('#btnSaveMaster');
     const btnCancelEditMaster = document.querySelector('#btnCancelEditMaster');
 
@@ -182,10 +189,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = this.getAttribute('data-id');
             const name = this.getAttribute('data-name');
             const dept = this.getAttribute('data-dept');
+            const upi = this.getAttribute('data-upi');
 
             editMasterIdInput.value = id;
             masterNameInput.value = name;
             masterDeptSelect.value = dept;
+            masterUpiInput.value = upi || '';
 
             masterFormTitle.textContent = 'Edit Master / Worker';
             btnSaveMaster.textContent = 'Save Master';
@@ -200,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
         editMasterIdInput.value = '';
         masterNameInput.value = '';
         masterDeptSelect.value = '';
+        masterUpiInput.value = '';
 
         masterFormTitle.textContent = 'Add New Master / Worker';
         btnSaveMaster.textContent = 'Add Master';

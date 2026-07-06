@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Record Payment{% endblock %}
+{% block page_title %}💸 Record Payment{% endblock %}
+
+{% block content %}
+<div class="form-page fade-in">
+  <div style="display: grid; grid-template-columns: 1fr; gap: 2rem; width: 100%; max-width: 900px; margin: 0 auto; align-items: start;">
+    
+    <!-- Top Back button -->
+    <div style="grid-column: 1 / -1;">
+      <a href="{% if master %}{% url 'master_ledger_detail' master.pk %}{% else %}{% url 'master_ledger_list' %}{% endif %}" class="btn btn-secondary" style="margin:0;">
+        ⬅️ Back
+      </a>
+    </div>
+
+    <!-- Main Payment Form Panel -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; width: 100%;">
+      
+      <!-- Left side: Form -->
+      <div class="form-card" style="margin: 0; padding: 2rem;">
+        <div class="form-card-header" style="margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.5rem; color: #fff;">Record Master Payment</h2>
+          <p class="form-subtitle">Record details of cash, UPI, or other payments.</p>
+        </div>
+
+        <form method="post" id="paymentForm" novalidate>
+          {% csrf_token %}
+          
+          <div class="form-group">
+            <label for="id_payment_master" class="form-label">Select Master / Worker <span class="required-star">*</span></label>
+            {{ form.master }}
+            {% if form.master.errors %}
+              <span class="field-error">{{ form.master.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label for="id_date" class="form-label">Payment Date <span class="required-star">*</span></label>
+              {{ form.date }}
+              {% if form.date.errors %}
+                <span class="field-error">{{ form.date.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_payment_amount" class="form-label">Amount (₹) <span class="required-star">*</span></label>
+              {{ form.amount }}
+              {% if form.amount.errors %}
+                <span class="field-error">{{ form.amount.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-row two-col">
+            <div class="form-group">
+              <label for="id_payment_mode" class="form-label">Payment Mode <span class="required-star">*</span></label>
+              {{ form.payment_mode }}
+              {% if form.payment_mode.errors %}
+                <span class="field-error">{{ form.payment_mode.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_reference_no" class="form-label">Ref No / UPI ID</label>
+              {{ form.reference_no }}
+              {% if form.reference_no.errors %}
+                <span class="field-error">{{ form.reference_no.errors.0 }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_remarks" class="form-label">Remarks</label>
+            {{ form.remarks }}
+            {% if form.remarks.errors %}
+              <span class="field-error">{{ form.remarks.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-actions" style="margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: #10b981; border-color: #10b981;">
+              Save Payment to Ledger
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right side: Live UPI QR Code Generator -->
+      <div class="form-card" id="upiQRCard" style="margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: rgba(30, 41, 59, 0.5); border: 1px dashed rgba(255,255,255,0.1); min-height: 380px;">
+        <div id="upiQRDefault">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📲</div>
+          <h3 style="color: #fff; font-size: 1.2rem; margin: 0 0 10px 0;">Instant UPI QR Payment</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 250px; margin: 0 auto;">Select a master with a saved UPI ID and enter an amount to generate a scan-to-pay QR code.</p>
+        </div>
+
+        <div id="upiQRActive" style="display: none; width: 100%;">
+          <div style="background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);">
+            <img id="upiQRImage" src="" alt="Scan to pay UPI QR Code" style="display: block; width: 200px; height: 200px;" />
+          </div>
+          <h3 style="color: #fff; font-size: 1.2rem; margin: 0 0 5px 0;" id="upiQRName">Pay Master</h3>
+          <div style="font-size: 1.5rem; font-weight: 800; color: #fbbf24; margin-bottom: 5px;" id="upiQRAmount">₹0.00</div>
+          <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1.5rem 0;" id="upiQRVpa">upiaddress@bank</p>
+          
+          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; color: #34d399; max-width: 280px; margin: 0 auto;">
+            📱 Scan with Google Pay, PhonePe, Paytm or BHIM to pay instantly.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  window.MASTERS_DATA = {{ masters_json|safe }};
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const masterSelect = document.getElementById('id_payment_master');
+    const amountInput = document.getElementById('id_payment_amount');
+    
+    const upiQRCard = document.getElementById('upiQRCard');
+    const upiQRDefault = document.getElementById('upiQRDefault');
+    const upiQRActive = document.getElementById('upiQRActive');
+    const upiQRImage = document.getElementById('upiQRImage');
+    const upiQRName = document.getElementById('upiQRName');
+    const upiQRAmount = document.getElementById('upiQRAmount');
+    const upiQRVpa = document.getElementById('upiQRVpa');
+    
+    function updateQRCode() {
+      const masterId = masterSelect.value;
+      const amount = parseFloat(amountInput.value) || 0.0;
+      
+      if (masterId && window.MASTERS_DATA[masterId]) {
+        const master = window.MASTERS_DATA[masterId];
+        
+        if (master.upi_id && amount > 0) {
+          // Master has VPA and valid payment amount
+          upiQRDefault.style.display = 'none';
+          upiQRActive.style.display = 'block';
+          
+          upiQRName.textContent = "Pay " + master.name;
+          upiQRAmount.textContent = "₹" + amount.toFixed(2);
+          upiQRVpa.textContent = master.upi_id;
+          
+          // Generate UPI Payment URI
+          // Format: upi://pay?pa=address@bank&pn=PayeeName&am=Amount&cu=INR&tn=FabricTrackPayment
+          const nameEncoded = encodeURIComponent(master.name);
+          const upiUri = `upi://pay?pa=${master.upi_id}&pn=${nameEncoded}&am=${amount.toFixed(2)}&cu=INR&tn=FabricTrack%20Payment`;
+          
+          // Get QR Code Image url via free API
+          upiQRImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUri)}`;
+          return;
+        }
+      }
+      
+      // Fallback to default instruction
+      upiQRActive.style.display = 'none';
+      upiQRDefault.style.display = 'block';
+    }
+    
+    if (masterSelect && amountInput) {
+      masterSelect.addEventListener('change', function() {
+        // Auto pre-populate amount if it is empty/zero and master is changed
+        const mId = masterSelect.value;
+        if (mId && window.MASTERS_DATA[mId]) {
+          const outstanding = window.MASTERS_DATA[mId].outstanding;
+          if (outstanding > 0 && (!amountInput.value || parseFloat(amountInput.value) === 0)) {
+            amountInput.value = outstanding.toFixed(2);
+          }
+        }
+        updateQRCode();
+      });
+      amountInput.addEventListener('input', updateQRCode);
+      
+      // Initial trigger
+      updateQRCode();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Master Ledger & Payments{% endblock %}
+{% block page_title %}💰 Master Ledger & Payments{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="display: flex; flex-direction: column; gap: 2rem;">
+
+  <!-- Upper Actions -->
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h2 style="margin: 0; font-size: 1.5rem; color: #fff;">Master Account Balances</h2>
+      <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: var(--text-muted);">Track earnings, payments, and balances due to each master/worker.</p>
+    </div>
+    <div>
+      <a href="{% url 'record_payment' %}" class="btn btn-primary" style="background: #10b981; border-color: #10b981;">
+        ➕ Record Payment
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Ledger List -->
+  <div class="section-card">
+    {% if ledger_data %}
+      <div class="table-wrapper">
+        <table class="data-table" id="ledgerTable">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Master Name</th>
+              <th>UPI ID / VPA</th>
+              <th style="text-align: right;">Total Earnings</th>
+              <th style="text-align: right;">Total Paid</th>
+              <th style="text-align: right;">Outstanding Balance</th>
+              <th style="text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in ledger_data %}
+            <tr class="table-row-hover">
+              <td>
+                <span class="badge" style="
+                  {% if item.master.department == 'Cutting' %}background: #dbeafe; color: #1e40af;{% endif %}
+                  {% if item.master.department == 'Stitching' %}background: #fce7f3; color: #9d174d;{% endif %}
+                  {% if item.master.department == 'Job Work' %}background: #fef3c7; color: #b45309;{% endif %}
+                  {% if item.master.department == 'Embroidery' %}background: #ecfeff; color: #0891b2;{% endif %}
+                  {% if item.master.department == 'Printing' %}background: #eef2ff; color: #4f46e5;{% endif %}
+                  {% if item.master.department == 'Singleneedle' %}background: #fae8ff; color: #86198f;{% endif %}
+                  {% if item.master.department == 'Sewing' %}background: #f0fdf4; color: #166534;{% endif %}
+                  {% if item.master.department == 'Finishing' %}background: #e0e7ff; color: #3730a3;{% endif %}
+                ">
+                  {{ item.master.department }}
+                </span>
+              </td>
+              <td>
+                <a href="{% url 'master_ledger_detail' item.master.pk %}" style="color: #60a5fa; font-weight: 600; text-decoration: none; hover: text-decoration: underline;">
+                  {{ item.master.name }}
+                </a>
+              </td>
+              <td style="color: var(--text-muted); font-size: 0.9rem;">
+                {{ item.master.upi_id|default:"—" }}
+              </td>
+              <td style="text-align: right; font-weight: 600;">₹{{ item.total_earnings|floatformat:2 }}</td>
+              <td style="text-align: right; font-weight: 600; color: #10b981;">₹{{ item.total_paid|floatformat:2 }}</td>
+              <td style="text-align: right; font-weight: 700; 
+                {% if item.balance > 0 %}color: #f59e0b;{% else %}color: var(--text-muted);{% endif %}">
+                ₹{{ item.balance|floatformat:2 }}
+              </td>
+              <td style="text-align: center; white-space: nowrap;">
+                <a href="{% url 'master_ledger_detail' item.master.pk %}" class="btn btn-sm btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; margin-right: 5px;">
+                  📖 View Statement
+                </a>
+                <a href="{% url 'record_payment_for_master' item.master.pk %}" class="btn btn-sm btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background: #10b981; border-color: #10b981;">
+                  💸 Pay Master
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">💰</div>
+        <p>No master accounts available. Please add some Master names in "Manage Masters & Rates" first.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

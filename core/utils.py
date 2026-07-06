@@ -593,3 +593,41 @@ def generate_backup_zip():
     zip_buffer.seek(0)
     return zip_buffer
 
+
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from django.db.models.functions import Coalesce
+
+def calculate_master_earnings(master_name):
+    """
+    Sums earnings (total_pcs * rate) across all 8 department reports where master_name matches.
+    """
+    from .models import (
+        CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
+        PrintingReport, SingleneedleReport, SewingReport, FinishingReport
+    )
+
+    earnings = 0.0
+
+    # 1. Cutting (uses cutting_rate)
+    res = CuttingReport.objects.filter(master_name=master_name).annotate(
+        val=ExpressionWrapper(F('total_pcs') * Coalesce(F('cutting_rate'), 0.0), output_field=DecimalField())
+    ).aggregate(total=Sum('val'))
+    earnings += float(res['total'] or 0.0)
+
+    # Standard reports helper (using total_rate)
+    def get_standard_earnings(model_class):
+        r = model_class.objects.filter(master_name=master_name).annotate(
+            val=ExpressionWrapper(F('total_pcs') * Coalesce(F('total_rate'), 0.0), output_field=DecimalField())
+        ).aggregate(total=Sum('val'))
+        return float(r['total'] or 0.0)
+
+    earnings += get_standard_earnings(StitchingReport)
+    earnings += get_standard_earnings(JobWorkReport)
+    earnings += get_standard_earnings(EmbroideryReport)
+    earnings += get_standard_earnings(PrintingReport)
+    earnings += get_standard_earnings(SingleneedleReport)
+    earnings += get_standard_earnings(SewingReport)
+    earnings += get_standard_earnings(FinishingReport)
+
+    return earnings
+

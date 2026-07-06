@@ -149,6 +149,11 @@
         id="nav-manage-masters">
         <span class="nav-icon">👤</span> Manage Masters
       </a>
+      <a href="{% url 'master_ledger_list' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'master_ledger_list' or request.resolver_match.url_name == 'master_ledger_detail' or request.resolver_match.url_name == 'record_payment' %}active{% endif %}"
+        id="nav-master-ledger">
+        <span class="nav-icon">💰</span> Master Ledger
+      </a>
       <a href="{% url 'manage_users' %}"
         class="nav-item {% if request.resolver_match.url_name == 'manage_users' %}active{% endif %}"
         id="nav-users">

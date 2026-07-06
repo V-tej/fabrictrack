@@ -1,5 +1,5 @@
 from django import forms
-from .models import MasterEntry, CuttingReport, MasterName, StitchingReport, JobWorkReport, FinishingReport, EmbroideryReport, PrintingReport, SingleneedleReport, SewingReport
+from .models import MasterEntry, CuttingReport, MasterName, StitchingReport, JobWorkReport, FinishingReport, EmbroideryReport, PrintingReport, SingleneedleReport, SewingReport, MasterPayment
 
 
 class MasterEntryForm(forms.ModelForm):
@@ -675,3 +675,17 @@ class PrintingReportForm(forms.ModelForm):
             else:
                 self.add_error('printing_out', "Printing Out Date cannot be before Printing In Date.")
         return cleaned_data
+
+
+class MasterPaymentForm(forms.ModelForm):
+    class Meta:
+        model = MasterPayment
+        fields = ['master', 'date', 'amount', 'payment_mode', 'reference_no', 'remarks']
+        widgets = {
+            'master': forms.Select(attrs={'class': 'form-control', 'id': 'id_payment_master'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00', 'id': 'id_payment_amount'}),
+            'payment_mode': forms.Select(attrs={'class': 'form-control'}),
+            'reference_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UPI Txn ID or Ref No'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Payment description...'}),
+        }

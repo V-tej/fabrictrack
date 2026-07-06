@@ -27,6 +27,13 @@ urlpatterns = [
     path('job-card/<int:pk>/', views.job_card_detail_view, name='job_card_detail'),
     path('job-card/<int:pk>/print/', views.job_card_print_view, name='job_card_print'),
 
+    # Ledger & Payment Routes
+    path('ledger/', views.master_ledger_list_view, name='master_ledger_list'),
+    path('ledger/<int:pk>/', views.master_ledger_detail_view, name='master_ledger_detail'),
+    path('ledger/payment/new/', views.record_payment_view, name='record_payment'),
+    path('ledger/payment/<int:pk>/new/', views.record_payment_view, name='record_payment_for_master'),
+    path('ledger/payment/<int:pk>/delete/', views.delete_payment_view, name='delete_payment'),
+
     # Edit Routes
     path('master-entry/<int:pk>/edit/', views.edit_master_entry, name='edit_master_entry'),
     path('cutting-report/<int:pk>/edit/', views.edit_cutting_report, name='edit_cutting_report'),
