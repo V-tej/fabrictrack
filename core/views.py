@@ -2621,13 +2621,32 @@ def master_ledger_list_view(request):
     if not is_admin:
         raise PermissionDenied("Only administrators can view the ledger.")
 
+    from django.utils.dateparse import parse_date
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+
+    start_date = parse_date(start_date_str) if start_date_str else None
+    end_date = parse_date(end_date_str) if end_date_str else None
+
     masters = MasterName.objects.all().order_by('department', 'name')
     ledger_data = []
 
     for master in masters:
-        total_earnings = calculate_master_earnings(master.name)
-        total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+        total_earnings = calculate_master_earnings(master.name, start_date, end_date)
+        
+        p_qs = master.payments.all()
+        if start_date:
+            p_qs = p_qs.filter(date__gte=start_date)
+        if end_date:
+            p_qs = p_qs.filter(date__lte=end_date)
+            
+        total_paid = float(p_qs.aggregate(total=Sum('amount'))['total'] or 0.0)
         balance = total_earnings - total_paid
+
+        # Hide inactive masters in the filtered view
+        if (start_date or end_date) and total_earnings == 0.0 and total_paid == 0.0 and balance == 0.0:
+            continue
+
         ledger_data.append({
             'master': master,
             'total_earnings': total_earnings,
@@ -2638,6 +2657,8 @@ def master_ledger_list_view(request):
     return render(request, 'master_ledger_list.html', {
         'ledger_data': ledger_data,
         'is_admin': is_admin,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
     })
 
 
@@ -2650,6 +2671,13 @@ def master_ledger_detail_view(request, pk):
         raise PermissionDenied("Only administrators can view the ledger.")
 
     master = get_object_or_404(MasterName, pk=pk)
+
+    from django.utils.dateparse import parse_date
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+
+    start_date_obj = parse_date(start_date_str) if start_date_str else None
+    end_date_obj = parse_date(end_date_str) if end_date_str else None
 
     from .models import (
         CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
@@ -2699,11 +2727,12 @@ def master_ledger_detail_view(request, pk):
 
     # Payments
     for p in MasterPayment.objects.filter(master=master):
+        period_str = f" (Period: {p.start_date.strftime('%d %b %Y')} to {p.end_date.strftime('%d %b %Y')})" if p.start_date and p.end_date else ""
         events.append({
             'date': p.date,
             'created_at': p.created_at,
             'type': 'payment',
-            'description': f"Paid via {p.get_payment_mode_display()}" + (f" (Ref: {p.reference_no})" if p.reference_no else "") + (f" - {p.remarks}" if p.remarks else ""),
+            'description': f"Paid via {p.get_payment_mode_display()}{period_str}" + (f" (Ref: {p.reference_no})" if p.reference_no else "") + (f" - {p.remarks}" if p.remarks else ""),
             'amount': float(p.amount),
             'payment_id': p.id
         })
@@ -2711,24 +2740,53 @@ def master_ledger_detail_view(request, pk):
     # Sort chronologically
     events = sorted(events, key=lambda x: (x['date'], x['created_at']))
 
-    running_balance = 0.0
+    # Split into pre-range and active range
+    pre_events = []
+    active_events = []
+    
     for e in events:
+        if start_date_obj and e['date'] < start_date_obj:
+            pre_events.append(e)
+        elif end_date_obj and e['date'] > end_date_obj:
+            pass
+        else:
+            active_events.append(e)
+
+    # Compute opening balance
+    opening_balance = sum(e['amount'] for e in pre_events if e['type'] == 'earning') - sum(e['amount'] for e in pre_events if e['type'] == 'payment')
+
+    running_balance = opening_balance
+    for e in active_events:
         if e['type'] == 'earning':
             running_balance += e['amount']
         else:
             running_balance -= e['amount']
         e['balance'] = running_balance
 
-    total_earnings = calculate_master_earnings(master.name)
-    total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
-    current_balance = total_earnings - total_paid
+    # Overall totals
+    total_earnings_all = calculate_master_earnings(master.name)
+    total_paid_all = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+    current_balance_all = total_earnings_all - total_paid_all
+
+    # Filtered range totals
+    range_earnings = sum(e['amount'] for e in active_events if e['type'] == 'earning')
+    range_paid = sum(e['amount'] for e in active_events if e['type'] == 'payment')
+    range_balance_change = range_earnings - range_paid
 
     return render(request, 'master_ledger_detail.html', {
         'master': master,
-        'events': reversed(events),  # Show newest first in table
-        'total_earnings': total_earnings,
-        'total_paid': total_paid,
-        'current_balance': current_balance,
+        'events': reversed(active_events),  # Show newest first in table
+        'total_earnings': range_earnings if (start_date_obj or end_date_obj) else total_earnings_all,
+        'total_paid': range_paid if (start_date_obj or end_date_obj) else total_paid_all,
+        'current_balance': (opening_balance + range_balance_change) if (start_date_obj or end_date_obj) else current_balance_all,
+        
+        'total_earnings_all': total_earnings_all,
+        'total_paid_all': total_paid_all,
+        'current_balance_all': current_balance_all,
+        'opening_balance': opening_balance,
+        
+        'start_date': start_date_str,
+        'end_date': end_date_str,
         'is_admin': is_admin,
     })
 
@@ -2741,14 +2799,34 @@ def record_payment_view(request, pk=None):
     if not is_admin:
         raise PermissionDenied("Only administrators can record payments.")
 
-    initial_data = {}
+    from django.utils.dateparse import parse_date
+    from django.urls import reverse
+    
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+
+    start_date_obj = parse_date(start_date_str) if start_date_str else None
+    end_date_obj = parse_date(end_date_str) if end_date_str else None
+
+    initial_data = {
+        'date': timezone.now().date(),
+    }
+    if start_date_obj:
+        initial_data['start_date'] = start_date_obj
+    if end_date_obj:
+        initial_data['end_date'] = end_date_obj
+
     master = None
     if pk:
         master = get_object_or_404(MasterName, pk=pk)
         initial_data['master'] = master
-        initial_data['date'] = timezone.now().date()
-        total_earnings = calculate_master_earnings(master.name)
-        total_paid = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+        total_earnings = calculate_master_earnings(master.name, start_date_obj, end_date_obj)
+        p_qs = master.payments.all()
+        if start_date_obj:
+            p_qs = p_qs.filter(date__gte=start_date_obj)
+        if end_date_obj:
+            p_qs = p_qs.filter(date__lte=end_date_obj)
+        total_paid = float(p_qs.aggregate(total=Sum('amount'))['total'] or 0.0)
         initial_data['amount'] = max(0.0, total_earnings - total_paid)
 
     if request.method == 'POST':
@@ -2758,7 +2836,14 @@ def record_payment_view(request, pk=None):
             payment.created_by = request.user
             payment.save()
             messages.success(request, f"Successfully recorded payment of ₹{payment.amount} to {payment.master.name}!")
-            return redirect('master_ledger_detail', pk=payment.master.pk)
+            
+            detail_url = reverse('master_ledger_detail', kwargs={'pk': payment.master.pk})
+            if start_date_str or end_date_str:
+                query_params = []
+                if start_date_str: query_params.append(f"start_date={start_date_str}")
+                if end_date_str: query_params.append(f"end_date={end_date_str}")
+                detail_url += "?" + "&".join(query_params)
+            return redirect(detail_url)
     else:
         form = MasterPaymentForm(initial=initial_data)
 
@@ -2766,7 +2851,12 @@ def record_payment_view(request, pk=None):
         str(m.id): {
             'name': m.name,
             'upi_id': m.upi_id or '',
-            'outstanding': max(0.0, calculate_master_earnings(m.name) - float(m.payments.aggregate(total=Sum('amount'))['total'] or 0.0))
+            'outstanding': max(0.0, calculate_master_earnings(m.name, start_date_obj, end_date_obj) - float(
+                m.payments.filter(
+                    **({'date__gte': start_date_obj} if start_date_obj else {}),
+                    **({'date__lte': end_date_obj} if end_date_obj else {})
+                ).aggregate(total=Sum('amount'))['total'] or 0.0
+            ))
         } for m in MasterName.objects.all()
     })
 
@@ -2775,6 +2865,8 @@ def record_payment_view(request, pk=None):
         'master': master,
         'masters_json': masters_json,
         'is_admin': is_admin,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
     })
 
 
@@ -2793,4 +2885,47 @@ def delete_payment_view(request, pk):
         messages.success(request, "Payment deleted successfully.")
         return redirect('master_ledger_detail', pk=master_pk)
     return render(request, 'confirm_delete.html', {'object': payment, 'cancel_url': 'master_ledger_detail'})
+
+
+@login_required
+def get_master_outstanding_api(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.http import JsonResponse
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    from django.http import JsonResponse
+
+    from django.utils.dateparse import parse_date
+    master_id = request.GET.get('master_id')
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+
+    if not master_id:
+        return JsonResponse({'error': 'master_id is required'}, status=400)
+
+    start_date = parse_date(start_date_str) if start_date_str else None
+    end_date = parse_date(end_date_str) if end_date_str else None
+
+    master = get_object_or_404(MasterName, id=master_id)
+
+    total_earnings = calculate_master_earnings(master.name, start_date, end_date)
+
+    p_qs = master.payments.all()
+    if start_date:
+        p_qs = p_qs.filter(date__gte=start_date)
+    if end_date:
+        p_qs = p_qs.filter(date__lte=end_date)
+
+    total_paid = float(p_qs.aggregate(total=Sum('amount'))['total'] or 0.0)
+    outstanding = max(0.0, total_earnings - total_paid)
+
+    return JsonResponse({
+        'master_id': master.id,
+        'name': master.name,
+        'upi_id': master.upi_id or '',
+        'outstanding': outstanding
+    })
 

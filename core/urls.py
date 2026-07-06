@@ -33,6 +33,7 @@ urlpatterns = [
     path('ledger/payment/new/', views.record_payment_view, name='record_payment'),
     path('ledger/payment/<int:pk>/new/', views.record_payment_view, name='record_payment_for_master'),
     path('ledger/payment/<int:pk>/delete/', views.delete_payment_view, name='delete_payment'),
+    path('api/master-outstanding/', views.get_master_outstanding_api, name='master_outstanding_api'),
 
     # Edit Routes
     path('master-entry/<int:pk>/edit/', views.edit_master_entry, name='edit_master_entry'),

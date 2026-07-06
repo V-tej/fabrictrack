@@ -449,25 +449,109 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('pendingSearch');
+    const tableBody = document.querySelector('#pending-tasks tbody');
+    if (!tableBody) return;
+    
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    let filteredRows = [...rows];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    
+    // Create pagination container
+    const card = document.getElementById('pending-tasks');
+    const paginationContainer = document.createElement('div');
+    paginationContainer.id = 'pendingPagination';
+    paginationContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; gap: 1rem;';
+    
+    paginationContainer.innerHTML = `
+      <div style="font-size: 0.9rem; color: var(--text-muted);" id="paginationInfo">Showing 1-10 of 10 tasks</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" id="btnPrev" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #334155; border-color: #334155;">Previous</button>
+        <button class="btn btn-secondary" id="btnNext" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #334155; border-color: #334155;">Next</button>
+      </div>
+    `;
+    
+    card.appendChild(paginationContainer);
+    
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    function renderPage() {
+      const totalItems = filteredRows.length;
+      const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+      
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+      
+      // Hide all rows first
+      rows.forEach(r => r.style.display = 'none');
+      
+      // Show only active rows for this page
+      filteredRows.slice(startIndex, endIndex).forEach(r => r.style.display = '');
+      
+      // Update pagination info
+      if (totalItems === 0) {
+        paginationInfo.textContent = 'Showing 0-0 of 0 tasks';
+      } else {
+        paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalItems} tasks (Page ${currentPage} of ${totalPages})`;
+      }
+      
+      // Enable/Disable buttons
+      btnPrev.disabled = (currentPage === 1);
+      btnPrev.style.opacity = (currentPage === 1) ? '0.5' : '1';
+      btnPrev.style.cursor = (currentPage === 1) ? 'not-allowed' : 'pointer';
+      
+      btnNext.disabled = (currentPage === totalPages);
+      btnNext.style.opacity = (currentPage === totalPages) ? '0.5' : '1';
+      btnNext.style.cursor = (currentPage === totalPages) ? 'not-allowed' : 'pointer';
+      
+      // Hide container if total items is less than or equal to itemsPerPage
+      if (totalItems <= itemsPerPage) {
+        paginationContainer.style.display = 'none';
+      } else {
+        paginationContainer.style.display = 'flex';
+      }
+    }
+    
+    btnPrev.addEventListener('click', function() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+      }
+    });
+    
+    btnNext.addEventListener('click', function() {
+      const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+      }
+    });
+    
     if (searchInput) {
       searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase().trim();
-        const rows = document.querySelectorAll('#pending-tasks tbody tr');
         
-        rows.forEach(row => {
-          // Job Card No is in the first td
+        filteredRows = rows.filter(row => {
           const jobCardCell = row.querySelector('td:first-child');
           if (jobCardCell) {
             const text = jobCardCell.textContent.toLowerCase();
-            if (text.includes(searchTerm)) {
-              row.style.display = '';
-            } else {
-              row.style.display = 'none';
-            }
+            return text.includes(searchTerm);
           }
+          return false;
         });
+        
+        currentPage = 1;
+        renderPage();
       });
     }
+    
+    // Initial page load
+    renderPage();
   });
 </script>
 {% endblock %}

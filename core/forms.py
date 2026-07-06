@@ -678,9 +678,20 @@ class PrintingReportForm(forms.ModelForm):
 
 
 class MasterPaymentForm(forms.ModelForm):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_work_start_date'}),
+        required=True,
+        label="Work Start Date"
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_work_end_date'}),
+        required=True,
+        label="Work End Date"
+    )
+
     class Meta:
         model = MasterPayment
-        fields = ['master', 'date', 'amount', 'payment_mode', 'reference_no', 'remarks']
+        fields = ['master', 'start_date', 'end_date', 'date', 'amount', 'payment_mode', 'reference_no', 'remarks']
         widgets = {
             'master': forms.Select(attrs={'class': 'form-control', 'id': 'id_payment_master'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),

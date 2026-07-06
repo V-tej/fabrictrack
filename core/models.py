@@ -90,6 +90,8 @@ class MasterPayment(models.Model):
         ('Other', 'Other'),
     ]
     master = models.ForeignKey(MasterName, on_delete=models.CASCADE, related_name='payments')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_mode = models.CharField(max_length=20, choices=PAYMENT_MODE_CHOICES, default='UPI')

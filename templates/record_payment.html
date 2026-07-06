@@ -7,8 +7,8 @@
   <div style="display: grid; grid-template-columns: 1fr; gap: 2rem; width: 100%; max-width: 900px; margin: 0 auto; align-items: start;">
     
     <!-- Top Back button -->
-    <div style="grid-column: 1 / -1;">
-      <a href="{% if master %}{% url 'master_ledger_detail' master.pk %}{% else %}{% url 'master_ledger_list' %}{% endif %}" class="btn btn-secondary" style="margin:0;">
+    <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <a href="{% if master %}{% url 'master_ledger_detail' master.pk %}{% else %}{% url 'master_ledger_list' %}{% endif %}{% if start_date or end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}" class="btn btn-secondary" style="margin:0;">
         ⬅️ Back
       </a>
     </div>
@@ -28,10 +28,36 @@
           
           <div class="form-group">
             <label for="id_payment_master" class="form-label">Select Master / Worker <span class="required-star">*</span></label>
-            {{ form.master }}
+            {% if master %}
+              <!-- If master is pre-selected, hide dropdown and show plain text -->
+              <input type="hidden" name="master" id="id_payment_master" value="{{ master.id }}">
+              <div class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; line-height: 38px; height: 38px; padding: 0 0.75rem; border-color: rgba(255,255,255,0.15);">
+                {{ master.name }} ({% if master.department %}{{ master.department }}{% else %}Worker{% endif %})
+              </div>
+            {% else %}
+              {{ form.master }}
+            {% endif %}
             {% if form.master.errors %}
               <span class="field-error">{{ form.master.errors.0 }}</span>
             {% endif %}
+          </div>
+
+          <!-- Live Dynamic Date Filters inside Form Card (Mandatory) -->
+          <div class="form-row two-col" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="id_work_start_date" class="form-label">Work Start Date <span class="required-star">*</span></label>
+              {{ form.start_date }}
+              {% if form.start_date.errors %}
+                <span class="field-error">{{ form.start_date.errors.0 }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="id_work_end_date" class="form-label">Work End Date <span class="required-star">*</span></label>
+              {{ form.end_date }}
+              {% if form.end_date.errors %}
+                <span class="field-error">{{ form.end_date.errors.0 }}</span>
+              {% endif %}
+            </div>
           </div>
 
           <div class="form-row two-col">
@@ -116,6 +142,8 @@
   document.addEventListener('DOMContentLoaded', function() {
     const masterSelect = document.getElementById('id_payment_master');
     const amountInput = document.getElementById('id_payment_amount');
+    const workStartDateInput = document.getElementById('id_work_start_date');
+    const workEndDateInput = document.getElementById('id_work_end_date');
     
     const upiQRCard = document.getElementById('upiQRCard');
     const upiQRDefault = document.getElementById('upiQRDefault');
@@ -157,18 +185,47 @@
       upiQRDefault.style.display = 'block';
     }
     
-    if (masterSelect && amountInput) {
-      masterSelect.addEventListener('change', function() {
-        // Auto pre-populate amount if it is empty/zero and master is changed
-        const mId = masterSelect.value;
-        if (mId && window.MASTERS_DATA[mId]) {
-          const outstanding = window.MASTERS_DATA[mId].outstanding;
-          if (outstanding > 0 && (!amountInput.value || parseFloat(amountInput.value) === 0)) {
-            amountInput.value = outstanding.toFixed(2);
+    function fetchOutstandingForMaster() {
+      const masterId = masterSelect.value;
+      if (!masterId) return;
+      
+      const startDate = workStartDateInput.value;
+      const endDate = workEndDateInput.value;
+      
+      // Show loading/waiting indicator in amount input if desired
+      amountInput.placeholder = "Calculating...";
+      
+      // Fetch outstanding balance from API
+      const url = `/api/master-outstanding/?master_id=${masterId}&start_date=${startDate}&end_date=${endDate}`;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data && !data.error) {
+            // Update local cache
+            if (!window.MASTERS_DATA[masterId]) {
+              window.MASTERS_DATA[masterId] = {};
+            }
+            window.MASTERS_DATA[masterId].outstanding = data.outstanding;
+            window.MASTERS_DATA[masterId].upi_id = data.upi_id;
+            window.MASTERS_DATA[masterId].name = data.name;
+            
+            // Set the amount input
+            amountInput.value = data.outstanding.toFixed(2);
+            updateQRCode();
           }
-        }
-        updateQRCode();
-      });
+        })
+        .catch(err => console.error("Error fetching outstanding balance:", err));
+    }
+    
+    if (masterSelect && amountInput) {
+      masterSelect.addEventListener('change', fetchOutstandingForMaster);
+      if (workStartDateInput) {
+        workStartDateInput.addEventListener('change', fetchOutstandingForMaster);
+      }
+      if (workEndDateInput) {
+        workEndDateInput.addEventListener('change', fetchOutstandingForMaster);
+      }
+      
       amountInput.addEventListener('input', updateQRCode);
       
       // Initial trigger

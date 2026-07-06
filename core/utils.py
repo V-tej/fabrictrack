@@ -597,9 +597,10 @@ def generate_backup_zip():
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.db.models.functions import Coalesce
 
-def calculate_master_earnings(master_name):
+def calculate_master_earnings(master_name, start_date=None, end_date=None):
     """
-    Sums earnings (total_pcs * rate) across all 8 department reports where master_name matches.
+    Sums earnings (total_pcs * rate) across all 8 department reports where master_name matches,
+    optionally filtered by a date range.
     """
     from .models import (
         CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
@@ -608,26 +609,38 @@ def calculate_master_earnings(master_name):
 
     earnings = 0.0
 
-    # 1. Cutting (uses cutting_rate)
-    res = CuttingReport.objects.filter(master_name=master_name).annotate(
+    # 1. Cutting (uses cutting_rate, date is in master_entry)
+    q_cut = CuttingReport.objects.filter(master_name=master_name)
+    if start_date:
+        q_cut = q_cut.filter(master_entry__date__gte=start_date)
+    if end_date:
+        q_cut = q_cut.filter(master_entry__date__lte=end_date)
+    
+    res = q_cut.annotate(
         val=ExpressionWrapper(F('total_pcs') * Coalesce(F('cutting_rate'), 0.0), output_field=DecimalField())
     ).aggregate(total=Sum('val'))
     earnings += float(res['total'] or 0.0)
 
-    # Standard reports helper (using total_rate)
-    def get_standard_earnings(model_class):
-        r = model_class.objects.filter(master_name=master_name).annotate(
+    # Helper for standard reports (using total_rate)
+    def get_standard_earnings(model_class, date_field):
+        q = model_class.objects.filter(master_name=master_name)
+        if start_date:
+            q = q.filter(**{f"{date_field}__gte": start_date})
+        if end_date:
+            q = q.filter(**{f"{date_field}__lte": end_date})
+            
+        r = q.annotate(
             val=ExpressionWrapper(F('total_pcs') * Coalesce(F('total_rate'), 0.0), output_field=DecimalField())
         ).aggregate(total=Sum('val'))
         return float(r['total'] or 0.0)
 
-    earnings += get_standard_earnings(StitchingReport)
-    earnings += get_standard_earnings(JobWorkReport)
-    earnings += get_standard_earnings(EmbroideryReport)
-    earnings += get_standard_earnings(PrintingReport)
-    earnings += get_standard_earnings(SingleneedleReport)
-    earnings += get_standard_earnings(SewingReport)
-    earnings += get_standard_earnings(FinishingReport)
+    earnings += get_standard_earnings(StitchingReport, 'line_in_date')
+    earnings += get_standard_earnings(JobWorkReport, 'jobwork_in')
+    earnings += get_standard_earnings(EmbroideryReport, 'embroidery_in')
+    earnings += get_standard_earnings(PrintingReport, 'printing_in')
+    earnings += get_standard_earnings(SingleneedleReport, 'line_in_date')
+    earnings += get_standard_earnings(SewingReport, 'line_in_date')
+    earnings += get_standard_earnings(FinishingReport, 'date')
 
     return earnings
 
