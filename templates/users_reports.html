@@ -181,7 +181,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -229,7 +229,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -280,7 +280,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -340,7 +340,7 @@
             <td><strong>{{ report.total_pcs }}</strong></td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -400,7 +400,7 @@
             <td><strong>{{ report.total_pcs }}</strong></td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -458,7 +458,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -506,7 +506,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -562,7 +562,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -610,7 +610,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -660,7 +660,7 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}

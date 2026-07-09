@@ -3,58 +3,41 @@
 {% block page_title %}📊 Submissions{% endblock %}
 
 {% block content %}
-<div class="fade-in">
+<div class="fade-in" style="display: flex; flex-direction: column;">
 
-  <!-- Navigation Tabs for Departments -->
   <div class="tabs-container" style="margin-bottom: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
     <a href="{% url 'submission_list' %}" class="btn {% if not filter_param %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       All Departments
     </a>
-    {% if user.profile.person_type in 'P1,P2,P3,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p1" class="btn {% if filter_param == 'p1' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       ✂️ Cutting Reports
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P4,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p4" class="btn {% if filter_param == 'p4' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🧵 Stitching
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P5,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p5" class="btn {% if filter_param == 'p5' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       👔 Job Work
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P7,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p7" class="btn {% if filter_param == 'p7' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🧵 Embroidery
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P8,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p8" class="btn {% if filter_param == 'p8' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🎨 Printing
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P6,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p6" class="btn {% if filter_param == 'p6' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       👔 Finishing Reports
     </a>
-    {% endif %}
-    {% if user.profile.person_type in 'P9,ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p9" class="btn {% if filter_param == 'p9' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🪡 Singleneedle
     </a>
-    {% endif %}
-    {% if user.profile.person_type == 'P10' or user.profile.person_type == 'ADMIN' or user.is_superuser %}
     <a href="{% url 'submission_list' %}?filter=p10" class="btn {% if filter_param == 'p10' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🧵 Sewing
     </a>
-    {% endif %}
   </div>
 
 
-  {% if show_p1 and user.profile.person_type in 'P1,P2,P3,ADMIN' or show_p1 and user.is_superuser %}
-  <div class="section-card" id="submissionsCard">
+  {% if show_p1 %}
+  <div class="section-card" id="submissionsCard" style="order: {% if person_type in 'P1,P2,P3' %}1{% else %}10{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Cutting Reports {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -81,7 +64,7 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
-        {% if request.user.profile.person_type in 'P1,P2,P3' %}
+        {% if request.user.profile.person_type in 'P1,P2,P3,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'cutting_report' %}" class="btn btn-primary btn-sm" id="btnNewReport">+ New Report</a>
         {% endif %}
         {% if request.user.is_superuser %}
@@ -162,7 +145,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_cutting_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_cutting_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -185,9 +168,9 @@
   {% endif %}
 
 
-  {% if show_p4 and user.profile.person_type in 'P4,ADMIN' or show_p4 and user.is_superuser %}
+  {% if show_p4 %}
   <!-- Stitching Section -->
-  <div class="section-card" id="p4SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p4SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P4' %}1{% else %}20{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Stitching {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -214,7 +197,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P4,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'stitching_report' %}" class="btn btn-primary btn-sm" id="btnNewP4Report">+ New Stitching</a>
+        {% endif %}
       </div>
     </div>
 
@@ -299,7 +284,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -397,7 +382,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -418,9 +403,9 @@
   </div>
   {% endif %}
 
-  {% if show_p5 and user.profile.person_type in 'P5,ADMIN' or show_p5 and user.is_superuser %}
+  {% if show_p5 %}
   <!-- Job Work Section -->
-  <div class="section-card" id="p5SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p5SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P5' %}1{% else %}30{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Job Work {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -447,7 +432,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P5,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'jobwork_report' %}" class="btn btn-primary btn-sm" id="btnNewP5Report">+ New Job Work</a>
+        {% endif %}
       </div>
     </div>
 
@@ -530,7 +517,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -627,7 +614,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -647,9 +634,9 @@
   </div>
   {% endif %}
 
-  {% if show_p7 and user.profile.person_type in 'P7,ADMIN' or show_p7 and user.is_superuser %}
+  {% if show_p7 %}
   <!-- Embroidery Section -->
-  <div class="section-card" id="p7SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p7SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P7' %}1{% else %}40{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Embroidery {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -676,7 +663,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P7,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'embroidery_report' %}" class="btn btn-primary btn-sm" id="btnNewP7Report">+ New Embroidery</a>
+        {% endif %}
       </div>
     </div>
 
@@ -759,7 +748,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -856,7 +845,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -876,9 +865,9 @@
   </div>
   {% endif %}
 
-  {% if show_p8 and user.profile.person_type in 'P8,ADMIN' or show_p8 and user.is_superuser %}
+  {% if show_p8 %}
   <!-- Printing Section -->
-  <div class="section-card" id="p8SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p8SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P8' %}1{% else %}50{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Printing {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -905,7 +894,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P8,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'printing_report' %}" class="btn btn-primary btn-sm" id="btnNewP8Report">+ New Printing</a>
+        {% endif %}
       </div>
     </div>
 
@@ -988,7 +979,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1085,7 +1076,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1105,9 +1096,9 @@
   </div>
   {% endif %}
 
-  {% if show_p6 and user.profile.person_type in 'P6,ADMIN' or show_p6 and user.is_superuser %}
+  {% if show_p6 %}
   <!-- Finishing Report Section -->
-  <div class="section-card" id="p6SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p6SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P6' %}1{% else %}60{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Finishing Reports {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1134,7 +1125,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P6,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm" id="btnNewP6Report">+ New Finishing Report</a>
+        {% endif %}
       </div>
     </div>
 
@@ -1214,7 +1207,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1236,9 +1229,9 @@
   </div>
   {% endif %}
 
-  {% if show_p9 and user.profile.person_type in 'P9,ADMIN' or show_p9 and user.is_superuser %}
+  {% if show_p9 %}
   <!-- Singleneedle Section -->
-  <div class="section-card" id="p9SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p9SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P9' %}1{% else %}70{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Singleneedle {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1265,7 +1258,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P9,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'singleneedle_report' %}" class="btn btn-primary btn-sm" id="btnNewP9Report">+ New Singleneedle</a>
+        {% endif %}
       </div>
     </div>
 
@@ -1350,7 +1345,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1449,7 +1444,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1469,9 +1464,9 @@
   </div>
   {% endif %}
 
-  {% if show_p10 and user.profile.person_type == 'P10' or show_p10 and user.profile.person_type == 'ADMIN' or show_p10 and user.is_superuser %}
+  {% if show_p10 %}
   <!-- Sewing Section -->
-  <div class="section-card" id="p10SubmissionsCard" style="margin-top: 2rem;">
+  <div class="section-card" id="p10SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P10' %}1{% else %}80{% endif %};">
     <div class="section-header-row">
       <h2 class="section-title">Sewing {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
       <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
@@ -1498,7 +1493,9 @@
         {% else %}
         <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
         {% endif %}
+        {% if request.user.profile.person_type in 'P10,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'sewing_report' %}" class="btn btn-primary btn-sm" id="btnNewP10Report">+ New Sewing</a>
+        {% endif %}
       </div>
     </div>
 
@@ -1583,7 +1580,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
@@ -1682,7 +1679,7 @@
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
             <td style="white-space: nowrap;">
-              {% if report.created_by == user or user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}

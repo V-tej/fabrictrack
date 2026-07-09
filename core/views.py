@@ -1,5 +1,5 @@
 import os
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Case, When, Value, IntegerField
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -1154,140 +1154,89 @@ def submission_list_view(request):
     page_number = request.GET.get('page', '1')
 
     # Base querysets with optimized prefetching to avoid N+1 queries
-    if person_type in ['P1', 'P2', 'P3'] and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.filter(
-            created_by=request.user
-        ).select_related('master_entry').prefetch_related(
-            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P4' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related(
-            Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P5' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').order_by('-created_at')
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P6' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related(
-            Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P7' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').order_by('-created_at')
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P8' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').order_by('-created_at')
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P9' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related(
-            Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p10_qs = SewingReport.objects.none()
-    elif person_type == 'P10' and not request.user.is_superuser:
-        reports_qs = CuttingReport.objects.none()
-        p4_qs = StitchingReport.objects.none()
-        p5_qs = JobWorkReport.objects.none()
-        p6_qs = FinishingReport.objects.none()
-        p7_qs = EmbroideryReport.objects.none()
-        p8_qs = PrintingReport.objects.none()
-        p9_qs = SingleneedleReport.objects.none()
-        p10_qs = SewingReport.objects.filter(
-            created_by=request.user
-        ).select_related('cutting_report__master_entry').prefetch_related(
-            Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-    else:
-        # Admin or Superuser sees all querysets
-        reports_qs = CuttingReport.objects.select_related(
-            'master_entry', 'created_by'
-        ).prefetch_related(
-            Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p4_qs = StitchingReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).prefetch_related(
-            Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p5_qs = JobWorkReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).order_by('-created_at')
-        p6_qs = FinishingReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).prefetch_related(
-            Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p7_qs = EmbroideryReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).order_by('-created_at')
-        p8_qs = PrintingReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).order_by('-created_at')
-        p9_qs = SingleneedleReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).prefetch_related(
-            Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
-        p10_qs = SewingReport.objects.select_related(
-            'cutting_report__master_entry', 'created_by'
-        ).prefetch_related(
-            Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
-        ).order_by('-created_at')
+    # All users see all querysets, ordered by current user's first, then by date descending
+    reports_qs = CuttingReport.objects.select_related(
+        'master_entry', 'created_by'
+    ).prefetch_related(
+        Prefetch('photos', queryset=CuttingReportPhoto.objects.defer('photo_data'))
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p4_qs = StitchingReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).prefetch_related(
+        Prefetch('photos', queryset=StitchingReportPhoto.objects.defer('photo_data'))
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p5_qs = JobWorkReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p6_qs = FinishingReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).prefetch_related(
+        Prefetch('photos', queryset=FinishingReportPhoto.objects.defer('photo_data'))
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p7_qs = EmbroideryReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p8_qs = PrintingReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p9_qs = SingleneedleReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).prefetch_related(
+        Prefetch('photos', queryset=SingleneedleReportPhoto.objects.defer('photo_data'))
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
+    p10_qs = SewingReport.objects.select_related(
+        'cutting_report__master_entry', 'created_by'
+    ).prefetch_related(
+        Prefetch('photos', queryset=SewingReportPhoto.objects.defer('photo_data'))
+    ).annotate(
+        is_mine=Case(
+            When(created_by=request.user, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_mine', '-created_at')
 
     # Apply Department-Specific Master/Worker Filters if present
     master_name_cutting = request.GET.get('master_name_cutting')
