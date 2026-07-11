@@ -117,31 +117,31 @@ def dashboard_view(request):
     # Fetch pending tasks
     if person_type == 'ADMIN' or request.user.is_superuser:
         context['pending_tasks'] = JobCardRequirement.objects.filter(
-            Q(requires_cutting=True, is_cutting_done=False) |
-            Q(requires_jobwork=True, is_jobwork_done=False) |
-            Q(requires_stitching=True, is_stitching_done=False) |
-            Q(requires_finishing=True, is_finishing_done=False) |
-            Q(requires_embroidery=True, is_embroidery_done=False) |
-            Q(requires_printing=True, is_printing_done=False) |
-            Q(requires_singleneedle=True, is_singleneedle_done=False) |
-            Q(requires_sewing=True, is_sewing_done=False)
+            Q(requires_cutting__gt=0, is_cutting_done=False) |
+            Q(requires_jobwork__gt=0, is_jobwork_done=False) |
+            Q(requires_stitching__gt=0, is_stitching_done=False) |
+            Q(requires_finishing__gt=0, is_finishing_done=False) |
+            Q(requires_embroidery__gt=0, is_embroidery_done=False) |
+            Q(requires_printing__gt=0, is_printing_done=False) |
+            Q(requires_singleneedle__gt=0, is_singleneedle_done=False) |
+            Q(requires_sewing__gt=0, is_sewing_done=False)
         )
     elif person_type in ['P1', 'P2', 'P3']:
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_cutting=True, is_cutting_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_cutting__gt=0, is_cutting_done=False)
     elif person_type == 'P4':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_stitching=True, is_stitching_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_stitching__gt=0, is_stitching_done=False)
     elif person_type == 'P5':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_jobwork=True, is_jobwork_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_jobwork__gt=0, is_jobwork_done=False)
     elif person_type == 'P6':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_finishing=True, is_finishing_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_finishing__gt=0, is_finishing_done=False)
     elif person_type == 'P7':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_embroidery=True, is_embroidery_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_embroidery__gt=0, is_embroidery_done=False)
     elif person_type == 'P8':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_printing=True, is_printing_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_printing__gt=0, is_printing_done=False)
     elif person_type == 'P9':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_singleneedle=True, is_singleneedle_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_singleneedle__gt=0, is_singleneedle_done=False)
     elif person_type == 'P10':
-        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_sewing=True, is_sewing_done=False)
+        context['pending_tasks'] = JobCardRequirement.objects.filter(requires_sewing__gt=0, is_sewing_done=False)
     else:
         context['pending_tasks'] = []
 
@@ -373,19 +373,19 @@ def create_master_entry(request):
             entry.created_by = request.user
             entry.save()
 
-            # Also create/update JobCardRequirement based on the new boolean fields
+            # Also create/update JobCardRequirement based on sequence fields
             JobCardRequirement.objects.update_or_create(
                 job_card_no=entry.job_card_number,
                 defaults={
                     'date': entry.date,
-                    'requires_cutting': form.cleaned_data.get('requires_cutting', True),
-                    'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
-                    'requires_stitching': form.cleaned_data.get('requires_stitching', True),
-                    'requires_finishing': form.cleaned_data.get('requires_finishing', True),
-                    'requires_embroidery': form.cleaned_data.get('requires_embroidery', True),
-                    'requires_printing': form.cleaned_data.get('requires_printing', True),
-                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', True),
-                    'requires_sewing': form.cleaned_data.get('requires_sewing', True),
+                    'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
+                    'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
+                    'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
+                    'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
+                    'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
+                    'requires_printing':     form.cleaned_data.get('requires_printing', 0),
+                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
+                    'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
                 }
             )
 
@@ -415,6 +415,13 @@ def cutting_report_view(request):
     master_entries_qs = MasterEntry.objects.filter(
         cutting_reports__isnull=True
     ).order_by('-date')
+
+    # Enforce sequence flow: only show job cards where cutting step is enabled
+    job_card_nos_for_cut = list(master_entries_qs.values_list('job_card_number', flat=True))
+    reqs_for_cut = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=job_card_nos_for_cut)}
+    allowed_cut_ids = [me.id for me in master_entries_qs
+                       if not reqs_for_cut.get(me.job_card_number) or reqs_for_cut[me.job_card_number].is_cutting_enabled]
+    master_entries_qs = master_entries_qs.filter(id__in=allowed_cut_ids)
 
     # Build a JSON map: { entry_id: job_card_number } for JS auto-fill
     master_entries_json = json.dumps({
@@ -533,8 +540,15 @@ def stitching_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         stitching_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_stitching=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_stitching__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow: only show job cards where stitching step is enabled
+    jc_nos_st = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_st = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_st)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_st if reqs_st.get(jc) and reqs_st[jc].is_stitching_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -617,8 +631,15 @@ def jobwork_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         jobwork_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_jobwork=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_jobwork__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_jw = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_jw = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_jw)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_jw if reqs_jw.get(jc) and reqs_jw[jc].is_jobwork_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -714,8 +735,15 @@ def embroidery_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         embroidery_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_embroidery=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_embroidery__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_em = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_em = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_em)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_em if reqs_em.get(jc) and reqs_em[jc].is_embroidery_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -798,8 +826,15 @@ def printing_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         printing_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_printing=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_printing__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_pr = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_pr = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_pr)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_pr if reqs_pr.get(jc) and reqs_pr[jc].is_printing_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -882,8 +917,15 @@ def singleneedle_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         singleneedle_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_singleneedle=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_singleneedle__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_sn = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_sn = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_sn)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_sn if reqs_sn.get(jc) and reqs_sn[jc].is_singleneedle_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -966,8 +1008,15 @@ def sewing_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         sewing_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_sewing=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_sewing__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_sw = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_sw = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_sw)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_sw if reqs_sw.get(jc) and reqs_sw[jc].is_sewing_enabled]
+    )
 
     cutting_reports_json = json.dumps({
         str(cr.id): {
@@ -1050,8 +1099,15 @@ def finishing_report_view(request):
 
     cutting_reports_qs = CuttingReport.objects.filter(
         finishing_reports__isnull=True,
-        job_card_no__in=JobCardRequirement.objects.filter(requires_finishing=True).values('job_card_no')
+        job_card_no__in=JobCardRequirement.objects.filter(requires_finishing__gt=0).values('job_card_no')
     ).select_related('master_entry').order_by('-created_at')
+
+    # Enforce sequence flow
+    jc_nos_fi = [cr.job_card_no for cr in cutting_reports_qs]
+    reqs_fi = {r.job_card_no: r for r in JobCardRequirement.objects.filter(job_card_no__in=jc_nos_fi)}
+    cutting_reports_qs = cutting_reports_qs.filter(
+        job_card_no__in=[jc for jc in jc_nos_fi if reqs_fi.get(jc) and reqs_fi[jc].is_finishing_enabled]
+    )
 
     # Build JSON map for auto-fill based on Cutting Report selection
     # We want to fill Date (from master_entry) and Lot No (from master_entry.job_card_number or cutting_report.job_card_no)
@@ -1615,17 +1671,28 @@ def import_job_cards_view(request):
                         return row[idx]
                     return None
                 
-                def is_yes(val):
-                    return str(val).strip().lower() == 'yes' if val else False
-                
-                cutting_req = is_yes(get_val('cutting'))
-                jobwork_req = is_yes(get_val('jobwork', 'jobworker'))
-                stitching_req = is_yes(get_val('stitching', 'stiching'))
-                finishing_req = is_yes(get_val('finishing'))
-                embroidery_req = is_yes(get_val('embroidery'))
-                printing_req = is_yes(get_val('printing'))
-                singleneedle_req = is_yes(get_val('singleneedle'))
-                sewing_req = is_yes(get_val('sewing'))
+                def parse_sequence_val(val):
+                    """Parse Excel cell: numeric → int, yes/true → 1, no/false/blank → 0"""
+                    if val is None:
+                        return 0
+                    val_str = str(val).strip().lower()
+                    if val_str in ('no', 'false', '0', 'none', ''):
+                        return 0
+                    if val_str in ('yes', 'true'):
+                        return 1
+                    try:
+                        return int(float(val_str))
+                    except (ValueError, TypeError):
+                        return 0
+
+                cutting_req     = parse_sequence_val(get_val('cutting'))
+                jobwork_req     = parse_sequence_val(get_val('jobwork', 'jobworker'))
+                stitching_req   = parse_sequence_val(get_val('stitching', 'stiching'))
+                finishing_req   = parse_sequence_val(get_val('finishing'))
+                embroidery_req  = parse_sequence_val(get_val('embroidery'))
+                printing_req    = parse_sequence_val(get_val('printing'))
+                singleneedle_req= parse_sequence_val(get_val('singleneedle'))
+                sewing_req      = parse_sequence_val(get_val('sewing'))
                 
                 # Parse date if possible
                 date_val = row[header_map.get('date', -1)]
@@ -1708,19 +1775,19 @@ def edit_master_entry(request, pk):
             entry.created_at = timezone.now()
             entry.save()
             
-            # Update the JobCardRequirement as well
+            # Update the JobCardRequirement with sequence values
             JobCardRequirement.objects.update_or_create(
                 job_card_no=entry.job_card_number,
                 defaults={
                     'date': entry.date,
-                    'requires_cutting': form.cleaned_data.get('requires_cutting', True),
-                    'requires_jobwork': form.cleaned_data.get('requires_jobwork', True),
-                    'requires_stitching': form.cleaned_data.get('requires_stitching', True),
-                    'requires_finishing': form.cleaned_data.get('requires_finishing', True),
-                    'requires_embroidery': form.cleaned_data.get('requires_embroidery', True),
-                    'requires_printing': form.cleaned_data.get('requires_printing', True),
-                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', True),
-                    'requires_sewing': form.cleaned_data.get('requires_sewing', True),
+                    'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
+                    'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
+                    'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
+                    'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
+                    'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
+                    'requires_printing':     form.cleaned_data.get('requires_printing', 0),
+                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
+                    'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
                 }
             )
             
@@ -1732,14 +1799,14 @@ def edit_master_entry(request, pk):
         initial_data = {}
         if req:
             initial_data = {
-                'requires_cutting': 'True' if req.requires_cutting else 'False',
-                'requires_jobwork': 'True' if req.requires_jobwork else 'False',
-                'requires_stitching': 'True' if req.requires_stitching else 'False',
-                'requires_finishing': 'True' if req.requires_finishing else 'False',
-                'requires_embroidery': 'True' if req.requires_embroidery else 'False',
-                'requires_printing': 'True' if req.requires_printing else 'False',
-                'requires_singleneedle': 'True' if req.requires_singleneedle else 'False',
-                'requires_sewing': 'True' if req.requires_sewing else 'False',
+                'requires_cutting':      req.requires_cutting,
+                'requires_jobwork':      req.requires_jobwork,
+                'requires_stitching':    req.requires_stitching,
+                'requires_finishing':    req.requires_finishing,
+                'requires_embroidery':   req.requires_embroidery,
+                'requires_printing':     req.requires_printing,
+                'requires_singleneedle': req.requires_singleneedle,
+                'requires_sewing':       req.requires_sewing,
             }
         form = MasterEntryForm(instance=entry, initial=initial_data)
     return render(request, 'master_entry_form.html', {'form': form, 'is_edit': True})

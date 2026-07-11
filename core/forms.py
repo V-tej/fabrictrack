@@ -3,15 +3,19 @@ from .models import MasterEntry, CuttingReport, MasterName, StitchingReport, Job
 
 
 class MasterEntryForm(forms.ModelForm):
-    YES_NO_CHOICES = [('True', 'Yes'), ('False', 'No')]
-    requires_cutting = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_jobwork = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_stitching = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_finishing = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_embroidery = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_printing = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_singleneedle = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
-    requires_sewing = forms.TypedChoiceField(choices=YES_NO_CHOICES, coerce=lambda x: x == 'True', widget=forms.Select(attrs={'class': 'form-control'}))
+    SEQUENCE_CHOICES = [
+        (0, '0 — Not Required'),
+        (1, '1'), (2, '2'), (3, '3'), (4, '4'),
+        (5, '5'), (6, '6'), (7, '7'), (8, '8'),
+    ]
+    requires_cutting     = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_jobwork     = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_stitching   = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_finishing   = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_embroidery  = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_printing    = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_singleneedle= forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_sewing      = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
 
     class Meta:
         model = MasterEntry

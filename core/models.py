@@ -606,15 +606,15 @@ class JobCardRequirement(models.Model):
     job_card_no = models.CharField(max_length=100, unique=True)
     date = models.DateField(default=timezone.now)
     
-    # Requirements (Yes/No from Excel)
-    requires_cutting = models.BooleanField(default=False)
-    requires_jobwork = models.BooleanField(default=False)
-    requires_stitching = models.BooleanField(default=False)
-    requires_finishing = models.BooleanField(default=False)
-    requires_embroidery = models.BooleanField(default=False)
-    requires_printing = models.BooleanField(default=False)
-    requires_singleneedle = models.BooleanField(default=False)
-    requires_sewing = models.BooleanField(default=False)
+    # Requirements: 0 = Not required, 1-8 = sequence order
+    requires_cutting = models.IntegerField(default=0)
+    requires_jobwork = models.IntegerField(default=0)
+    requires_stitching = models.IntegerField(default=0)
+    requires_finishing = models.IntegerField(default=0)
+    requires_embroidery = models.IntegerField(default=0)
+    requires_printing = models.IntegerField(default=0)
+    requires_singleneedle = models.IntegerField(default=0)
+    requires_sewing = models.IntegerField(default=0)
     
     # Status (Updated when reports are submitted)
     is_cutting_done = models.BooleanField(default=False)
@@ -639,6 +639,58 @@ class JobCardRequirement(models.Model):
 
     def __str__(self):
         return f"Requirement: {self.job_card_no}"
+
+    def is_step_enabled(self, step_seq, step_done_attr):
+        """A step is enabled if all required steps with a lower sequence number are done."""
+        if step_seq == 0:
+            return False  # not required
+        # Build dict of {seq: done_status} for all required steps
+        steps = [
+            (self.requires_cutting,     self.is_cutting_done),
+            (self.requires_jobwork,     self.is_jobwork_done),
+            (self.requires_stitching,   self.is_stitching_done),
+            (self.requires_finishing,   self.is_finishing_done),
+            (self.requires_embroidery,  self.is_embroidery_done),
+            (self.requires_printing,    self.is_printing_done),
+            (self.requires_singleneedle,self.is_singleneedle_done),
+            (self.requires_sewing,      self.is_sewing_done),
+        ]
+        for seq, done in steps:
+            if seq > 0 and seq < step_seq and not done:
+                return False  # a predecessor step is not yet done
+        return True
+
+    @property
+    def is_cutting_enabled(self):
+        return self.is_step_enabled(self.requires_cutting, self.is_cutting_done)
+
+    @property
+    def is_jobwork_enabled(self):
+        return self.is_step_enabled(self.requires_jobwork, self.is_jobwork_done)
+
+    @property
+    def is_stitching_enabled(self):
+        return self.is_step_enabled(self.requires_stitching, self.is_stitching_done)
+
+    @property
+    def is_finishing_enabled(self):
+        return self.is_step_enabled(self.requires_finishing, self.is_finishing_done)
+
+    @property
+    def is_embroidery_enabled(self):
+        return self.is_step_enabled(self.requires_embroidery, self.is_embroidery_done)
+
+    @property
+    def is_printing_enabled(self):
+        return self.is_step_enabled(self.requires_printing, self.is_printing_done)
+
+    @property
+    def is_singleneedle_enabled(self):
+        return self.is_step_enabled(self.requires_singleneedle, self.is_singleneedle_done)
+
+    @property
+    def is_sewing_enabled(self):
+        return self.is_step_enabled(self.requires_sewing, self.is_sewing_done)
 
     @property
     def master_entry_id(self):

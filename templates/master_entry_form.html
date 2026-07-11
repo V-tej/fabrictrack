@@ -7,7 +7,7 @@
   <div class="form-card" id="masterEntryCard">
     <div class="form-card-header">
       <h2>Create Master Entry</h2>
-      <p class="form-subtitle">Create a Date + Lot No. record that P1 and other persons will link their submissions to.</p>
+      <p class="form-subtitle">Create a Date + Lot No. record. Assign a <strong>sequence number (1–8)</strong> to each department to define the order of report submission. Use <strong>0</strong> if that department is not required for this job card.</p>
     </div>
 
     <form method="post" id="masterEntryForm">
@@ -30,7 +30,8 @@
           </div>
         </div>
 
-        <h3 class="section-title" style="margin-top: 1.5rem; font-size: 1.1rem;">Require Submissions For: <span class="required-star">*</span></h3>
+        <h3 class="section-title" style="margin-top: 1.5rem; font-size: 1.1rem;">Submission Order <span class="required-star">*</span></h3>
+        <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 1rem;">Enter the step number (1–8) for each department. Departments must complete their report in ascending order. Enter 0 if not required.</p>
         <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
           <div class="form-group">
             <label for="id_requires_cutting" class="form-label">Cutting</label>
@@ -101,7 +102,8 @@
     <div class="form-card-header">
       <h3 style="margin: 0 0 0.5rem 0; color: #3b82f6;">Import Pending Tasks (Excel)</h3>
       <p class="form-subtitle">
-        Upload an Excel file to bulk-assign pending tasks. The file must have headers: <strong>Date, Jobcard number, Cutting, Jobworker, Embroidery, Printing, Stiching, Finishing</strong>.
+        Upload an Excel file to bulk-assign pending tasks. Columns should contain <strong>sequence numbers (1–8)</strong> for required departments, or <strong>0 / leave blank</strong> if not required.<br>
+        Required headers: <strong>Date, Jobcard number, Cutting, Jobworker, Embroidery, Printing, Stiching, Singleneedle, Sewing, Finishing</strong>.
       </p>
     </div>
     <div class="form-section">
@@ -115,4 +117,60 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const seqSelects = [
+    document.getElementById('id_requires_cutting'),
+    document.getElementById('id_requires_jobwork'),
+    document.getElementById('id_requires_embroidery'),
+    document.getElementById('id_requires_printing'),
+    document.getElementById('id_requires_stitching'),
+    document.getElementById('id_requires_singleneedle'),
+    document.getElementById('id_requires_sewing'),
+    document.getElementById('id_requires_finishing'),
+  ].filter(Boolean);
+
+  function syncOptions() {
+    // Collect all values currently selected (ignore 0 — "Not Required")
+    const usedValues = new Set();
+    seqSelects.forEach(sel => {
+      const v = parseInt(sel.value, 10);
+      if (v > 0) usedValues.add(v);
+    });
+
+    // For each select, enable/disable options based on usage
+    seqSelects.forEach(sel => {
+      const ownVal = parseInt(sel.value, 10);
+      Array.from(sel.options).forEach(opt => {
+        const optVal = parseInt(opt.value, 10);
+        if (optVal === 0) {
+          // Always allow "Not Required"
+          opt.disabled = false;
+          opt.style.display = '';
+        } else if (optVal === ownVal) {
+          // Always allow own current selection
+          opt.disabled = false;
+          opt.style.display = '';
+        } else if (usedValues.has(optVal)) {
+          // Already used by another dropdown — hide it
+          opt.disabled = true;
+          opt.style.display = 'none';
+        } else {
+          opt.disabled = false;
+          opt.style.display = '';
+        }
+      });
+    });
+  }
+
+  // Attach listeners
+  seqSelects.forEach(sel => sel.addEventListener('change', syncOptions));
+
+  // Run once on page load to handle pre-filled edit form
+  syncOptions();
+})();
+</script>
 {% endblock %}
