@@ -775,3 +775,146 @@ class JobCardRequirement(models.Model):
         from .models import SewingReport
         r = SewingReport.objects.filter(job_card_no=self.job_card_no).first()
         return r.created_by if r else None
+
+
+# ── Accessories ──────────────────────────────────────────────────────────────
+
+ACCESSORIES_ITEMS = [
+    'MAIN CUM SIZE LABEL', 'LOOP LABEL', 'THREAD', 'ZIPPER', 'FUSING',
+    'BUTTONS', 'HANGTAG', 'POLYBAG', 'BRANDING', 'CARTONS',
+    'KIMBAL', 'HEAT TRANSFER', 'BAR CODES', 'DRAW CORD', 'ELASTIC',
+]
+
+
+class AccessoriesRecord(models.Model):
+    """One record per job card — stores total_pcs from cutting report."""
+    job_card_no = models.CharField(max_length=100, unique=True)
+    total_pcs   = models.PositiveIntegerField(default=0)
+    notes       = models.TextField(blank=True, null=True)
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Accessories Record'
+
+    def __str__(self):
+        return f"Accessories — {self.job_card_no}"
+
+    @property
+    def is_started(self):
+        for e in self.entries.all():
+            if (e.qty_a is not None and e.qty_a > 0) or \
+               (e.qty_b is not None and e.qty_b > 0) or \
+               (e.qty_c is not None and e.qty_c > 0) or \
+               (e.qty_d is not None and e.qty_d > 0) or \
+               e.status_a in ['green', 'red'] or \
+               e.status_b in ['green', 'red'] or \
+               e.status_c in ['green', 'red'] or \
+               e.status_d in ['green', 'red']:
+                return True
+        return False
+
+    @property
+    def is_complete(self):
+        if not self.is_started:
+            return False
+        for e in self.entries.all():
+            # Check A
+            if e.qty_a and e.qty_a > 0:
+                if e.status_a != 'green':
+                    return False
+            elif e.status_a == 'red':
+                return False
+            
+            # Check B
+            if e.qty_b and e.qty_b > 0:
+                if e.status_b != 'green':
+                    return False
+            elif e.status_b == 'red':
+                return False
+
+            # Check C
+            if e.qty_c and e.qty_c > 0:
+                if e.status_c != 'green':
+                    return False
+            elif e.status_c == 'red':
+                return False
+
+            # Check D
+            if e.qty_d and e.qty_d > 0:
+                if e.status_d != 'green':
+                    return False
+            elif e.status_d == 'red':
+                return False
+        return True
+
+
+class AccessoriesItemEntry(models.Model):
+    """One row in the accessories table — one item per job card."""
+    STATUS_CHOICES = [('green', 'Green'), ('red', 'Red'), ('', 'Not Set')]
+
+    record    = models.ForeignKey(AccessoriesRecord, on_delete=models.CASCADE, related_name='entries')
+    sr_no     = models.PositiveIntegerField()
+    item_name = models.CharField(max_length=150)
+    qty_a     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    qty_b     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    qty_c     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    qty_d     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status_a  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
+    status_b  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
+    status_c  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
+    status_d  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
+
+    class Meta:
+        ordering = ['sr_no']
+        unique_together = ('record', 'sr_no')
+
+    def __str__(self):
+        return f"{self.record.job_card_no} — {self.item_name}"
+
+    @property
+    def total_a(self):
+        if self.qty_a is not None and self.record.total_pcs:
+            return int(self.record.total_pcs * self.qty_a)
+        return None
+
+    @property
+    def total_b(self):
+        if self.qty_b is not None and self.record.total_pcs:
+            return int(self.record.total_pcs * self.qty_b)
+        return None
+
+    @property
+    def total_c(self):
+        if self.qty_c is not None and self.record.total_pcs:
+            return int(self.record.total_pcs * self.qty_c)
+        return None
+
+    @property
+    def total_d(self):
+        if self.qty_d is not None and self.record.total_pcs:
+            return int(self.record.total_pcs * self.qty_d)
+        return None
+
+    @property
+    def grand_total(self):
+        t = 0
+        if self.total_a: t += self.total_a
+        if self.total_b: t += self.total_b
+        if self.total_c: t += self.total_c
+        if self.total_d: t += self.total_d
+        return t if t > 0 else None
+
+
+class AccessoryCustomName(models.Model):
+    name = models.CharField(max_length=150, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return self.name
+

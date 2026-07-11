@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 import json
 
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition, AccessoriesRecord, AccessoriesItemEntry, ACCESSORIES_ITEMS, AccessoryCustomName
 from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm, EmbroideryReportForm, PrintingReportForm, SingleneedleReportForm, SewingReportForm
 from .utils import export_to_excel, generate_backup_zip
 
@@ -2945,3 +2945,195 @@ def get_master_outstanding_api(request):
         'outstanding': outstanding
     })
 
+
+
+# ── Accessories Views ──────────────────────────────────────────────────────
+
+@login_required
+def accessories_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    from django.db.models import Sum, Max
+    jc_data = (
+        CuttingReport.objects
+        .values('job_card_no')
+        .annotate(total=Sum('total_pcs'), item_name=Max('item_name'))
+        .order_by('job_card_no')
+    )
+    existing = {r.job_card_no: r for r in AccessoriesRecord.objects.prefetch_related('entries').all()}
+
+    job_cards = []
+    for jc in jc_data:
+        rec = existing.get(jc['job_card_no'])
+        if rec and rec.is_started:
+            status = 'complete' if rec.is_complete else 'pending'
+        else:
+            status = 'new'
+        job_cards.append({
+            'job_card_no': jc['job_card_no'],
+            'total_pcs':   jc['total'],
+            'item_name':   jc['item_name'] or '—',
+            'record':      rec,
+            'status':      status,
+        })
+
+    # Find all unique item names in database entries, subtract standard ones, and sort the rest
+    db_item_names = set(AccessoriesItemEntry.objects.values_list('item_name', flat=True))
+    custom_names = sorted(list(db_item_names - set(ACCESSORIES_ITEMS)))
+    all_accessories_list = list(ACCESSORIES_ITEMS) + custom_names
+
+    return render(request, 'accessories.html', {
+        'job_cards': job_cards,
+        'all_accessories_list': all_accessories_list,
+        'is_admin': is_admin
+    })
+
+
+@login_required
+def accessories_detail_view(request, job_card_no):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    from django.db.models import Sum, Max
+    total_pcs = CuttingReport.objects.filter(job_card_no=job_card_no).aggregate(t=Sum('total_pcs'))['t'] or 0
+
+    record, created = AccessoriesRecord.objects.get_or_create(
+        job_card_no=job_card_no,
+        defaults={'total_pcs': total_pcs, 'created_by': request.user}
+    )
+    if not created:
+        record.total_pcs = total_pcs
+        record.save(update_fields=['total_pcs', 'updated_at'])
+
+    # Ensure all standard accessory entries exist for this record
+    existing_entries = {e.item_name: e for e in record.entries.all()}
+    for name in ACCESSORIES_ITEMS:
+        if name not in existing_entries:
+            max_sr = record.entries.aggregate(m=Max('sr_no'))['m'] or 0
+            AccessoriesItemEntry.objects.create(record=record, sr_no=max_sr + 1, item_name=name)
+
+    # Re-fetch and normalize sr_no order
+    entries = list(record.entries.order_by('sr_no'))
+    for i, entry in enumerate(entries):
+        if entry.sr_no != i + 1:
+            entry.sr_no = i + 1
+            entry.save(update_fields=['sr_no'])
+
+    if request.method == 'POST':
+        if 'add_accessory_item' in request.POST:
+            new_name = request.POST.get('new_item_name', '').strip().upper()
+            if new_name:
+                if not record.entries.filter(item_name=new_name).exists():
+                    max_sr = record.entries.aggregate(m=Max('sr_no'))['m'] or 0
+                    AccessoriesItemEntry.objects.create(record=record, sr_no=max_sr + 1, item_name=new_name)
+                    messages.success(request, f'Accessory item "{new_name}" added.')
+                else:
+                    messages.warning(request, f'Accessory item "{new_name}" already exists on this job card.')
+            return redirect('accessories_detail', job_card_no=job_card_no)
+
+        elif 'delete_accessory_item' in request.POST:
+            item_id = request.POST.get('item_id')
+            if item_id:
+                entry = record.entries.filter(id=item_id).first()
+                if entry:
+                    if entry.item_name not in ACCESSORIES_ITEMS:
+                        entry.delete()
+                        messages.success(request, 'Accessory item deleted.')
+                    else:
+                        messages.error(request, 'Standard accessory items cannot be deleted.')
+            return redirect('accessories_detail', job_card_no=job_card_no)
+
+        # Standard save accessories form
+        for entry in entries:
+            prefix = f'item_{entry.sr_no}'
+
+            def get_dec(key, p=prefix):
+                val = request.POST.get(f'{p}_{key}', '').strip()
+                try:
+                    return float(val) if val else None
+                except ValueError:
+                    return None
+
+            entry.qty_a  = get_dec('a')
+            entry.qty_b  = get_dec('b')
+            entry.qty_c  = get_dec('c')
+            entry.qty_d  = get_dec('d')
+            entry.status_a = request.POST.get(f'{prefix}_status_a', '')
+            entry.status_b = request.POST.get(f'{prefix}_status_b', '')
+            entry.status_c = request.POST.get(f'{prefix}_status_c', '')
+            entry.status_d = request.POST.get(f'{prefix}_status_d', '')
+            entry.save()
+
+        record.notes = request.POST.get('notes', '').strip()
+        record.save(update_fields=['notes', 'updated_at'])
+        messages.success(request, f'Accessories for {job_card_no} saved successfully.')
+        return redirect('accessories_detail', job_card_no=job_card_no)
+
+    custom_names_obj = record.entries.exclude(item_name__in=ACCESSORIES_ITEMS).order_by('sr_no')
+
+    return render(request, 'accessories_detail.html', {
+        'record': record, 'entries': entries, 'is_admin': is_admin,
+        'custom_names_obj': custom_names_obj,
+    })
+
+
+@login_required
+def accessories_print_view(request, job_card_no):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    record  = get_object_or_404(AccessoriesRecord, job_card_no=job_card_no)
+    entries = list(record.entries.order_by('sr_no'))
+    return render(request, 'accessories_print.html', {'record': record, 'entries': entries})
+
+
+@login_required
+@require_POST
+def accessories_add_item_view(request):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    item_name = request.POST.get('new_item_name', '').strip().upper()
+    if item_name:
+        if AccessoryCustomName.objects.filter(name=item_name).exists() or item_name in ACCESSORIES_ITEMS:
+            messages.error(request, f'Item "{item_name}" already exists.')
+        else:
+            AccessoryCustomName.objects.create(name=item_name)
+            messages.success(request, f'Global Accessory Item "{item_name}" added successfully.')
+    else:
+        messages.error(request, 'Item name cannot be empty.')
+    return redirect('accessories')
+
+
+@login_required
+@require_POST
+def accessories_delete_item_view(request, pk):
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    custom_name = get_object_or_404(AccessoryCustomName, pk=pk)
+    name = custom_name.name
+    custom_name.delete()
+    messages.success(request, f'Global Accessory Item "{name}" deleted successfully.')
+    return redirect('accessories')

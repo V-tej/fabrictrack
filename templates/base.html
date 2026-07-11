@@ -53,6 +53,11 @@
         id="nav-master">
         <span class="nav-icon">📋</span> New Master Entry
       </a>
+      <a href="{% url 'accessories' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'accessories' or request.resolver_match.url_name == 'accessories_detail' %}active{% endif %}"
+        id="nav-accessories">
+        <span class="nav-icon">🧷</span> Accessories
+      </a>
       {% endif %}
 
       {% if user.profile.person_type in 'P1,P2,P3' and not user.is_superuser %}

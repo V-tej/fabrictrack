@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Accessories - {{ record.job_card_no }}{% endblock %}
+{% block page_title %}🧷 Accessories — {{ record.job_card_no }}{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+  <!-- Top bar -->
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+    <a href="{% url 'accessories' %}" class="btn btn-secondary" style="font-size:0.85rem;">← Back to List</a>
+    <a href="{% url 'accessories_print' record.job_card_no %}" target="_blank" class="btn btn-primary" style="font-size:0.85rem;background:#7c3aed;">🖨️ Print / PDF</a>
+  </div>
+
+  <!-- Two-column layout -->
+  <div style="display:flex; gap:1.25rem; align-items:flex-start;">
+
+    <!-- Left: Main accessories table (scrollable) -->
+    <div class="section-card" style="flex:1; min-width:0; margin:0; overflow-x:auto;">
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <h2 style="margin:0;font-size:1.4rem;color:#f1f5f9;">Dhruv Fabrics</h2>
+      <h3 style="margin:0.25rem 0 0 0;font-size:1.1rem;color:#94a3b8;letter-spacing:0.1em;">ACCESSORIES</h3>
+      <div style="margin-top:0.75rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
+        <span style="color:#fbbf24;font-weight:bold;">Job Card: {{ record.job_card_no }}</span>
+        <span style="color:#60a5fa;">Total Pcs: <strong>{{ record.total_pcs }}</strong></span>
+        {% if record.is_complete %}
+          <span style="background:#dcfce7;color:#16a34a;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">✅ Completed</span>
+        {% elif record.is_started %}
+          <span style="background:#fee2e2;color:#dc2626;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">🔴 Pending</span>
+        {% else %}
+          <span style="background:#f3f4f6;color:#6b7280;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">⬜ Not Started</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Dropdown Item Name Filter -->
+    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; max-width: 420px; box-sizing: border-box;">
+      <label for="detailItemFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500;">Filter by Item Name:</label>
+      <select id="detailItemFilter" style="flex: 1; padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
+        <option value="">-- All Items --</option>
+        {% for entry in entries %}
+          <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <form method="POST" id="accessoriesForm">
+      {% csrf_token %}
+      <div class="table-wrapper" style="overflow-x:auto;">
+        <table id="accTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:750px;">
+          <thead>
+            <tr style="background:#1e3a5f;color:#fff;">
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:50px;">Sr. No.</th>
+              <th style="padding:0.65rem 0.75rem;text-align:left;min-width:140px;">Item Name</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:80px;">Total Pcs</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">A</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">B</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">C</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">D</th>
+              <th style="padding:0.65rem 0.75rem;text-align:center;width:85px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:0.8rem 0.75rem;text-align:center;color:#9ca3af;vertical-align:middle;">{{ entry.sr_no }}</td>
+              <td style="padding:0.8rem 0.75rem;font-weight:600;color:#f1f5f9;vertical-align:middle;">{{ entry.item_name }}</td>
+              <td style="padding:0.8rem 0.75rem;text-align:center;color:#60a5fa;font-weight:600;vertical-align:middle;">{{ record.total_pcs }}</td>
+              
+              <!-- Column A -->
+              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                  <input type="number" name="item_{{ entry.sr_no }}_a"
+                    value="{% if entry.qty_a is not None %}{{ entry.qty_a }}{% endif %}"
+                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="a"
+                    step="0.01" min="0" placeholder="Qty"
+                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                  <span class="calc-box" id="calc_{{ entry.sr_no }}_a"
+                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                    {% if entry.status_a == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.total_a is not None %}{{ entry.total_a }}{% else %}0{% endif %}
+                  </span>
+                  <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}" data-col="a"
+                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    {% if entry.status_a == 'green' %}color:#22c55e;{% elif entry.status_a == 'red' %}color:#ef4444;{% else %}color:#9ca3af;{% endif %}">
+                    <option value="" {% if not entry.status_a %}selected{% endif %}>—</option>
+                    <option value="green" {% if entry.status_a == 'green' %}selected{% endif %}>🟢 G</option>
+                    <option value="red" {% if entry.status_a == 'red' %}selected{% endif %}>🔴 R</option>
+                  </select>
+                </div>
+              </td>
+
+              <!-- Column B -->
+              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                  <input type="number" name="item_{{ entry.sr_no }}_b"
+                    value="{% if entry.qty_b is not None %}{{ entry.qty_b }}{% endif %}"
+                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="b"
+                    step="0.01" min="0" placeholder="Qty"
+                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                  <span class="calc-box" id="calc_{{ entry.sr_no }}_b"
+                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                    {% if entry.status_b == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.total_b is not None %}{{ entry.total_b }}{% else %}0{% endif %}
+                  </span>
+                  <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}" data-col="b"
+                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    {% if entry.status_b == 'green' %}color:#22c55e;{% elif entry.status_b == 'red' %}color:#ef4444;{% else %}color:#9ca3af;{% endif %}">
+                    <option value="" {% if not entry.status_b %}selected{% endif %}>—</option>
+                    <option value="green" {% if entry.status_b == 'green' %}selected{% endif %}>🟢 G</option>
+                    <option value="red" {% if entry.status_b == 'red' %}selected{% endif %}>🔴 R</option>
+                  </select>
+                </div>
+              </td>
+
+              <!-- Column C -->
+              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                  <input type="number" name="item_{{ entry.sr_no }}_c"
+                    value="{% if entry.qty_c is not None %}{{ entry.qty_c }}{% endif %}"
+                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="c"
+                    step="0.01" min="0" placeholder="Qty"
+                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                  <span class="calc-box" id="calc_{{ entry.sr_no }}_c"
+                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                    {% if entry.status_c == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.total_c is not None %}{{ entry.total_c }}{% else %}0{% endif %}
+                  </span>
+                  <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}" data-col="c"
+                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    {% if entry.status_c == 'green' %}color:#22c55e;{% elif entry.status_c == 'red' %}color:#ef4444;{% else %}color:#9ca3af;{% endif %}">
+                    <option value="" {% if not entry.status_c %}selected{% endif %}>—</option>
+                    <option value="green" {% if entry.status_c == 'green' %}selected{% endif %}>🟢 G</option>
+                    <option value="red" {% if entry.status_c == 'red' %}selected{% endif %}>🔴 R</option>
+                  </select>
+                </div>
+              </td>
+
+              <!-- Column D -->
+              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                  <input type="number" name="item_{{ entry.sr_no }}_d"
+                    value="{% if entry.qty_d is not None %}{{ entry.qty_d }}{% endif %}"
+                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="d"
+                    step="0.01" min="0" placeholder="Qty"
+                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                  <span class="calc-box" id="calc_{{ entry.sr_no }}_d"
+                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                    {% if entry.status_d == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.total_d is not None %}{{ entry.total_d }}{% else %}0{% endif %}
+                  </span>
+                  <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}" data-col="d"
+                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    {% if entry.status_d == 'green' %}color:#22c55e;{% elif entry.status_d == 'red' %}color:#ef4444;{% else %}color:#9ca3af;{% endif %}">
+                    <option value="" {% if not entry.status_d %}selected{% endif %}>—</option>
+                    <option value="green" {% if entry.status_d == 'green' %}selected{% endif %}>🟢 G</option>
+                    <option value="red" {% if entry.status_d == 'red' %}selected{% endif %}>🔴 R</option>
+                  </select>
+                </div>
+              </td>
+
+              <!-- Grand Total -->
+              <td style="padding:0.8rem 0.75rem;text-align:center;vertical-align:middle;">
+                <span class="row-total" id="row_total_{{ entry.sr_no }}"
+                  style="font-weight:700;font-size:1.05rem;color:#f1f5f9;background:rgba(255,255,255,0.05);padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;min-width:60px;">
+                  {% if entry.grand_total is not None %}{{ entry.grand_total }}{% else %}0{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Notes (optional)</label>
+        <textarea name="notes" rows="2" placeholder="Any additional notes..."
+          style="width:100%;background:#0f172a;border:1px solid #374151;border-radius:8px;color:#f1f5f9;padding:0.6rem 0.75rem;font-size:0.9rem;resize:vertical;box-sizing:border-box;">{{ record.notes|default:"" }}</textarea>
+      </div>
+
+      <div class="form-actions" style="margin-top:1.5rem;">
+        <a href="{% url 'accessories' %}" class="btn btn-secondary">← Back</a>
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Right: Custom Accessory Items panel -->
+  <div class="section-card" style="margin: 0; width: 300px; flex-shrink: 0; position: sticky; top: 1.5rem; box-sizing: border-box;">
+    <h3 style="margin: 0 0 0.3rem 0; font-size: 1rem; color: #f1f5f9; font-weight: 700;">🧷 Custom Accessory Items</h3>
+    <p style="color:#9ca3af; margin: 0 0 1rem 0; font-size: 0.8rem;">Items added here will appear only on this Job Card.</p>
+
+    <form method="POST" action="{% url 'accessories_detail' record.job_card_no %}" style="margin-bottom: 1.25rem;">
+      {% csrf_token %}
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label style="color:#9ca3af; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Item Name</label>
+        <div style="display: flex; gap: 0.4rem;">
+          <input type="text" name="new_item_name" required placeholder="e.g. BUTTON" 
+            style="flex:1; padding:0.4rem 0.6rem; border:1px solid #374151; border-radius:6px; background:#0f172a; color:#f1f5f9; font-size:0.85rem; min-width:0;">
+          <button type="submit" name="add_accessory_item" 
+            style="padding:0.4rem 0.75rem; background:#10b981; border:none; border-radius:6px; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">+ Add</button>
+        </div>
+      </div>
+    </form>
+
+    <div style="border-top: 1px solid #1e293b; padding-top: 0.75rem;">
+      <p style="color:#64748b; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.5rem 0;">Active Custom Items</p>
+      {% if custom_names_obj %}
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.4rem; max-height:300px; overflow-y:auto;">
+          {% for item in custom_names_obj %}
+          <li style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.6rem; background:rgba(255,255,255,0.025); border:1px solid #1e293b; border-radius:6px;">
+            <span style="font-size:0.82rem; font-weight:600; color:#e2e8f0;">{{ item.item_name }}</span>
+            <form method="POST" action="{% url 'accessories_detail' record.job_card_no %}" style="margin:0;"
+              onsubmit="return confirm('Delete {{ item.item_name }} from this Job Card?');">
+              {% csrf_token %}
+              <input type="hidden" name="item_id" value="{{ item.id }}">
+              <button type="submit" name="delete_accessory_item"
+                style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem; padding:0; line-height:1;" title="Delete">🗑️</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="color:#475569; font-size:0.82rem; font-style:italic; text-align:center; margin:0.75rem 0;">No custom items added yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const totalPcs = {{ record.total_pcs }};
+
+  // Setup detail dropdown filter
+  const detailItemFilter = document.getElementById('detailItemFilter');
+  if (detailItemFilter) {
+    detailItemFilter.addEventListener('change', function () {
+      const selectedVal = detailItemFilter.value.toLowerCase().trim();
+      const tableRows = document.querySelectorAll('#accTable tbody tr');
+      tableRows.forEach(row => {
+        const nameCell = row.cells[1];
+        if (nameCell) {
+          const itemName = nameCell.textContent.toLowerCase().trim();
+          if (!selectedVal || itemName === selectedVal) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        }
+      });
+    });
+  }
+
+  function updateRowTotal(sr) {
+    let sum = 0;
+    ['a', 'b', 'c', 'd'].forEach(col => {
+      const calcBox = document.getElementById('calc_' + sr + '_' + col);
+      if (calcBox) {
+        sum += parseInt(calcBox.textContent) || 0;
+      }
+    });
+    const totalEl = document.getElementById('row_total_' + sr);
+    if (totalEl) {
+      totalEl.textContent = sum;
+    }
+  }
+
+  function applyStatusColor(sel) {
+    const sr = sel.dataset.sr;
+    const col = sel.dataset.col;
+    const calcBox = document.getElementById('calc_' + sr + '_' + col);
+    if (sel.value === 'green') {
+      sel.style.color = '#22c55e';
+      if (calcBox) {
+        calcBox.style.background = '#15803d';
+        calcBox.style.color = '#f0fdf4';
+      }
+    } else {
+      if (sel.value === 'red') {
+        sel.style.color = '#ef4444';
+      } else {
+        sel.style.color = '#9ca3af';
+      }
+      if (calcBox) {
+        calcBox.style.background = '#b91c1c';
+        calcBox.style.color = '#fef2f2';
+      }
+    }
+  }
+
+  document.querySelectorAll('.status-select').forEach(sel => {
+    sel.addEventListener('change', function () { applyStatusColor(sel); });
+  });
+
+  document.querySelectorAll('.qty-input').forEach(input => {
+    function recalc() {
+      const sr  = input.dataset.sr;
+      const col = input.dataset.col;
+      const qty = parseFloat(input.value);
+      const el  = document.getElementById('calc_' + sr + '_' + col);
+      if (el) {
+        if (!isNaN(qty) && qty > 0 && totalPcs > 0) {
+          el.textContent = Math.round(totalPcs * qty);
+        } else {
+          el.textContent = '0';
+        }
+      }
+      updateRowTotal(sr);
+    }
+    input.addEventListener('input', recalc);
+  });
+})();
+</script>
+{% endblock %}

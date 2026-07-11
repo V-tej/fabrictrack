@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Accessories — {{ record.job_card_no }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #111; background: #fff; padding: 20px; font-size: 13px; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .header h2 { font-size: 15px; font-weight: 600; color: #444; letter-spacing: 3px; margin-top: 4px; }
+  .meta { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; color: #555; }
+  .meta strong { color: #111; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #1e3a5f; color: #fff; padding: 8px 10px; text-align: center; font-size: 12px; font-weight: 600; }
+  th:nth-child(2) { text-align: left; }
+  td { padding: 7px 10px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px; }
+  td:nth-child(2) { text-align: left; font-weight: 600; }
+  tr:nth-child(even) { background: #f9fafb; }
+  .cell-green { background: #dcfce7; color: #166534; font-weight: 700; border-radius: 4px; display: inline-block; width: 65px; text-align: center; }
+  .cell-red   { background: #fee2e2; color: #991b1b; font-weight: 700; border-radius: 4px; display: inline-block; width: 65px; text-align: center; }
+  .status-badge-green { background: #dcfce7; color: #166534; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; }
+  .status-badge-red   { background: #fee2e2; color: #991b1b; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; }
+  .footer { margin-top: 20px; font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; }
+  .print-btn { position: fixed; bottom: 20px; right: 20px; background: #1e3a5f; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .print-btn:hover { background: #1d4ed8; }
+  @media print {
+    .print-btn { display: none; }
+    body { padding: 10px; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Dhruv Fabrics</h1>
+    <h2>ACCESSORIES</h2>
+  </div>
+  <div class="meta">
+    <div><strong>Job Card No:</strong> {{ record.job_card_no }}</div>
+    <div><strong>Total Pcs:</strong> {{ record.total_pcs }}</div>
+    <div><strong>Date:</strong> {{ record.updated_at|date:"d-M-Y" }}</div>
+    <div>
+      Status:
+      {% if record.is_complete %}
+        <span class="status-badge-green">✅ All Green</span>
+      {% else %}
+        <span class="status-badge-red">🔴 Pending</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50px;">Sr. No.</th>
+        <th>Item Name</th>
+        <th style="width:90px;">Total Pcs</th>
+        <th style="width:100px;">A</th>
+        <th style="width:100px;">B</th>
+        <th style="width:100px;">C</th>
+        <th style="width:100px;">D</th>
+        <th style="width:100px;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      <tr>
+        <td>{{ entry.sr_no }}</td>
+        <td>{{ entry.item_name }}</td>
+        <td>{{ record.total_pcs }}</td>
+        
+        <!-- Column A -->
+        <td>
+          {% if entry.qty_a is not None %}
+            <div style="font-size:10px; color:#555;">Qty: {{ entry.qty_a }}</div>
+            <span class="{% if entry.status_a == 'green' %}cell-green{% else %}cell-red{% endif %}">
+              {{ entry.total_a }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+
+        <!-- Column B -->
+        <td>
+          {% if entry.qty_b is not None %}
+            <div style="font-size:10px; color:#555;">Qty: {{ entry.qty_b }}</div>
+            <span class="{% if entry.status_b == 'green' %}cell-green{% else %}cell-red{% endif %}">
+              {{ entry.total_b }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+
+        <!-- Column C -->
+        <td>
+          {% if entry.qty_c is not None %}
+            <div style="font-size:10px; color:#555;">Qty: {{ entry.qty_c }}</div>
+            <span class="{% if entry.status_c == 'green' %}cell-green{% else %}cell-red{% endif %}">
+              {{ entry.total_c }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+
+        <!-- Column D -->
+        <td>
+          {% if entry.qty_d is not None %}
+            <div style="font-size:10px; color:#555;">Qty: {{ entry.qty_d }}</div>
+            <span class="{% if entry.status_d == 'green' %}cell-green{% else %}cell-red{% endif %}">
+              {{ entry.total_d }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+
+        <!-- Total -->
+        <td style="font-weight:bold;">
+          {% if entry.grand_total is not None %}{{ entry.grand_total }}{% else %}0{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if record.notes %}
+  <div style="margin-top:16px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;color:#555;">
+    <strong>Notes:</strong> {{ record.notes }}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <span>Generated: {% now "d-M-Y H:i" %}</span>
+    <span>Dhruv Fabrics — Accessories Report</span>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+</body>
+</html>

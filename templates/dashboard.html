@@ -43,6 +43,11 @@
         <div class="action-label">New Master Entry</div>
         <div class="action-desc">Create Date + Lot No record</div>
       </a>
+      <a href="{% url 'accessories' %}" class="action-card" id="action-accessories" style="border-left: 4px solid #7c3aed;">
+        <div class="action-icon">🧷</div>
+        <div class="action-label">Accessories</div>
+        <div class="action-desc">Manage accessories list</div>
+      </a>
       {% endif %}
 
       {% if user.profile.person_type == 'P1' %}

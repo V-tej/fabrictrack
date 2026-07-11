@@ -64,4 +64,11 @@ urlpatterns = [
     path('manage-users/<int:user_id>/delete/', views.delete_user, name='delete_user'),
     path('manage-users/<int:user_id>/reset-password/', views.reset_user_password, name='reset_user_password'),
     path('manage-users/<int:user_id>/update-role/', views.update_user_role, name='update_user_role'),
+
+    # Accessories Routes
+    path('accessories/', views.accessories_view, name='accessories'),
+    path('accessories/add-item/', views.accessories_add_item_view, name='accessories_add_item'),
+    path('accessories-item/<int:pk>/delete/', views.accessories_delete_item_view, name='accessories_delete_item'),
+    path('accessories/<str:job_card_no>/', views.accessories_detail_view, name='accessories_detail'),
+    path('accessories/<str:job_card_no>/print/', views.accessories_print_view, name='accessories_print'),
 ]
