@@ -44,6 +44,10 @@
 
     <form method="POST" id="accessoriesForm">
       {% csrf_token %}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Fill in the multiplier quantities and select status:</span>
+        <button type="submit" class="btn btn-primary" style="font-size:0.85rem; background: #10b981; border-color: #10b981;">💾 Save Changes</button>
+      </div>
       <div class="table-wrapper" style="overflow-x:auto;">
         <table id="accTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:750px;">
           <thead>
@@ -75,7 +79,10 @@
                     style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
                   <span class="calc-box" id="calc_{{ entry.sr_no }}_a"
                     style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
-                    {% if entry.status_a == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.status_a == 'green' %}background:#15803d;color:#f0fdf4;
+                    {% elif entry.status_a == 'red' %}background:#b91c1c;color:#fef2f2;
+                    {% elif entry.qty_a and entry.qty_a > 0 %}background:#b91c1c;color:#fef2f2;
+                    {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
                     {% if entry.total_a is not None %}{{ entry.total_a }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}" data-col="a"
@@ -98,7 +105,10 @@
                     style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
                   <span class="calc-box" id="calc_{{ entry.sr_no }}_b"
                     style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
-                    {% if entry.status_b == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.status_b == 'green' %}background:#15803d;color:#f0fdf4;
+                    {% elif entry.status_b == 'red' %}background:#b91c1c;color:#fef2f2;
+                    {% elif entry.qty_b and entry.qty_b > 0 %}background:#b91c1c;color:#fef2f2;
+                    {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
                     {% if entry.total_b is not None %}{{ entry.total_b }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}" data-col="b"
@@ -121,7 +131,10 @@
                     style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
                   <span class="calc-box" id="calc_{{ entry.sr_no }}_c"
                     style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
-                    {% if entry.status_c == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.status_c == 'green' %}background:#15803d;color:#f0fdf4;
+                    {% elif entry.status_c == 'red' %}background:#b91c1c;color:#fef2f2;
+                    {% elif entry.qty_c and entry.qty_c > 0 %}background:#b91c1c;color:#fef2f2;
+                    {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
                     {% if entry.total_c is not None %}{{ entry.total_c }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}" data-col="c"
@@ -144,7 +157,10 @@
                     style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
                   <span class="calc-box" id="calc_{{ entry.sr_no }}_d"
                     style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
-                    {% if entry.status_d == 'green' %}background:#15803d;color:#f0fdf4;{% else %}background:#b91c1c;color:#fef2f2;{% endif %}">
+                    {% if entry.status_d == 'green' %}background:#15803d;color:#f0fdf4;
+                    {% elif entry.status_d == 'red' %}background:#b91c1c;color:#fef2f2;
+                    {% elif entry.qty_d and entry.qty_d > 0 %}background:#b91c1c;color:#fef2f2;
+                    {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
                     {% if entry.total_d is not None %}{{ entry.total_d }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}" data-col="d"
@@ -270,21 +286,30 @@
     const sr = sel.dataset.sr;
     const col = sel.dataset.col;
     const calcBox = document.getElementById('calc_' + sr + '_' + col);
+    const input = document.querySelector(`input[name="item_${sr}_${col}"]`);
+    const qty = input ? parseFloat(input.value) : 0;
     if (sel.value === 'green') {
       sel.style.color = '#22c55e';
       if (calcBox) {
         calcBox.style.background = '#15803d';
         calcBox.style.color = '#f0fdf4';
       }
-    } else {
-      if (sel.value === 'red') {
-        sel.style.color = '#ef4444';
-      } else {
-        sel.style.color = '#9ca3af';
-      }
+    } else if (sel.value === 'red') {
+      sel.style.color = '#ef4444';
       if (calcBox) {
         calcBox.style.background = '#b91c1c';
         calcBox.style.color = '#fef2f2';
+      }
+    } else {
+      sel.style.color = '#9ca3af';
+      if (calcBox) {
+        if (!isNaN(qty) && qty > 0) {
+          calcBox.style.background = '#b91c1c';
+          calcBox.style.color = '#fef2f2';
+        } else {
+          calcBox.style.background = 'rgba(255,255,255,0.05)';
+          calcBox.style.color = '#475569';
+        }
       }
     }
   }
@@ -302,8 +327,30 @@
       if (el) {
         if (!isNaN(qty) && qty > 0 && totalPcs > 0) {
           el.textContent = Math.round(totalPcs * qty);
+          const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
+          if (sel && sel.value === 'green') {
+            el.style.background = '#15803d';
+            el.style.color = '#f0fdf4';
+          } else if (sel && sel.value === 'red') {
+            el.style.background = '#b91c1c';
+            el.style.color = '#fef2f2';
+          } else {
+            el.style.background = '#b91c1c';
+            el.style.color = '#fef2f2';
+          }
         } else {
           el.textContent = '0';
+          const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
+          if (sel && sel.value === 'green') {
+            el.style.background = '#15803d';
+            el.style.color = '#f0fdf4';
+          } else if (sel && sel.value === 'red') {
+            el.style.background = '#b91c1c';
+            el.style.color = '#fef2f2';
+          } else {
+            el.style.background = 'rgba(255,255,255,0.05)';
+            el.style.color = '#475569';
+          }
         }
       }
       updateRowTotal(sr);
