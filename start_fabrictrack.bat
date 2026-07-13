@@ -1,27 +1,18 @@
 @echo off
 title FabricTrack Launcher
-echo =======================================
-echo   FabricTrack -- Starting...
-echo =======================================
-echo.
+setlocal
+set "CLOUDFLARED=C:\Program Files (x86)\cloudflared\cloudflared.exe"
+set "PROJECT_DIR=C:\Users\Administrator\fabrictrack"
 
-cd /d "%~dp0"
+cd /d "%PROJECT_DIR%"
 
-echo [1/2] Starting Django server on port 8000...
-start "FabricTrack Django" cmd /k "cd /d "%~dp0" && python manage.py runserver 0.0.0.0:8000"
+echo Starting Django server on port 8000...
+start "FabricTrack Django" cmd /k "cd /d "%PROJECT_DIR%" && call .venv\Scripts\activate.bat && python manage.py runserver 0.0.0.0:8000 > django_log.txt 2>&1"
 
-echo Waiting for Django to start...
-timeout /t 6 /nobreak > nul
+echo Waiting 15 seconds for Django and PostgreSQL to be ready...
+timeout /t 15 /nobreak > nul
 
-echo [2/2] Starting Cloudflare Tunnel...
-start "FabricTrack Tunnel" cmd /k "cloudflared tunnel --url http://localhost:8000"
+echo Starting Cloudflare Tunnel...
+start "FabricTrack Tunnel" cmd /k ""%CLOUDFLARED%" tunnel --url http://localhost:8000"
 
-echo.
-echo =======================================
-echo   FabricTrack is RUNNING!
-echo   Check the "FabricTrack Tunnel" window
-echo   for the public URL.
-echo   Share that URL with your users.
-echo =======================================
-echo.
 pause
