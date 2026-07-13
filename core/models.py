@@ -918,3 +918,20 @@ class AccessoryCustomName(models.Model):
     def __str__(self):
         return self.name
 
+
+class AccessoriesPhoto(models.Model):
+    """Up to 5 job card photos per AccessoriesRecord."""
+    accessories_record = models.ForeignKey(
+        AccessoriesRecord,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.accessories_record}"
+
+

@@ -42,7 +42,7 @@
       </select>
     </div>
 
-    <form method="POST" id="accessoriesForm">
+    <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
       {% csrf_token %}
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
         <span style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Fill in the multiplier quantities and select status:</span>
@@ -184,6 +184,50 @@
             {% endfor %}
           </tbody>
         </table>
+      </div>
+
+      <!-- Job Card Photos Section -->
+      <div class="form-section" style="margin-top: 2rem; border-top: 1px solid #374151; padding-top: 1.5rem;">
+        <h3 style="color:#f1f5f9; font-size:1.1rem; margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">📷 Job Card Photos</h3>
+        
+        <div class="form-group">
+          <label for="id_photos" class="form-label" style="display:block; margin-bottom:0.75rem; color:#9ca3af; font-size:0.85rem;">
+            Upload Photos <span class="file-count-badge" style="background:#1e293b; color:#94a3b8; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.75rem; margin-left:0.5rem;">Up to 5 files • Max 100 MB each</span>
+          </label>
+
+          {% if record.photos.all %}
+          <div class="existing-photos" style="margin-bottom: 1.5rem;">
+            <label class="form-label" style="font-weight:600; font-size: 0.9rem; margin-bottom: 0.75rem; display:block; color:#f1f5f9;">
+              Current Photos (Click red cross to delete):
+            </label>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              {% for photo in record.photos.all %}
+              <div style="position: relative; width: 90px; height: 90px;">
+                <a href="{% url 'serve_db_image' 'accessories' photo.id %}" target="_blank">
+                  <img src="{% url 'serve_db_image' 'accessories' photo.id %}"
+                    style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #374151;" />
+                </a>
+                <a href="?delete_photo={{ photo.id }}"
+                  style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid #0f172a;"
+                  title="Delete Photo" onclick="return confirm('Are you sure you want to delete this photo?');">×</a>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="file-upload-zone" id="fileUploadZone">
+            <div class="file-upload-inner">
+              <div class="upload-icon">📸</div>
+              <p class="upload-text" style="margin: 0; color:#cbd5e1; font-weight:600;">Click to select photos or drag &amp; drop here</p>
+              <p class="upload-hint" style="margin: 4px 0 0 0; color:#64748b;">JPG, PNG, HEIC supported • Up to 5 photos</p>
+              <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
+            </div>
+          </div>
+
+          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+          <div class="photo-count-display" id="photoCountDisplay" style="margin-top: 8px; color: #94a3b8; font-size: 0.85rem;"></div>
+        </div>
       </div>
 
       <div style="margin-top:1.5rem;">

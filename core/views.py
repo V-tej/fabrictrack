@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 import json
 
-from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition, AccessoriesRecord, AccessoriesItemEntry, ACCESSORIES_ITEMS, AccessoryCustomName
+from .models import MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail, StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto, FinishingReport, FinishingReportPhoto, UserProfile, SystemSetting, JobCardRequirement, EmbroideryReport, PrintingReport, EmbroideryReportPhoto, PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto, SewingReportPhoto, RateDefinition, AccessoriesRecord, AccessoriesItemEntry, ACCESSORIES_ITEMS, AccessoryCustomName, AccessoriesPhoto
 from .forms import MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm, FinishingReportForm, EmbroideryReportForm, PrintingReportForm, SingleneedleReportForm, SewingReportForm
 from .utils import export_to_excel, generate_backup_zip
 
@@ -2593,6 +2593,8 @@ def serve_db_image(request, model_name, photo_id):
         photo = get_object_or_404(SingleneedleReportPhoto, pk=photo_id)
     elif model_name == 'sewing':
         photo = get_object_or_404(SewingReportPhoto, pk=photo_id)
+    elif model_name == 'accessories':
+        photo = get_object_or_404(AccessoriesPhoto, pk=photo_id)
     else:
         raise Http404("Invalid photo model")
     
@@ -3014,6 +3016,14 @@ def accessories_detail_view(request, job_card_no):
         record.total_pcs = total_pcs
         record.save(update_fields=['total_pcs', 'updated_at'])
 
+    # Handle photo deletion if requested via URL param
+    delete_photo_id = request.GET.get('delete_photo')
+    if delete_photo_id:
+        photo_to_delete = get_object_or_404(AccessoriesPhoto, pk=delete_photo_id, accessories_record=record)
+        photo_to_delete.delete()
+        messages.success(request, 'Photo deleted successfully.')
+        return redirect('accessories_detail', job_card_no=job_card_no)
+
     # Ensure all standard accessory entries exist for this record
     existing_entries = {e.item_name: e for e in record.entries.all()}
     for name in ACCESSORIES_ITEMS:
@@ -3075,6 +3085,28 @@ def accessories_detail_view(request, job_card_no):
 
         record.notes = request.POST.get('notes', '').strip()
         record.save(update_fields=['notes', 'updated_at'])
+
+        # Save uploaded photos up to 5
+        photos = request.FILES.getlist('photos')
+        uploaded_count = 0
+        skipped_count = 0
+        for photo_file in photos:
+            if record.photos.count() < 5:
+                AccessoriesPhoto.objects.create(
+                    accessories_record=record,
+                    photo_data=photo_file.read(),
+                    photo_name=photo_file.name,
+                    photo_content_type=photo_file.content_type
+                )
+                uploaded_count += 1
+            else:
+                skipped_count += 1
+        
+        if uploaded_count > 0:
+            messages.success(request, f'{uploaded_count} photo(s) uploaded successfully.')
+        if skipped_count > 0:
+            messages.warning(request, f'{skipped_count} photo(s) skipped because the limit is max 5 photos.')
+
         messages.success(request, f'Accessories for {job_card_no} saved successfully.')
         return redirect('accessories_detail', job_card_no=job_card_no)
 
