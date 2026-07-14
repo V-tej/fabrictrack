@@ -92,6 +92,27 @@
         <span class="stat-label">Total Sewing</span>
       </div>
     </div>
+    <div class="stat-card" id="stat-person11">
+      <div class="stat-icon">👔</div>
+      <div class="stat-body">
+        <span class="stat-value">{{ jobwork1_reports_count }}</span>
+        <span class="stat-label">Total Job Work 1</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-person12">
+      <div class="stat-icon">🧵</div>
+      <div class="stat-body">
+        <span class="stat-value">{{ sewing1_reports_count }}</span>
+        <span class="stat-label">Total Sewing 1</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-misc">
+      <div class="stat-icon">📝</div>
+      <div class="stat-body">
+        <span class="stat-value">{{ miscellaneous_reports_count }}</span>
+        <span class="stat-label">Total Misc Reports</span>
+      </div>
+    </div>
   </div>
 
   <!-- ── Quick Actions ──────────────────────────────────────────────── -->
@@ -138,6 +159,26 @@
         <div class="action-icon" style="font-size: 2rem;">🧵</div>
         <div class="action-label" style="font-weight: 600; margin-top: 0.5rem; color: var(--text-color);">Sewing</div>
         <div class="action-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">Submit data for Sewing</div>
+      </a>
+      <a href="{% url 'jobwork1_report' %}" class="action-card primary" style="text-decoration: none;">
+        <div class="action-icon" style="font-size: 2rem;">👔</div>
+        <div class="action-label" style="font-weight: 600; margin-top: 0.5rem; color: var(--text-color);">Job Work 1</div>
+        <div class="action-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">Submit data for Job Work 1</div>
+      </a>
+      <a href="{% url 'sewing1_report' %}" class="action-card primary" style="text-decoration: none;">
+        <div class="action-icon" style="font-size: 2rem;">🧵</div>
+        <div class="action-label" style="font-weight: 600; margin-top: 0.5rem; color: var(--text-color);">Sewing 1</div>
+        <div class="action-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">Submit data for Sewing 1</div>
+      </a>
+      <a href="{% url 'miscellaneous_report' %}" class="action-card primary" style="text-decoration: none; border: 1px dashed var(--accent);">
+        <div class="action-icon" style="font-size: 2rem;">📝</div>
+        <div class="action-label" style="font-weight: 600; margin-top: 0.5rem; color: var(--text-color);">Misc Report (Form)</div>
+        <div class="action-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">Submit a Miscellaneous Report</div>
+      </a>
+      <a href="{% url 'miscellaneous_report_list' %}" class="action-card primary" style="text-decoration: none; border: 1px dashed var(--accent);">
+        <div class="action-icon" style="font-size: 2rem;">📊</div>
+        <div class="action-label" style="font-weight: 600; margin-top: 0.5rem; color: var(--text-color);">Misc Reports (List)</div>
+        <div class="action-desc" style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">View all Miscellaneous Submissions</div>
       </a>
       <!-- Future Users go here -->
     </div>
@@ -297,6 +338,58 @@
     <div class="empty-state" id="empty-dashboard-p5">
       <div class="empty-icon">📭</div>
       <p>No Job Work data yet. <a href="{% url 'jobwork_report' %}">Submit the first one →</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Recent Job Work 1 ────────────────────────────────────── -->
+  <div class="section-card" id="recent-p11-reports">
+    <h2 class="section-title">Recent Job Work 1</h2>
+    {% if recent_jobwork1_reports %}
+    <div class="table-wrapper">
+      <table class="data-table" id="recentP11Table">
+        <thead>
+          <tr>
+            <th>P1 Date & Lot</th>
+            <th>Jobworker</th>
+            <th>Type</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Submitted By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in recent_jobwork1_reports %}
+          <tr>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td>{{ report.jobworker }}</td>
+            <td><span class="badge" style="background: var(--light-bg); color: var(--text-color);">{{ report.job_work_type }}</span></td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'submission_list' %}?filter=p11" class="btn-link" id="view-all-p11-link">View all Job Work 1 submissions →</a>
+    {% else %}
+    <div class="empty-state" id="empty-dashboard-p11">
+      <div class="empty-icon">📭</div>
+      <p>No Job Work 1 data yet. <a href="{% url 'jobwork1_report' %}">Submit the first one →</a></p>
     </div>
     {% endif %}
   </div>
@@ -629,6 +722,110 @@
     {% endif %}
   </div>
 
+  <!-- ── Recent Sewing 1 ─────────────────────────────────────── -->
+  <div class="section-card" id="recent-p12-reports">
+    <h2 class="section-title" style="margin-bottom: 0;">Recent Sewing 1</h2>
+    <div style="margin-bottom: 1rem;">
+      <a href="{% url 'submission_list' %}?filter=p12" class="btn-link" id="view-all-p12-link">View all Sewing 1 submissions →</a>
+    </div>
+
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress (Pending Line Out)</h3>
+    {% if recent_p12_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 1.5rem;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>P1 Date & Lot</th>
+            <th>Item</th>
+            <th>Job Card</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Submitted By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in recent_p12_in_progress %}
+          <tr>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td>{{ report.item_name }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1rem; margin-bottom: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No In Progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed (Line Out Done)</h3>
+    {% if recent_p12_completed %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>P1 Date & Lot</th>
+            <th>Item</th>
+            <th>Job Card</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Submitted By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in recent_p12_completed %}
+          <tr>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td>{{ report.item_name }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1rem;">
+      <p style="margin: 0; color: #64748b;">No completed submissions.</p>
+    </div>
+    {% endif %}
+  </div>
+
   <!-- ── Recent Finishing ─────────────────────────────────────── -->
   <div class="section-card" id="recent-p6-reports">
     <h2 class="section-title">Recent Finishing Reports</h2>
@@ -677,6 +874,92 @@
     <div class="empty-state" id="empty-dashboard-p6">
       <div class="empty-icon">📭</div>
       <p>No Finishing Report data yet. <a href="{% url 'finishing_report' %}">Submit the first one →</a></p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Recent Miscellaneous Reports ───────────────────────────── -->
+  <div class="section-card" id="recent-misc-reports">
+    <h2 class="section-title">Recent Miscellaneous Reports</h2>
+    {% if recent_misc_reports %}
+    <div class="table-wrapper">
+      <table class="data-table" id="recentMiscTable">
+        <thead>
+          <tr>
+            <th>Job Card No</th>
+            <th>Master Name</th>
+            <th>Notes</th>
+            <th>Attached Files</th>
+            <th>Signed</th>
+            <th>Submitted By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in recent_misc_reports %}
+          <tr>
+            <td>
+              <span class="badge" style="background: #ddd3fe; color: #4c1d95; font-weight: bold;">{{ report.job_card_no }}</span>
+            </td>
+            <td>
+              {% if report.master_name %}
+              <strong>{{ report.master_name }}</strong>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if report.notes %}
+              <div style="font-size: 0.88rem; max-height: 60px; overflow: hidden;" title="{{ report.notes }}">
+                {{ report.notes|truncatechars:80 }}
+              </div>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if report.files.all %}
+                <div class="photo-thumbs" style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+                  {% for f in report.files.all %}
+                    {% if 'image/' in f.content_type %}
+                      <a href="{% url 'serve_misc_file' f.id %}" target="_blank" class="photo-thumb-link" title="View {{ f.file_name }}">
+                        <img src="{% url 'serve_misc_file' f.id %}" alt="{{ f.file_name }}" class="photo-thumb" loading="lazy" />
+                      </a>
+                    {% else %}
+                      <div style="margin-bottom:2px; width:100%;">
+                        <a href="{% url 'serve_misc_file' f.id %}" style="color: #a78bfa; text-decoration: none; font-size: 0.85rem;" title="Download {{ f.file_name }}">
+                          📎 {{ f.file_name|truncatechars:15 }}
+                        </a>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% else %}
+              <span class="text-muted">No files</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if report.signature %}<span style="color: var(--success); font-size: 14px;">✅ Signed</span>{% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td style="white-space: nowrap;">
+              <a href="{% url 'edit_miscellaneous_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; text-decoration:none;" title="Edit">✏️</a>
+              <form method="POST" action="{% url 'delete_miscellaneous_report' report.id %}" style="display:inline;"
+                    onsubmit="return confirm('Delete this miscellaneous report?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'miscellaneous_report_list' %}" class="btn-link" id="view-all-misc-link">View all Miscellaneous Submissions →</a>
+    {% else %}
+    <div class="empty-state" id="empty-dashboard-misc">
+      <div class="empty-icon">📭</div>
+      <p>No Miscellaneous Reports submitted yet. <a href="{% url 'miscellaneous_report' %}">Submit the first one →</a></p>
     </div>
     {% endif %}
   </div>

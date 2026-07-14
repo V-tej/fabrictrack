@@ -255,7 +255,11 @@ document.addEventListener('DOMContentLoaded', function () {
       );
       uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        const accept = photoInput.getAttribute('accept') || 'image/*';
+        let files = Array.from(e.dataTransfer.files);
+        if (accept === 'image/*') {
+          files = files.filter(f => f.type.startsWith('image/'));
+        }
         addFiles(files);
       });
     }
@@ -263,7 +267,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function addFiles(newFiles) {
       const remaining = MAX_PHOTOS - selectedFiles.length;
       if (newFiles.length > remaining) {
-        alert(`You can only upload ${MAX_PHOTOS} photos. Only the first ${remaining} will be used.`);
+        const label = (photoInput.getAttribute('accept') || 'image/*') === 'image/*' ? 'photos' : 'files';
+        alert(`You can only upload ${MAX_PHOTOS} ${label}. Only the first ${remaining} will be used.`);
         newFiles = newFiles.slice(0, remaining);
       }
       newFiles.forEach(file => {
@@ -275,18 +280,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderPreview(file, index) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const item = document.createElement('div');
-        item.className = 'preview-item';
-        item.id = `preview-${index}`;
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      item.id = `preview-${index}`;
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          item.innerHTML = `
+            <img src="${e.target.result}" alt="Preview ${index + 1}" />
+            <button type="button" class="preview-remove" onclick="removePhoto(${index})" title="Remove">✕</button>
+          `;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        let icon = '📎';
+        if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) icon = '📄';
+        else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) icon = '📊';
+        else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) icon = '📝';
+
         item.innerHTML = `
-          <img src="${e.target.result}" alt="Preview ${index + 1}" />
-          <button type="button" class="preview-remove" onclick="removePhoto(${index})" title="Remove">✕</button>
+          <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(167,139,250,0.1); padding: 5px; box-sizing: border-box; text-align: center;">
+            <span style="font-size: 24px; margin-bottom: 4px;">${icon}</span>
+            <span style="font-size: 10px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); display: block;" title="${file.name}">${file.name}</span>
+            <button type="button" class="preview-remove" onclick="removePhoto(${index})" title="Remove">✕</button>
+          </div>
         `;
-        previewGrid.appendChild(item);
-      };
-      reader.readAsDataURL(file);
+      }
+      previewGrid.appendChild(item);
     }
 
     function syncFileInput() {
@@ -304,8 +325,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateCountDisplay() {
       if (countDisplay) {
+        const label = (photoInput.getAttribute('accept') || 'image/*') === 'image/*' ? 'photo' : 'file';
         countDisplay.textContent = selectedFiles.length > 0
-          ? `${selectedFiles.length} of ${MAX_PHOTOS} photo${selectedFiles.length !== 1 ? 's' : ''} selected`
+          ? `${selectedFiles.length} of ${MAX_PHOTOS} ${label}${selectedFiles.length !== 1 ? 's' : ''} selected`
           : '';
       }
     }

@@ -124,11 +124,13 @@
             {% if person_type == 'ADMIN' or user.is_superuser %}
               <th>Cutting</th>
               <th>Jobwork</th>
+              <th>Jobwork 1</th>
               <th>Embroidery</th>
               <th>Printing</th>
               <th>Stitching</th>
               <th>Singleneedle</th>
               <th>Sewing</th>
+              <th>Sewing 1</th>
               <th>Finishing</th>
             {% endif %}
             <th>Action</th>
@@ -153,6 +155,17 @@
                     <span style="color:#f59e0b;">🔄 In Progress</span>
                   {% else %}
                     <span style="color:#ef4444;">❌ Pending({{ task.requires_jobwork }})</span>
+                  {% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_jobwork1 %}
+                  {% if task.is_jobwork1_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_jobwork1_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending({{ task.requires_jobwork1 }})</span>
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
@@ -208,6 +221,17 @@
                     <span style="color:#f59e0b;">🔄 In Progress</span>
                   {% else %}
                     <span style="color:#ef4444;">❌ Pending({{ task.requires_sewing }})</span>
+                  {% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if task.requires_sewing1 %}
+                  {% if task.is_sewing1_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                  {% elif task.is_sewing1_in_progress %}
+                    <span style="color:#f59e0b;">🔄 In Progress</span>
+                  {% else %}
+                    <span style="color:#ef4444;">❌ Pending({{ task.requires_sewing1 }})</span>
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
@@ -302,6 +326,30 @@
                 {% else %}
                   <a href="{% url 'finishing_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
                 {% endif %}
+              {% elif person_type == 'P11' %}
+                {% if not task.is_jobwork1_enabled %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Previous steps not yet completed for {{ task.job_card_no }}.'); return false;">Locked 🔒</a>
+                {% elif task.is_jobwork1_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.jobwork1_created_by == user %}
+                    <a href="{% url 'edit_jobwork1_report' task.jobwork1_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;">Locked (Created by: {{ task.jobwork1_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
+                {% else %}
+                  <a href="{% url 'jobwork1_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
+              {% elif person_type == 'P12' %}
+                {% if not task.is_sewing1_enabled %}
+                  <a href="#" class="btn-link" style="color: #9ca3af; cursor: not-allowed;" onclick="alert('Previous steps not yet completed for {{ task.job_card_no }}.'); return false;">Locked 🔒</a>
+                {% elif task.is_sewing1_in_progress %}
+                  {% if user.is_superuser or person_type == 'ADMIN' or task.sewing1_created_by == user %}
+                    <a href="{% url 'edit_sewing1_report' task.sewing1_report_id %}" class="btn-link" style="color: #f59e0b;">🔄 Update Report →</a>
+                  {% else %}
+                    <span style="color: #9ca3af; cursor: not-allowed; font-size: 0.9rem;">Locked (Created by: {{ task.sewing1_created_by.username|default:"Admin" }})</span>
+                  {% endif %}
+                {% else %}
+                  <a href="{% url 'sewing1_report' %}?job_card={{ task.job_card_no }}" class="btn-link" style="color: #f59e0b;">Start Report →</a>
+                {% endif %}
               {% elif person_type == 'ADMIN' or user.is_superuser %}
                 {% if task.master_entry_id %}
                   <a href="{% url 'edit_master_entry' task.master_entry_id %}" style="text-decoration: none; font-size: 1.2rem; margin-right: 10px;" title="Edit Task">✏️</a>
@@ -314,6 +362,60 @@
                 —
               {% endif %}
             </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Completed Job Cards ───────────────────────────────────────────── -->
+  {% if completed_tasks %}
+  <div class="section-card" id="completed-tasks" style="border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.02); margin-top: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h2 class="section-title" style="color: #22c55e; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        ✅ Completed Job Cards <span class="badge" style="background: #22c55e; color: #fff;">{{ completed_tasks|length }}</span>
+      </h2>
+      <input type="text" id="completedSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="max-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid #22c55e;">
+    </div>
+    <div class="table-wrapper">
+      <table class="data-table" id="completedTable">
+        <thead>
+          <tr>
+            <th>Job Card No</th>
+            <th>Date</th>
+            <th>Cutting</th>
+            <th>Jobwork</th>
+            <th>Jobwork 1</th>
+            <th>Embroidery</th>
+            <th>Printing</th>
+            <th>Stitching</th>
+            <th>Singleneedle</th>
+            <th>Sewing</th>
+            <th>Sewing 1</th>
+            <th>Finishing</th>
+            <th>Completed On</th>
+          </tr>
+        </thead>
+        <tbody id="completedTableBody">
+          {% for task in completed_tasks %}
+          <tr>
+            <td>
+              <span class="badge" style="background: #dcfce7; color: #166534; font-weight: bold;">{{ task.job_card_no }}</span>
+            </td>
+            <td>{{ task.date|date:"d-b-Y" }}</td>
+            <td>{% if task.requires_cutting %}{% if task.is_cutting_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_jobwork %}{% if task.is_jobwork_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_jobwork1 %}{% if task.is_jobwork1_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_embroidery %}{% if task.is_embroidery_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_printing %}{% if task.is_printing_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_stitching %}{% if task.is_stitching_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_singleneedle %}{% if task.is_singleneedle_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_sewing %}{% if task.is_sewing_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_sewing1 %}{% if task.is_sewing1_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td>{% if task.requires_finishing %}{% if task.is_finishing_done %}<span style="color:#22c55e;">✅ Done</span>{% else %}<span style="color:#ef4444;">⏳ Pending</span>{% endif %}{% else %}—{% endif %}</td>
+            <td style="font-size:0.82rem; color:#9ca3af;">{{ task.updated_at|date:"d-b-Y" }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -337,9 +439,9 @@
               <th>Item</th><th>CR Lakshay Master</th>
             {% elif person_type == 'P3' %}
               <th>Item</th><th>CR Rahul Master</th>
-            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' %}
+            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' or person_type == 'P12' %}
               <th>Item</th><th>Total Rate</th>
-            {% elif person_type == 'P5' %}
+            {% elif person_type == 'P5' or person_type == 'P11' %}
               <th>Jobworker</th><th>Type</th>
             {% elif person_type == 'P7' %}
               <th>Embroidery Worker</th><th>Type</th>
@@ -359,7 +461,7 @@
             <td>
               {% if person_type == 'P6' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.lot_no }}</span>
-              {% elif person_type == 'P5' or person_type == 'P4' or person_type == 'P7' or person_type == 'P8' or person_type == 'P9' or person_type == 'P10' %}
+              {% elif person_type == 'P5' or person_type == 'P4' or person_type == 'P7' or person_type == 'P8' or person_type == 'P9' or person_type == 'P10' or person_type == 'P11' or person_type == 'P12' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.job_card_no }}</span>
               {% elif person_type == 'P2' or person_type == 'P3' %}
                 <span class="badge" style="background: #e0e7ff; color: #4338ca;">{{ report.master_entry.job_card_number }}</span>
@@ -394,9 +496,9 @@
                   —
                 {% endif %}
               </td>
-            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' %}
+            {% elif person_type == 'P4' or person_type == 'P9' or person_type == 'P10' or person_type == 'P12' %}
               <td>{{ report.item_name }}</td><td>₹{{ report.total_rate }}</td>
-            {% elif person_type == 'P5' %}
+            {% elif person_type == 'P5' or person_type == 'P11' %}
               <td>
                 {% if report.master_name and report.jobworker %}
                   {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.jobworker }})</span>
@@ -561,6 +663,22 @@
     
     // Initial page load
     renderPage();
+  });
+
+  // ── Completed Job Cards Search ────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    const completedSearch = document.getElementById('completedSearch');
+    const completedBody   = document.getElementById('completedTableBody');
+    if (!completedSearch || !completedBody) return;
+
+    completedSearch.addEventListener('input', function() {
+      const term = this.value.toLowerCase().trim();
+      completedBody.querySelectorAll('tr').forEach(function(row) {
+        const jobCardCell = row.querySelector('td:first-child');
+        const text = jobCardCell ? jobCardCell.textContent.toLowerCase() : '';
+        row.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
   });
 </script>
 {% endblock %}

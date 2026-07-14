@@ -33,6 +33,12 @@
     <a href="{% url 'submission_list' %}?filter=p10" class="btn {% if filter_param == 'p10' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       🧵 Sewing
     </a>
+    <a href="{% url 'submission_list' %}?filter=p11" class="btn {% if filter_param == 'p11' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      👔 Job Work 1
+    </a>
+    <a href="{% url 'submission_list' %}?filter=p12" class="btn {% if filter_param == 'p12' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
+      🧵 Sewing 1
+    </a>
   </div>
 
 
@@ -617,6 +623,239 @@
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No completed submissions.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if show_p11 %}
+  <!-- Job Work 1 Section -->
+  <div class="section-card" id="p11SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P11' %}1{% else %}35{% endif %};">
+    <div class="section-header-row">
+      <h2 class="section-title">Job Work 1 {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <form method="get" style="margin: 0; display: inline-flex; align-items: center;">
+          {% if filter_param %}<input type="hidden" name="filter" value="{{ filter_param }}">{% endif %}
+          {% if master_name_cutting %}<input type="hidden" name="master_name_cutting" value="{{ master_name_cutting }}">{% endif %}
+          {% if master_name_stitching %}<input type="hidden" name="master_name_stitching" value="{{ master_name_stitching }}">{% endif %}
+          {% if master_name_job_work %}<input type="hidden" name="master_name_job_work" value="{{ master_name_job_work }}">{% endif %}
+          {% if master_name_embroidery %}<input type="hidden" name="master_name_embroidery" value="{{ master_name_embroidery }}">{% endif %}
+          {% if master_name_printing %}<input type="hidden" name="master_name_printing" value="{{ master_name_printing }}">{% endif %}
+          {% if master_name_finishing %}<input type="hidden" name="master_name_finishing" value="{{ master_name_finishing }}">{% endif %}
+          {% if master_name_singleneedle %}<input type="hidden" name="master_name_singleneedle" value="{{ master_name_singleneedle }}">{% endif %}
+          {% if master_name_sewing %}<input type="hidden" name="master_name_sewing" value="{{ master_name_sewing }}">{% endif %}
+          {% if master_name_sewing1 %}<input type="hidden" name="master_name_sewing1" value="{{ master_name_sewing1 }}">{% endif %}
+          <select name="master_name_job_work1" onchange="this.form.submit()" class="form-select-sm" style="padding: 0.3rem 0.6rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; outline: none; cursor: pointer; height: 32px;">
+            <option value="" style="background: #1e293b; color: #fff;">-- All Job Workers --</option>
+            {% for m in master_names %}
+              {% if m.department == 'Job Work 1' %}
+                <option value="{{ m.name }}" {% if master_name_job_work1 == m.name %}selected{% endif %} style="background: #1e293b; color: #fff;">{{ m.name }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </form>
+        {% if not filter_param %}
+        <a href="?filter=p11" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
+        {% endif %}
+        {% if request.user.profile.person_type in 'P11,ADMIN' or request.user.is_superuser %}
+        <a href="{% url 'jobwork1_report' %}" class="btn btn-primary btn-sm" id="btnNewP11Report">+ New Job Work 1</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress</h3>
+    {% if p11_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 2rem;">
+      <table class="data-table" id="p11InSubmissionsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Jobworker</th>
+            <th>Purpose</th>
+            <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
+            <th>Date In</th>
+            <th>Date Out</th>
+            <th>Any other Problem</th>
+            <th>Total Pcs short</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p11_in_progress %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><strong>
+              {% if report.master_name and report.jobworker %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.jobworker }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.jobworker %}
+                {{ report.jobworker }}
+              {% else %}
+                —
+              {% endif %}
+            </strong></td>
+            <td>{{ report.purpose }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_jobwork|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ report.jobwork_in|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.jobwork_out|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.any_other_problem }}</td>
+            <td>{{ report.total_pcs_short }}</td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'jobwork1' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'jobwork1' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem; margin-bottom: 2rem;">
+      <p style="margin: 0; color: #64748b;">No in-progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed</h3>
+    {% if p11_completed %}
+    <div class="table-wrapper">
+      <table class="data-table" id="p11OutSubmissionsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Jobworker</th>
+            <th>Purpose</th>
+            <th>Job Card No.</th>
+            <th>Design</th>
+            <th>Rate</th>
+            <th>Date In</th>
+            <th>Date Out</th>
+            <th>Any other Problem</th>
+            <th>Total Pcs short</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p11_completed %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><strong>
+              {% if report.master_name and report.jobworker %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.jobworker }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.jobworker %}
+                {{ report.jobworker }}
+              {% else %}
+                —
+              {% endif %}
+            </strong></td>
+            <td>{{ report.purpose }}</td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>{{ report.design_jobwork|default:"—" }}</td>
+            <td>
+              {% if report.rate_definition %}
+                {{ report.rate_definition.name }} (₹{{ report.total_rate }})
+              {% elif report.total_rate %}
+                ₹{{ report.total_rate }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ report.jobwork_in|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.jobwork_out|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.any_other_problem }}</td>
+            <td>{{ report.total_pcs_short }}</td>
+            <td><strong>{{ report.total_pcs }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'jobwork1' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'jobwork1' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
               <span class="text-muted">—</span>
               {% endif %}
@@ -1682,6 +1921,243 @@
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
               <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem;">
+      <p style="margin: 0; color: #64748b;">No completed submissions.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if show_p12 %}
+  <!-- Sewing 1 Section -->
+  <div class="section-card" id="p12SubmissionsCard" style="margin-top: 2rem; order: {% if person_type == 'P12' %}1{% else %}85{% endif %};">
+    <div class="section-header-row">
+      <h2 class="section-title">Sewing 1 {% if not filter_param %}<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Latest 10)</span>{% endif %}</h2>
+      <div class="header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <form method="get" style="margin: 0; display: inline-flex; align-items: center;">
+          {% if filter_param %}<input type="hidden" name="filter" value="{{ filter_param }}">{% endif %}
+          {% if master_name_cutting %}<input type="hidden" name="master_name_cutting" value="{{ master_name_cutting }}">{% endif %}
+          {% if master_name_stitching %}<input type="hidden" name="master_name_stitching" value="{{ master_name_stitching }}">{% endif %}
+          {% if master_name_job_work %}<input type="hidden" name="master_name_job_work" value="{{ master_name_job_work }}">{% endif %}
+          {% if master_name_job_work1 %}<input type="hidden" name="master_name_job_work1" value="{{ master_name_job_work1 }}">{% endif %}
+          {% if master_name_embroidery %}<input type="hidden" name="master_name_embroidery" value="{{ master_name_embroidery }}">{% endif %}
+          {% if master_name_printing %}<input type="hidden" name="master_name_printing" value="{{ master_name_printing }}">{% endif %}
+          {% if master_name_finishing %}<input type="hidden" name="master_name_finishing" value="{{ master_name_finishing }}">{% endif %}
+          {% if master_name_singleneedle %}<input type="hidden" name="master_name_singleneedle" value="{{ master_name_singleneedle }}">{% endif %}
+          {% if master_name_sewing %}<input type="hidden" name="master_name_sewing" value="{{ master_name_sewing }}">{% endif %}
+          <select name="master_name_sewing1" onchange="this.form.submit()" class="form-select-sm" style="padding: 0.3rem 0.6rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; outline: none; cursor: pointer; height: 32px;">
+            <option value="" style="background: #1e293b; color: #fff;">-- All Sewing 1 Workers --</option>
+            {% for m in master_names %}
+              {% if m.department == 'Sewing 1' %}
+                <option value="{{ m.name }}" {% if master_name_sewing1 == m.name %}selected{% endif %} style="background: #1e293b; color: #fff;">{{ m.name }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </form>
+        {% if not filter_param %}
+        <a href="?filter=p12" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">View All</a>
+        {% else %}
+        <a href="{% url 'submission_list' %}" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">⬅ Back</a>
+        {% endif %}
+        {% if request.user.profile.person_type in 'P12,ADMIN' or request.user.is_superuser %}
+        <a href="{% url 'sewing1_report' %}" class="btn btn-primary btn-sm" id="btnNewP12Report">+ New Sewing 1</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- IN PROGRESS TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">In Progress (Pending Line Out)</h3>
+    {% if p12_in_progress %}
+    <div class="table-wrapper" style="margin-bottom: 2rem;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Sewing Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p12_in_progress %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.sewing_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.sewing_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.sewing_master_name %}
+                {{ report.sewing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'sewing1' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'sewing1' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 1.5rem; margin-bottom: 2rem;">
+      <p style="margin: 0; color: #64748b;">No In Progress submissions.</p>
+    </div>
+    {% endif %}
+
+    <!-- COMPLETED TABLE -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #475569; font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Completed (Line Out Done)</h3>
+    {% if p12_completed %}
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>P1 Date &amp; Job Card No.</th>
+            <th>Job Card No.</th>
+            <th>Sewing Master</th>
+            <th>Item Name</th>
+            <th>Line In</th>
+            <th>Line Out</th>
+            <th>Total Pcs</th>
+            <th>Photos</th>
+            <th>Rate</th>
+            <th>Description</th>
+            <th>Total Rate</th>
+            <th>Option 1</th>
+            <th>Signed</th>
+            <th>By</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for report in p12_completed %}
+          <tr class="table-row-hover">
+            <td>{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'job_card_print' report.cutting_report.master_entry.id %}" target="_blank" title="Print QR Code" style="text-decoration: none;">
+                <span class="badge" style="cursor: pointer; background: #e0e7ff; color: #4338ca; border: 1px dashed #818cf8;">🖨️ {{ report.cutting_report.master_entry }}</span>
+              </a>
+            </td>
+            <td><code>{{ report.job_card_no }}</code></td>
+            <td>
+              {% if report.master_name and report.sewing_master_name %}
+                {{ report.master_name }} <span style="color:#64748b; font-size:0.9em;">({{ report.sewing_master_name }})</span>
+              {% elif report.master_name %}
+                {{ report.master_name }}
+              {% elif report.sewing_master_name %}
+                {{ report.sewing_master_name }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td><strong>{{ report.item_name }}</strong></td>
+            <td>{{ report.line_in_date|date:"d M Y"|default:"—" }}</td>
+            <td>{{ report.line_out_date|date:"d M Y"|default:"—" }}</td>
+            <td><strong>{{ report.total_pcs|default:"—" }}</strong></td>
+            <td>
+              <div class="photo-thumbs">
+                {% for photo in report.photos.all %}
+                <a href="{% url 'serve_db_image' 'sewing1' photo.id %}" target="_blank" class="photo-thumb-link" title="View photo {{ forloop.counter }}">
+                  <img src="{% url 'serve_db_image' 'sewing1' photo.id %}" alt="Job Card Photo {{ forloop.counter }}" class="photo-thumb" loading="lazy" />
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+            <td>{% if report.rate_name %}{{ report.rate_name }}{% else %}<span style="color:#64748b; font-size:0.85em;">Legacy</span>{% endif %}</td>
+            <td style="max-width: 250px; font-size: 0.9em;">
+              {% if report.rate_description %}
+                {{ report.rate_description }}
+              {% else %}
+                {% if report.darji_rate or report.folding_rate or report.overlock_rate %}
+                  <span style="color:#64748b; font-size:0.9em;">D: {{ report.darji_rate }} | F: {{ report.folding_rate }} | O: {{ report.overlock_rate }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              {% endif %}
+            </td>
+            <td><strong>{% if report.total_rate %}₹{{ report.total_rate }}{% else %}—{% endif %}</strong></td>
+            <td>{{ report.option_1|default:"—" }}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              {% if report.signature %}<span title="Worker Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+              {% if report.signature_2 %}<span title="Master Signed" style="color:var(--success); font-size:16px;">✅</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+            </td>
+            <td>{{ report.created_by.username|default:"—" }}</td>
+            <td class="text-muted">{{ report.created_at|date:"d M Y H:i" }}</td>
+            <td style="white-space: nowrap;">
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+              <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
               {% else %}
               <span class="text-muted">—</span>
               {% endif %}

@@ -130,6 +130,30 @@
       </a>
       {% endif %}
 
+      {% if user.profile.person_type == 'P11' %}
+      <a href="{% url 'jobwork1_report' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'jobwork1_report' %}active{% endif %}"
+        id="nav-person11">
+        <span class="nav-icon">👔</span> Job Work 1
+      </a>
+      {% endif %}
+
+      {% if user.profile.person_type == 'P12' %}
+      <a href="{% url 'sewing1_report' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'sewing1_report' %}active{% endif %}"
+        id="nav-person12">
+        <span class="nav-icon">🧵</span> Sewing 1
+      </a>
+      {% endif %}
+
+      {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
+      <a href="{% url 'miscellaneous_report' %}"
+        class="nav-item {% if 'miscellaneous' in request.resolver_match.url_name %}active{% endif %}"
+        id="nav-misc-report">
+        <span class="nav-icon">📝</span> Misc Report
+      </a>
+      {% endif %}
+
       <a href="{% url 'submission_list' %}"
         class="nav-item {% if request.resolver_match.url_name == 'submission_list' %}active{% endif %}"
         id="nav-submissions">

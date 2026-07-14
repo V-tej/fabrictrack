@@ -54,6 +54,7 @@ def export_to_excel(since_date=None):
         'Submitted By', 'Submitted At',
         'Jobworker', 'Purpose', 'Job Work In Date', 'Job Work Out Date', 'Total Pcs short', 'Total Pcs', 'Any other Problem',
         'Design Jobwork', 'Job Work Rate',
+        'Job Work 1 Jobworker', 'Job Work 1 Purpose', 'Job Work 1 In Date', 'Job Work 1 Out Date', 'Job Work 1 Total Pcs short', 'Job Work 1 Total Pcs', 'Job Work 1 Any other Problem', 'Design Jobwork 1', 'Job Work 1 Rate',
         'Embroidery Worker', 'Embroidery Purpose', 'Embroidery In Date', 'Embroidery Out Date', 'Embroidery Pcs short', 'Embroidery Pcs', 'Embroidery Any other Problem',
         'Design Embroidery', 'Embroidery Rate',
         'Printing Worker', 'Printing Purpose', 'Printing In Date', 'Printing Out Date', 'Printing Pcs short', 'Printing Pcs', 'Printing Any other Problem',
@@ -61,6 +62,7 @@ def export_to_excel(since_date=None):
         'Line in Date', 'Line out Date', 'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
         'Singleneedle Line in Date', 'Singleneedle Line out Date', 'Singleneedle Total Pcs', 'Singleneedle Rate', 'Singleneedle Description', 'Singleneedle Total Rate', 'Singleneedle Option 1',
         'Sewing Line in Date', 'Sewing Line out Date', 'Sewing Total Pcs', 'Sewing Rate', 'Sewing Description', 'Sewing Total Rate', 'Sewing Option 1',
+        'Sewing 1 Line in Date', 'Sewing 1 Line out Date', 'Sewing 1 Total Pcs', 'Sewing 1 Rate', 'Sewing 1 Description', 'Sewing 1 Total Rate', 'Sewing 1 Option 1',
         'Finishing Date', 'Finishing Total Pcs', 'Finishing Pcs Short', 'Finishing Pcs Packed', 'Finishing Green Tape', 'Finishing Red Tape', 'Finishing Blue Tape', 'Finishing Total Tape', 'Finishing Rate'
     ]
     _write_header_row(ws2, headers2)
@@ -68,17 +70,19 @@ def export_to_excel(since_date=None):
     
     all_reports = CuttingReport.objects.select_related('master_entry', 'created_by').prefetch_related(
         'photos', 'color_details', 'embroidery_reports', 'printing_reports', 'stitching_reports', 'finishing_reports',
-        'singleneedle_reports', 'sewing_reports'
+        'singleneedle_reports', 'sewing_reports', 'jobwork1_reports', 'sewing1_reports'
     ).all()
     if since_date:
         all_reports = all_reports.filter(
             Q(created_at__gt=since_date) | Q(updated_at__gt=since_date) |
             Q(jobwork_reports__created_at__gt=since_date) | Q(jobwork_reports__updated_at__gt=since_date) |
+            Q(jobwork1_reports__created_at__gt=since_date) | Q(jobwork1_reports__updated_at__gt=since_date) |
             Q(stitching_reports__created_at__gt=since_date) | Q(stitching_reports__updated_at__gt=since_date) |
             Q(embroidery_reports__created_at__gt=since_date) | Q(embroidery_reports__updated_at__gt=since_date) |
             Q(printing_reports__created_at__gt=since_date) | Q(printing_reports__updated_at__gt=since_date) |
             Q(singleneedle_reports__created_at__gt=since_date) | Q(singleneedle_reports__updated_at__gt=since_date) |
             Q(sewing_reports__created_at__gt=since_date) | Q(sewing_reports__updated_at__gt=since_date) |
+            Q(sewing1_reports__created_at__gt=since_date) | Q(sewing1_reports__updated_at__gt=since_date) |
             Q(finishing_reports__created_at__gt=since_date) | Q(finishing_reports__updated_at__gt=since_date)
         ).distinct()
         
@@ -86,11 +90,13 @@ def export_to_excel(since_date=None):
 
     for i, report in enumerate(all_reports, start=1):
         job_work = report.jobwork_reports.first()
+        job_work1 = report.jobwork1_reports.first()
         embroidery = report.embroidery_reports.first()
         printing = report.printing_reports.first()
         stitching = report.stitching_reports.first()
         singleneedle = report.singleneedle_reports.first()
         sewing = report.sewing_reports.first()
+        sewing1 = report.sewing1_reports.first()
         finishing = report.finishing_reports.first()
             
         if job_work:
@@ -107,6 +113,21 @@ def export_to_excel(since_date=None):
             ]
         else:
             jw_data = ['—'] * 9
+
+        if job_work1:
+            jw1_data = [
+                job_work1.jobworker,
+                job_work1.purpose,
+                job_work1.jobwork_in.strftime('%d-%b-%Y') if job_work1.jobwork_in else '—',
+                job_work1.jobwork_out.strftime('%d-%b-%Y') if job_work1.jobwork_out else '—',
+                job_work1.total_pcs_short if job_work1.total_pcs_short is not None else '—',
+                job_work1.total_pcs if job_work1.total_pcs is not None else '—',
+                job_work1.any_other_problem,
+                job_work1.design_jobwork or '—',
+                float(job_work1.total_rate) if job_work1.total_rate else '—',
+            ]
+        else:
+            jw1_data = ['—'] * 9
 
         if embroidery:
             emb_data = [
@@ -177,6 +198,19 @@ def export_to_excel(since_date=None):
         else:
             sewing_data = ['—'] * 7
 
+        if sewing1:
+            sewing1_data = [
+                sewing1.line_in_date.strftime('%d-%b-%Y') if sewing1.line_in_date else '—',
+                sewing1.line_out_date.strftime('%d-%b-%Y') if sewing1.line_out_date else '—',
+                sewing1.total_pcs if sewing1.total_pcs is not None else '—',
+                sewing1.rate_name or '—',
+                sewing1.rate_description or '—',
+                float(sewing1.total_rate) if sewing1.total_rate else '—',
+                sewing1.option_1 or '—',
+            ]
+        else:
+            sewing1_data = ['—'] * 7
+
         if finishing:
             finish_data = [
                 finishing.date.strftime('%d-%b-%Y') if finishing.date else '—',
@@ -211,7 +245,7 @@ def export_to_excel(since_date=None):
             report.total_pcs,
             report.created_by.username if report.created_by else '—',
             report.created_at.strftime('%d-%b-%Y %H:%M'),
-        ] + jw_data + emb_data + print_data + stitch_data + singleneedle_data + sewing_data + finish_data)
+        ] + jw_data + jw1_data + emb_data + print_data + stitch_data + singleneedle_data + sewing_data + sewing1_data + finish_data)
 
     _auto_width_and_style(ws2)
 
@@ -455,6 +489,103 @@ def export_to_excel(since_date=None):
 
     _auto_width_and_style(ws11)
 
+    # ── Sheet 12: Job Work 1 ─────────────────────────────────────────
+    ws12 = wb.create_sheet('Job Work 1')
+    _style_sheet(ws12)
+
+    headers12 = [
+        '#', 'P1 Date', 'Job Card Number', 'Jobworker', 'Purpose',
+        'In Date', 'Out Date', 'Any other Problem', 'Total Pcs short', 'Total Pcs',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws12, headers12)
+
+    from .models import JobWork1Report
+    p11_qs = JobWork1Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p11_qs = p11_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p11_qs.order_by('-created_at'), start=1):
+        ws12.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.jobworker,
+            report.purpose,
+            report.jobwork_in.strftime('%d-%b-%Y') if report.jobwork_in else '—',
+            report.jobwork_out.strftime('%d-%b-%Y') if report.jobwork_out else '—',
+            report.any_other_problem,
+            report.total_pcs_short if report.total_pcs_short is not None else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws12)
+
+    # ── Sheet 13: Sewing 1 ───────────────────────────────────────────
+    ws13 = wb.create_sheet('Sewing 1')
+    _style_sheet(ws13)
+
+    headers13 = [
+        '#', 'P1 Date', 'Job Card Number', 'Sewing 1 Master', 'Item Name', 'Line In Date', 'Line Out Date',
+        'Total Pcs', 'Rate', 'Description', 'Total Rate', 'Option 1',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws13, headers13)
+
+    from .models import Sewing1Report
+    p12_qs = Sewing1Report.objects.select_related('cutting_report__master_entry', 'created_by').all()
+    if since_date:
+        p12_qs = p12_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(p12_qs.order_by('-created_at'), start=1):
+        ws13.append([
+            i,
+            report.cutting_report.master_entry.date.strftime('%d-%b-%Y'),
+            report.job_card_no,
+            report.master_name or '—',
+            report.item_name,
+            report.line_in_date.strftime('%d-%b-%Y') if report.line_in_date else '—',
+            report.line_out_date.strftime('%d-%b-%Y') if report.line_out_date else '—',
+            report.total_pcs if report.total_pcs is not None else '—',
+            report.rate_name or '—',
+            report.rate_description or '—',
+            float(report.total_rate) if report.total_rate else '—',
+            report.option_1 or '—',
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws13)
+
+    # ── Sheet 14: Miscellaneous Reports ──────────────────────────────
+    ws14 = wb.create_sheet('Miscellaneous Reports')
+    _style_sheet(ws14)
+
+    headers14 = [
+        '#', 'Job Card No', 'Master Name', 'Notes', 'Signature', 'Attached Files',
+        'Submitted By', 'Submitted At'
+    ]
+    _write_header_row(ws14, headers14)
+
+    from .models import MiscellaneousReport
+    misc_qs = MiscellaneousReport.objects.select_related('created_by').prefetch_related('files').all()
+    if since_date:
+        misc_qs = misc_qs.filter(created_at__gt=since_date)
+    for i, report in enumerate(misc_qs.order_by('-created_at'), start=1):
+        file_names_str = '\n'.join([f.file_name for f in report.files.all()]) if report.files.exists() else '—'
+        ws14.append([
+            i,
+            report.job_card_no,
+            report.master_name or '—',
+            report.notes or '—',
+            'Signed' if report.signature else 'Unsigned',
+            file_names_str,
+            report.created_by.username if report.created_by else '—',
+            report.created_at.strftime('%d-%b-%Y %H:%M'),
+        ])
+
+    _auto_width_and_style(ws14)
+
     wb.save(filepath)
     return filepath
 
@@ -589,6 +720,36 @@ def generate_backup_zip():
             sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
             filename = f"Photos/Sewing/sewing_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
             zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Job Work 1 Photos
+        from .models import JobWork1ReportPhoto
+        for photo in JobWork1ReportPhoto.objects.select_related('job_work1_report').all():
+            job_card = photo.job_work1_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/JobWork1/jobwork1_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Sewing 1 Photos
+        from .models import Sewing1ReportPhoto
+        for photo in Sewing1ReportPhoto.objects.select_related('sewing1_report').all():
+            job_card = photo.sewing1_report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in photo.photo_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Sewing1/sewing1_photo_{photo.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(photo.photo_data))
+
+        # Add Miscellaneous Report Files
+        from .models import MiscellaneousReportFile
+        for f in MiscellaneousReportFile.objects.select_related('report').all():
+            job_card = f.report.job_card_no or "unknown"
+            job_card_safe = "".join([c for c in job_card if c.isalnum() or c in (' ', '-', '_')]).strip()
+            job_card_safe = job_card_safe.replace(' ', '_')
+            sanitized_name = "".join([c for c in f.file_name if c.isalnum() or c in ('.', '_', '-')])
+            filename = f"Photos/Miscellaneous/misc_file_{f.id}_jc_{job_card_safe}_{sanitized_name}"
+            zip_file.writestr(filename, bytes(f.file_data))
             
     zip_buffer.seek(0)
     return zip_buffer

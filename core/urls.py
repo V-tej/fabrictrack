@@ -71,4 +71,21 @@ urlpatterns = [
     path('accessories-item/<int:pk>/delete/', views.accessories_delete_item_view, name='accessories_delete_item'),
     path('accessories/<str:job_card_no>/', views.accessories_detail_view, name='accessories_detail'),
     path('accessories/<str:job_card_no>/print/', views.accessories_print_view, name='accessories_print'),
+
+    # Miscellaneous Report Routes
+    path('miscellaneous/', views.miscellaneous_report_view, name='miscellaneous_report'),
+    path('miscellaneous/list/', views.miscellaneous_report_list_view, name='miscellaneous_report_list'),
+    path('miscellaneous/file/<int:file_id>/', views.serve_misc_file, name='serve_misc_file'),
+    path('miscellaneous/<int:pk>/edit/', views.edit_miscellaneous_report, name='edit_miscellaneous_report'),
+    path('miscellaneous/<int:pk>/delete/', views.delete_miscellaneous_report, name='delete_miscellaneous_report'),
+
+    # P11 — Job Work 1
+    path('job-work-1/', views.jobwork1_report_view, name='jobwork1_report'),
+    path('job-work-1/<int:pk>/edit/', views.edit_jobwork1_report, name='edit_jobwork1_report'),
+    path('job-work-1/<int:pk>/delete/', views.delete_jobwork1_report, name='delete_jobwork1_report'),
+    
+    # P12 — Sewing 1
+    path('sewing-1/', views.sewing1_report_view, name='sewing1_report'),
+    path('sewing-1/<int:pk>/edit/', views.edit_sewing1_report, name='edit_sewing1_report'),
+    path('sewing-1/<int:pk>/delete/', views.delete_sewing1_report, name='delete_sewing1_report'),
 ]

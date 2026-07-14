@@ -15,8 +15,8 @@ PERSON_CHOICES = [
     ('P8', 'Printing'),
     ('P9', 'Singleneedle'),
     ('P10', 'Sewing'),
-    ('P11', 'Person 11'),
-    ('P12', 'Person 12'),
+    ('P11', 'Job Work 1'),
+    ('P12', 'Sewing 1'),
     ('P13', 'Person 13'),
 ]
 
@@ -64,11 +64,13 @@ class MasterName(models.Model):
         ('Cutting', 'Cutting'),
         ('Stitching', 'Stitching'),
         ('Job Work', 'Job Work'),
+        ('Job Work 1', 'Job Work 1'),
         ('Finishing', 'Finishing'),
         ('Embroidery', 'Embroidery'),
         ('Printing', 'Printing'),
         ('Singleneedle', 'Singleneedle'),
         ('Sewing', 'Sewing'),
+        ('Sewing 1', 'Sewing 1'),
     ]
     name = models.CharField(max_length=100)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
@@ -333,6 +335,60 @@ class JobWorkReportPhoto(models.Model):
         return f"Photo for {self.job_work_report}"
 
 
+class JobWork1Report(models.Model):
+    """Job Work 1 — Same fields as JobWorkReport."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='jobwork1_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    jobworker = models.CharField(max_length=200)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    purpose = models.CharField(max_length=300)
+    job_card_no = models.CharField(max_length=100)
+    jobwork_in = models.DateField(null=True, blank=True)
+    jobwork_out = models.DateField(null=True, blank=True)
+    any_other_problem = models.TextField()
+    total_pcs_short = models.PositiveIntegerField()
+    total_pcs = models.PositiveIntegerField()
+    
+    # Design and Rates
+    design_jobwork = models.CharField(max_length=200, blank=True, null=True)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Job Work 1'
+        verbose_name_plural = 'Job Work 1'
+
+    def __str__(self):
+        return f"Job Work 1 — {self.jobworker} — {self.job_card_no}"
+
+
+class JobWork1ReportPhoto(models.Model):
+    """Up to 5 job card photos per JobWork1Report."""
+    job_work1_report = models.ForeignKey(
+        JobWork1Report,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.job_work1_report}"
+
+
 class EmbroideryReport(models.Model):
     """Embroidery — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
@@ -547,6 +603,59 @@ class SewingReportPhoto(models.Model):
         return f"Photo for {self.sewing_report}"
 
 
+class Sewing1Report(models.Model):
+    """Sewing 1 — Same fields as SewingReport."""
+    cutting_report = models.ForeignKey(
+        CuttingReport,
+        on_delete=models.CASCADE,
+        related_name='sewing1_reports'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    sewing_master_name = models.CharField(max_length=200, blank=True, null=True)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    job_card_no = models.CharField(max_length=100)
+    line_in_date = models.DateField(null=True, blank=True)
+    total_pcs = models.PositiveIntegerField(null=True, blank=True)
+    line_out_date = models.DateField(null=True, blank=True)
+    item_name = models.CharField(max_length=200)
+    rate_definition = models.ForeignKey('RateDefinition', on_delete=models.SET_NULL, null=True, blank=True)
+    rate_name = models.CharField(max_length=50, blank=True, null=True)
+    rate_description = models.CharField(max_length=300, blank=True, null=True)
+    darji_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    folding_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    overlock_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    total_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, null=True, blank=True)
+    option_1 = models.CharField(max_length=200, blank=True)
+    signature = models.TextField(blank=True, null=True)
+    signature_2 = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Sewing 1'
+        verbose_name_plural = 'Sewing 1'
+
+    def __str__(self):
+        return f"Sewing 1 — {self.cutting_report.master_entry} — {self.item_name}"
+
+
+class Sewing1ReportPhoto(models.Model):
+    """Up to 5 job card photos per Sewing1Report."""
+    sewing1_report = models.ForeignKey(
+        Sewing1Report,
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    photo_data = models.BinaryField()
+    photo_name = models.CharField(max_length=255, default='photo.jpg')
+    photo_content_type = models.CharField(max_length=100, default='image/jpeg')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.sewing1_report}"
+
+
 class FinishingReport(models.Model):
     """Finishing Report — Form based on P1's Cutting Report."""
     cutting_report = models.ForeignKey(
@@ -609,30 +718,36 @@ class JobCardRequirement(models.Model):
     # Requirements: 0 = Not required, 1-8 = sequence order
     requires_cutting = models.IntegerField(default=0)
     requires_jobwork = models.IntegerField(default=0)
+    requires_jobwork1 = models.IntegerField(default=0)
     requires_stitching = models.IntegerField(default=0)
     requires_finishing = models.IntegerField(default=0)
     requires_embroidery = models.IntegerField(default=0)
     requires_printing = models.IntegerField(default=0)
     requires_singleneedle = models.IntegerField(default=0)
     requires_sewing = models.IntegerField(default=0)
+    requires_sewing1 = models.IntegerField(default=0)
     
     # Status (Updated when reports are submitted)
     is_cutting_done = models.BooleanField(default=False)
     is_jobwork_done = models.BooleanField(default=False)
+    is_jobwork1_done = models.BooleanField(default=False)
     is_stitching_done = models.BooleanField(default=False)
     is_finishing_done = models.BooleanField(default=False)
     is_embroidery_done = models.BooleanField(default=False)
     is_printing_done = models.BooleanField(default=False)
     is_singleneedle_done = models.BooleanField(default=False)
     is_sewing_done = models.BooleanField(default=False)
+    is_sewing1_done = models.BooleanField(default=False)
 
     # In-Progress: In date submitted but Out date not yet filled
     is_jobwork_in_progress = models.BooleanField(default=False)
+    is_jobwork1_in_progress = models.BooleanField(default=False)
     is_embroidery_in_progress = models.BooleanField(default=False)
     is_printing_in_progress = models.BooleanField(default=False)
     is_stitching_in_progress = models.BooleanField(default=False)
     is_singleneedle_in_progress = models.BooleanField(default=False)
     is_sewing_in_progress = models.BooleanField(default=False)
+    is_sewing1_in_progress = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -648,12 +763,14 @@ class JobCardRequirement(models.Model):
         steps = [
             (self.requires_cutting,     self.is_cutting_done),
             (self.requires_jobwork,     self.is_jobwork_done),
+            (self.requires_jobwork1,    self.is_jobwork1_done),
             (self.requires_stitching,   self.is_stitching_done),
             (self.requires_finishing,   self.is_finishing_done),
             (self.requires_embroidery,  self.is_embroidery_done),
             (self.requires_printing,    self.is_printing_done),
             (self.requires_singleneedle,self.is_singleneedle_done),
             (self.requires_sewing,      self.is_sewing_done),
+            (self.requires_sewing1,     self.is_sewing1_done),
         ]
         for seq, done in steps:
             if seq > 0 and seq < step_seq and not done:
@@ -667,6 +784,10 @@ class JobCardRequirement(models.Model):
     @property
     def is_jobwork_enabled(self):
         return self.is_step_enabled(self.requires_jobwork, self.is_jobwork_done)
+
+    @property
+    def is_jobwork1_enabled(self):
+        return self.is_step_enabled(self.requires_jobwork1, self.is_jobwork1_done)
 
     @property
     def is_stitching_enabled(self):
@@ -693,6 +814,10 @@ class JobCardRequirement(models.Model):
         return self.is_step_enabled(self.requires_sewing, self.is_sewing_done)
 
     @property
+    def is_sewing1_enabled(self):
+        return self.is_step_enabled(self.requires_sewing1, self.is_sewing1_done)
+
+    @property
     def master_entry_id(self):
         from .models import MasterEntry # ensure no circular import if needed, though they are in same file
         me = MasterEntry.objects.filter(job_card_number=self.job_card_no).first()
@@ -707,7 +832,13 @@ class JobCardRequirement(models.Model):
     @property
     def jobwork_report_id(self):
         from .models import JobWorkReport
-        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no).first()
+        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no, created_by__profile__person_type='P5').first()
+        return r.id if r else None
+
+    @property
+    def jobwork1_report_id(self):
+        from .models import JobWork1Report
+        r = JobWork1Report.objects.filter(job_card_no=self.job_card_no).first()
         return r.id if r else None
 
     @property
@@ -731,7 +862,13 @@ class JobCardRequirement(models.Model):
     @property
     def sewing_report_id(self):
         from .models import SewingReport
-        r = SewingReport.objects.filter(job_card_no=self.job_card_no).first()
+        r = SewingReport.objects.filter(job_card_no=self.job_card_no, created_by__profile__person_type='P10').first()
+        return r.id if r else None
+
+    @property
+    def sewing1_report_id(self):
+        from .models import Sewing1Report
+        r = Sewing1Report.objects.filter(job_card_no=self.job_card_no).first()
         return r.id if r else None
 
     @property
@@ -749,7 +886,13 @@ class JobCardRequirement(models.Model):
     @property
     def jobwork_created_by(self):
         from .models import JobWorkReport
-        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no).first()
+        r = JobWorkReport.objects.filter(job_card_no=self.job_card_no, created_by__profile__person_type='P5').first()
+        return r.created_by if r else None
+
+    @property
+    def jobwork1_created_by(self):
+        from .models import JobWork1Report
+        r = JobWork1Report.objects.filter(job_card_no=self.job_card_no).first()
         return r.created_by if r else None
 
     @property
@@ -773,7 +916,13 @@ class JobCardRequirement(models.Model):
     @property
     def sewing_created_by(self):
         from .models import SewingReport
-        r = SewingReport.objects.filter(job_card_no=self.job_card_no).first()
+        r = SewingReport.objects.filter(job_card_no=self.job_card_no, created_by__profile__person_type='P10').first()
+        return r.created_by if r else None
+
+    @property
+    def sewing1_created_by(self):
+        from .models import Sewing1Report
+        r = Sewing1Report.objects.filter(job_card_no=self.job_card_no).first()
         return r.created_by if r else None
 
 
@@ -935,3 +1084,34 @@ class AccessoriesPhoto(models.Model):
         return f"Photo for {self.accessories_record}"
 
 
+# ── Miscellaneous Report ─────────────────────────────────────────────────────
+
+class MiscellaneousReport(models.Model):
+    """A simple free-form report: pick a job card, enter notes, upload files, select master, signature."""
+    job_card_no = models.CharField(max_length=100)
+    master_name = models.CharField(max_length=200, blank=True, null=True)
+    notes       = models.TextField(blank=True)
+    signature   = models.TextField(blank=True, null=True)
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Miscellaneous Report'
+        verbose_name_plural = 'Miscellaneous Reports'
+
+    def __str__(self):
+        return f"Misc — {self.job_card_no} — {self.created_at.strftime('%d-%b-%Y')}"
+
+
+class MiscellaneousReportFile(models.Model):
+    """Up to 5 file attachments per MiscellaneousReport."""
+    report       = models.ForeignKey(MiscellaneousReport, on_delete=models.CASCADE, related_name='files')
+    file_data    = models.BinaryField()
+    file_name    = models.CharField(max_length=255, default='file')
+    content_type = models.CharField(max_length=100, default='application/octet-stream')
+    uploaded_at  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.file_name} for {self.report}"

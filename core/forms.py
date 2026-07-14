@@ -1,5 +1,5 @@
 from django import forms
-from .models import MasterEntry, CuttingReport, MasterName, StitchingReport, JobWorkReport, FinishingReport, EmbroideryReport, PrintingReport, SingleneedleReport, SewingReport, MasterPayment
+from .models import MasterEntry, CuttingReport, MasterName, StitchingReport, JobWorkReport, JobWork1Report, FinishingReport, EmbroideryReport, PrintingReport, SingleneedleReport, SewingReport, Sewing1Report, MasterPayment, MiscellaneousReport, JobCardRequirement
 
 
 class MasterEntryForm(forms.ModelForm):
@@ -7,15 +7,18 @@ class MasterEntryForm(forms.ModelForm):
         (0, '0 — Not Required'),
         (1, '1'), (2, '2'), (3, '3'), (4, '4'),
         (5, '5'), (6, '6'), (7, '7'), (8, '8'),
+        (9, '9'), (10, '10'),
     ]
     requires_cutting     = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_jobwork     = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_jobwork1    = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_stitching   = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_finishing   = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_embroidery  = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_printing    = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_singleneedle= forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
     requires_sewing      = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
+    requires_sewing1     = forms.TypedChoiceField(choices=SEQUENCE_CHOICES, coerce=int, widget=forms.Select(attrs={'class': 'form-control'}))
 
     class Meta:
         model = MasterEntry
@@ -353,6 +356,86 @@ class SewingReportForm(forms.ModelForm):
         return signature_2
 
 
+class Sewing1ReportForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [('', 'Select Sewing Master')]
+        try:
+            choices += [(m.name, m.name) for m in MasterName.objects.filter(department='Sewing 1')]
+        except Exception:
+            pass
+        self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
+        self.fields['sewing_master_name'].required = False
+        self.fields['line_out_date'].required = False
+        self.fields['rate_definition'].required = True
+        self.fields['rate_definition'].empty_label = "Select Rate..."
+
+    class Meta:
+        model = Sewing1Report
+        fields = [
+            'master_name',
+            'sewing_master_name',
+            'cutting_report',
+            'job_card_no',
+            'line_in_date',
+            'total_pcs',
+            'line_out_date',
+            'item_name',
+            'rate_definition',
+            'total_rate',
+            'option_1',
+            'signature',
+            'signature_2',
+        ]
+        widgets = {
+            'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
+            'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
+            'line_in_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'line_out_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Item Name'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-populated', 'readonly': 'readonly', 'id': 'id_total_rate'}),
+            'option_1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Option 1'}),
+            'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
+            'signature_2': forms.HiddenInput(attrs={'id': 'id_signature_2'}),
+        }
+        labels = {
+            'cutting_report': 'Select Cutting Report',
+            'job_card_no': 'Job Card Number',
+            'line_in_date': 'Line In Date',
+            'total_pcs': 'Total Pcs',
+            'line_out_date': 'Line Out Date',
+            'item_name': 'Item Name',
+            'rate_definition': 'Rate',
+            'total_rate': 'Total Rate',
+            'option_1': 'Option 1',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        line_in_date = cleaned_data.get('line_in_date')
+        line_out_date = cleaned_data.get('line_out_date')
+
+        if line_in_date and line_out_date and line_in_date == line_out_date:
+            self.add_error('line_out_date', "Line Out Date cannot be the same as Line In Date.")
+
+        return cleaned_data
+
+    def clean_signature(self):
+        signature = self.cleaned_data.get('signature')
+        if not signature:
+            raise forms.ValidationError("Please provide a signature.")
+        return signature
+
+    def clean_signature_2(self):
+        signature_2 = self.cleaned_data.get('signature_2')
+        if not signature_2:
+            raise forms.ValidationError("Please provide a second signature.")
+        return signature_2
+
+
+
 class JobWorkReportForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -438,6 +521,94 @@ class JobWorkReportForm(forms.ModelForm):
             else:
                 self.add_error('jobwork_out', "Job Work Out Date cannot be before Job Work In Date.")
         return cleaned_data
+
+
+class JobWork1ReportForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [('', 'Select Job Worker')]
+        try:
+            choices += [(m.name, m.name) for m in MasterName.objects.filter(department='Job Work 1')]
+        except Exception:
+            pass
+        self.fields['master_name'] = forms.ChoiceField(choices=choices, required=False, widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'}))
+        self.fields['jobworker'].required = False
+        self.fields['jobwork_out'].required = False
+        self.fields['design_jobwork'].required = False
+        self.fields['rate_definition'].required = False
+        self.fields['total_rate'].required = False
+    class Meta:
+        model = JobWork1Report
+        fields = [
+            'cutting_report',
+            'master_name',
+            'jobworker',
+            'purpose',
+            'job_card_no',
+            'jobwork_in',
+            'jobwork_out',
+            'any_other_problem',
+            'total_pcs_short',
+            'total_pcs',
+            'design_jobwork',
+            'rate_definition',
+            'total_rate',
+            'signature',
+            'signature_2',
+        ]
+        widgets = {
+            'cutting_report': forms.Select(attrs={'class': 'form-control', 'id': 'id_cutting_report'}),
+            'purpose': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Purpose'}),
+            'job_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Job Card No.', 'id': 'id_job_card_no'}),
+            'jobwork_in': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'jobwork_out': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'any_other_problem': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Any other problem...', 'rows': 3}),
+            'total_pcs_short': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'}),
+            'total_pcs': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Auto-filled', 'readonly': 'readonly', 'id': 'id_total_pcs'}),
+            'design_jobwork': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Design Jobwork'}),
+            'rate_definition': forms.Select(attrs={'class': 'form-control', 'id': 'id_rate_definition'}),
+            'total_rate': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_total_rate', 'step': '0.01', 'placeholder': '0.00'}),
+            'signature': forms.HiddenInput(attrs={'id': 'id_signature'}),
+            'signature_2': forms.HiddenInput(attrs={'id': 'id_signature_2'}),
+        }
+        labels = {
+            'cutting_report': 'Select Cutting Report',
+            'jobworker': 'Jobworker',
+            'purpose': 'Purpose',
+            'job_card_no': 'Job Card No.',
+            'jobwork_in': 'Jobwork In Date',
+            'jobwork_out': 'Jobwork Out Date',
+            'any_other_problem': 'Any other Problem',
+            'total_pcs_short': 'Total Pcs short',
+            'total_pcs': 'Total Pcs',
+            'design_jobwork': 'Design Jobwork',
+            'rate_definition': 'Rate Name',
+            'total_rate': 'Rate (₹)',
+        }
+
+    def clean_signature(self):
+        signature = self.cleaned_data.get('signature')
+        if not signature:
+            raise forms.ValidationError("Please provide a signature.")
+        return signature
+
+    def clean_signature_2(self):
+        signature_2 = self.cleaned_data.get('signature_2')
+        if not signature_2:
+            raise forms.ValidationError("Please provide a second signature.")
+        return signature_2
+
+    def clean(self):
+        cleaned_data = super().clean()
+        jobwork_in = cleaned_data.get('jobwork_in')
+        jobwork_out = cleaned_data.get('jobwork_out')
+        if jobwork_in and jobwork_out and jobwork_in >= jobwork_out:
+            if jobwork_in == jobwork_out:
+                self.add_error('jobwork_out', "Job Work Out Date cannot be the same as Job Work In Date.")
+            else:
+                self.add_error('jobwork_out', "Job Work Out Date cannot be before Job Work In Date.")
+        return cleaned_data
+
 
 class FinishingReportForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -704,3 +875,54 @@ class MasterPaymentForm(forms.ModelForm):
             'reference_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'UPI Txn ID or Ref No'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Payment description...'}),
         }
+
+
+class MiscellaneousReportForm(forms.ModelForm):
+    """Simple form: job card select + master select + notes textarea + signature."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Build job card choices from JobCardRequirement
+        jc_choices = [('', '--- Select Job Card ---')]
+        jc_choices += [(r.job_card_no, r.job_card_no)
+                       for r in JobCardRequirement.objects.all().order_by('-date', 'job_card_no')]
+        self.fields['job_card_no'] = forms.ChoiceField(
+            choices=jc_choices,
+            required=True,
+            widget=forms.Select(attrs={'class': 'form-control select2', 'id': 'id_misc_job_card'})
+        )
+        
+        # Build master choices from all MasterNames
+        choices = [('', '--- Select Master (Optional) ---')]
+        try:
+            choices += [(m.name, f"{m.name} ({m.department})") for m in MasterName.objects.all().order_by('department', 'name')]
+        except Exception:
+            pass
+        self.fields['master_name'] = forms.ChoiceField(
+            choices=choices,
+            required=False,
+            widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_master_name'})
+        )
+        self.fields['notes'].required = False
+        self.fields['signature'] = forms.CharField(
+            widget=forms.HiddenInput(attrs={'id': 'id_signature'}),
+            required=True,
+            error_messages={'required': 'Please provide your signature.'}
+        )
+
+    class Meta:
+        model = MiscellaneousReport
+        fields = ['job_card_no', 'master_name', 'notes', 'signature']
+        widgets = {
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 6,
+                'placeholder': 'Enter any notes, observations, or remarks here...'
+            }),
+        }
+
+    def clean_signature(self):
+        signature = self.cleaned_data.get('signature')
+        if not signature:
+            raise forms.ValidationError("Please provide a signature.")
+        return signature

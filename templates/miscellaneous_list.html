@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Miscellaneous Reports{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+  <div>
+    <h1 class="page-title">&#128221; Miscellaneous Reports</h1>
+    <p class="page-subtitle">All submitted miscellaneous reports.</p>
+  </div>
+  <a href="{% url 'miscellaneous_report' %}" class="btn btn-primary">
+    + New Report
+  </a>
+</div>
+
+{% if messages %}
+<div style="margin-bottom:1rem;">
+  {% for m in messages %}
+  <div style="padding:0.75rem 1rem;border-radius:8px;margin-bottom:0.5rem;
+    background:{% if 'error' in m.tags %}rgba(239,68,68,0.15){% else %}rgba(34,197,94,0.15){% endif %};
+    border:1px solid {% if 'error' in m.tags %}#ef4444{% else %}#22c55e{% endif %};
+    color:{% if 'error' in m.tags %}#ef4444{% else %}#22c55e{% endif %};">
+    {{ m }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if reports %}
+<div class="section-card">
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Job Card No</th>
+          <th>Master</th>
+          <th>Notes</th>
+          <th>Files</th>
+          <th>Signed</th>
+          <th>Submitted By</th>
+          <th>Date</th>
+          {% if is_admin %}<th>Action</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td style="color:var(--text-muted);font-size:0.85rem;">{{ forloop.counter }}</td>
+          <td>
+            <span class="badge" style="background:#ddd3fe;color:#4c1d95;font-weight:bold;">
+              {{ r.job_card_no }}
+            </span>
+          </td>
+          <td>
+            {% if r.master_name %}
+              <strong>{{ r.master_name }}</strong>
+            {% else %}
+              <span style="color:var(--text-muted);">—</span>
+            {% endif %}
+          </td>
+          <td style="max-width:300px;">
+            {% if r.notes %}
+              <div style="white-space:pre-line;font-size:0.88rem;color:var(--text-secondary);
+                max-height:80px;overflow:hidden;position:relative;">
+                {{ r.notes|truncatechars:150 }}
+              </div>
+            {% else %}
+              <span style="color:var(--text-muted);font-style:italic;">No notes</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.files.all %}
+              <div class="photo-thumbs" style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+                {% for f in r.files.all %}
+                  {% if 'image/' in f.content_type %}
+                    <a href="{% url 'serve_misc_file' f.id %}" target="_blank" class="photo-thumb-link" title="View {{ f.file_name }}">
+                      <img src="{% url 'serve_misc_file' f.id %}" alt="{{ f.file_name }}" class="photo-thumb" loading="lazy" />
+                    </a>
+                  {% else %}
+                    <div style="margin-bottom:4px; width:100%;">
+                      <a href="{% url 'serve_misc_file' f.id %}"
+                         style="color:#a78bfa;text-decoration:none;font-size:0.85rem;display:flex;align-items:center;gap:4px;"
+                         title="Download {{ f.file_name }}">
+                        📎 {{ f.file_name|truncatechars:15 }}
+                      </a>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:0.85rem;">No files</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.signature %}<span style="color:var(--success); font-size:16px;">✅ Signed</span>{% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+          </td>
+          <td style="font-size:0.88rem;">
+            {{ r.created_by.username|default:"—" }}
+          </td>
+          <td style="font-size:0.85rem;color:var(--text-muted);">
+            {{ r.created_at|date:"d-b-Y H:i" }}
+          </td>
+          {% if is_admin %}
+          <td style="white-space: nowrap;">
+            <a href="{% url 'edit_miscellaneous_report' r.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; text-decoration:none; vertical-align:middle;" title="Edit">✏️</a>
+            <form method="POST" action="{% url 'delete_miscellaneous_report' r.id %}" style="display:inline;"
+                  onsubmit="return confirm('Delete this miscellaneous report?');">
+              {% csrf_token %}
+              <button type="submit" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#ef4444;vertical-align:middle;" title="Delete">
+                &#128465;
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="section-card" style="text-align:center;padding:3rem;">
+  <div style="font-size:3rem;margin-bottom:1rem;">&#128221;</div>
+  <p style="color:var(--text-muted);">No miscellaneous reports yet.</p>
+  <a href="{% url 'miscellaneous_report' %}" class="btn btn-primary" style="margin-top:1rem;">
+    Submit First Report
+  </a>
+</div>
+{% endif %}
+{% endblock %}

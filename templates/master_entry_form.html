@@ -7,7 +7,12 @@
   <div class="form-card" id="masterEntryCard">
     <div class="form-card-header">
       <h2>Create Master Entry</h2>
-      <p class="form-subtitle">Create a Date + Lot No. record. Assign a <strong>sequence number (1–8)</strong> to each department to define the order of report submission. Use <strong>0</strong> if that department is not required for this job card.</p>
+      {% if last_job_card %}
+      <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0 1rem 0; font-size: 0.9rem; color: #60a5fa; display: flex; align-items: center; gap: 0.5rem; width: fit-content;">
+        <span>ℹ️ Last Job Card created/uploaded: <strong style="color: #93c5fd;">{{ last_job_card }}</strong></span>
+      </div>
+      {% endif %}
+      <p class="form-subtitle">Create a Date + Lot No. record. Assign a <strong>sequence number (1–10)</strong> to each department to define the order of report submission. Use <strong>0</strong> if that department is not required for this job card.</p>
     </div>
 
     <form method="post" id="masterEntryForm">
@@ -31,7 +36,7 @@
         </div>
 
         <h3 class="section-title" style="margin-top: 1.5rem; font-size: 1.1rem;">Submission Order <span class="required-star">*</span></h3>
-        <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 1rem;">Enter the step number (1–8) for each department. Departments must complete their report in ascending order. Enter 0 if not required.</p>
+        <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 1rem;">Enter the step number (1–10) for each department. Departments must complete their report in ascending order. Enter 0 if not required.</p>
         <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
           <div class="form-group">
             <label for="id_requires_cutting" class="form-label">Cutting</label>
@@ -45,6 +50,13 @@
             {{ form.requires_jobwork }}
             {% if form.requires_jobwork.errors %}
             <span class="field-error">{{ form.requires_jobwork.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="id_requires_jobwork1" class="form-label">Job Work 1</label>
+            {{ form.requires_jobwork1 }}
+            {% if form.requires_jobwork1.errors %}
+            <span class="field-error">{{ form.requires_jobwork1.errors.0 }}</span>
             {% endif %}
           </div>
           <div class="form-group">
@@ -83,6 +95,13 @@
             {% endif %}
           </div>
           <div class="form-group">
+            <label for="id_requires_sewing1" class="form-label">Sewing 1</label>
+            {{ form.requires_sewing1 }}
+            {% if form.requires_sewing1.errors %}
+            <span class="field-error">{{ form.requires_sewing1.errors.0 }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
             <label for="id_requires_finishing" class="form-label">Finishing</label>
             {{ form.requires_finishing }}
             {% if form.requires_finishing.errors %}
@@ -102,8 +121,8 @@
     <div class="form-card-header">
       <h3 style="margin: 0 0 0.5rem 0; color: #3b82f6;">Import Pending Tasks (Excel)</h3>
       <p class="form-subtitle">
-        Upload an Excel file to bulk-assign pending tasks. Columns should contain <strong>sequence numbers (1–8)</strong> for required departments, or <strong>0 / leave blank</strong> if not required.<br>
-        Required headers: <strong>Date, Jobcard number, Cutting, Jobworker, Embroidery, Printing, Stiching, Singleneedle, Sewing, Finishing</strong>.
+        Upload an Excel file to bulk-assign pending tasks. Columns should contain <strong>sequence numbers (1–10)</strong> for required departments, or <strong>0 / leave blank</strong> if not required.<br>
+        Required headers: <strong>Date, Jobcard number, Cutting, Jobworker, Jobwork 1, Embroidery, Printing, Stiching, Singleneedle, Sewing, Sewing 1, Finishing</strong>.
       </p>
     </div>
     <div class="form-section">
@@ -125,11 +144,13 @@
   const seqSelects = [
     document.getElementById('id_requires_cutting'),
     document.getElementById('id_requires_jobwork'),
+    document.getElementById('id_requires_jobwork1'),
     document.getElementById('id_requires_embroidery'),
     document.getElementById('id_requires_printing'),
     document.getElementById('id_requires_stitching'),
     document.getElementById('id_requires_singleneedle'),
     document.getElementById('id_requires_sewing'),
+    document.getElementById('id_requires_sewing1'),
     document.getElementById('id_requires_finishing'),
   ].filter(Boolean);
 

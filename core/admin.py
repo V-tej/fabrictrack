@@ -7,7 +7,8 @@ from .models import (
     FinishingReport, FinishingReportPhoto, EmbroideryReport,
     EmbroideryReportPhoto, PrintingReport, PrintingReportPhoto,
     SingleneedleReport, SingleneedleReportPhoto, SewingReport,
-    SewingReportPhoto, MasterName, JobCardRequirement, RateDefinition
+    SewingReportPhoto, MasterName, JobCardRequirement, RateDefinition,
+    JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto
 )
 
 
@@ -107,6 +108,30 @@ class JobWorkReportAdmin(admin.ModelAdmin):
 @admin.register(JobWorkReportPhoto)
 class JobWorkReportPhotoAdmin(admin.ModelAdmin):
     list_display = ['job_work_report', 'photo_name', 'uploaded_at']
+
+
+class JobWork1ReportPhotoInline(admin.TabularInline):
+    model = JobWork1ReportPhoto
+    extra = 0
+    readonly_fields = ['uploaded_at']
+
+
+@admin.register(JobWork1Report)
+class JobWork1ReportAdmin(admin.ModelAdmin):
+    list_display = [
+        'cutting_report', 'master_name', 'jobworker', 'jobwork_in', 'jobwork_out',
+        'job_card_no', 'total_pcs', 'created_by', 'created_at'
+    ]
+    list_filter = ['jobwork_in', 'jobwork_out', 'created_by']
+    search_fields = ['master_name', 'job_card_no']
+    inlines = [JobWork1ReportPhotoInline]
+    readonly_fields = ['created_at']
+
+
+@admin.register(JobWork1ReportPhoto)
+class JobWork1ReportPhotoAdmin(admin.ModelAdmin):
+    list_display = ['job_work1_report', 'photo_name', 'uploaded_at']
+
 
 
 class FinishingReportPhotoInline(admin.TabularInline):
@@ -222,6 +247,30 @@ class SewingReportAdmin(admin.ModelAdmin):
 @admin.register(SewingReportPhoto)
 class SewingReportPhotoAdmin(admin.ModelAdmin):
     list_display = ['sewing_report', 'photo_name', 'uploaded_at']
+
+
+class Sewing1ReportPhotoInline(admin.TabularInline):
+    model = Sewing1ReportPhoto
+    extra = 0
+    readonly_fields = ['uploaded_at']
+
+
+@admin.register(Sewing1Report)
+class Sewing1ReportAdmin(admin.ModelAdmin):
+    list_display = [
+        'cutting_report', 'master_name', 'sewing_master_name', 'item_name', 'job_card_no',
+        'rate_name', 'rate_description', 'total_rate', 'total_pcs', 'created_by', 'created_at'
+    ]
+    list_filter = ['cutting_report__master_entry__date', 'created_by']
+    search_fields = ['item_name', 'job_card_no', 'master_name', 'sewing_master_name']
+    inlines = [Sewing1ReportPhotoInline]
+    readonly_fields = ['created_at']
+
+
+@admin.register(Sewing1ReportPhoto)
+class Sewing1ReportPhotoAdmin(admin.ModelAdmin):
+    list_display = ['sewing1_report', 'photo_name', 'uploaded_at']
+
 
 
 @admin.register(MasterName)
