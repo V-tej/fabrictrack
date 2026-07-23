@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, date
 from django.db.models import Q, Prefetch, Case, When, Value, IntegerField
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
@@ -17,7 +18,8 @@ from .models import (
     PrintingReportPhoto, SingleneedleReport, SewingReport, SingleneedleReportPhoto,
     SewingReportPhoto, RateDefinition, AccessoriesRecord, AccessoriesItemEntry,
     ACCESSORIES_ITEMS, AccessoryCustomName, AccessoriesPhoto, MiscellaneousReport,
-    MiscellaneousReportFile, JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto
+    MiscellaneousReportFile, JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto,
+    ActivityLog
 )
 from .forms import (
     MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm,
@@ -27,6 +29,91 @@ from .forms import (
 )
 from .utils import export_to_excel, generate_backup_zip
 
+
+# ── Activity Log Helper ──────────────────────────────────────────────────────
+
+def log_activity(user, action, department, job_card_no='', details=''):
+    """Record a Create/Edit/Delete action in the ActivityLog."""
+    ActivityLog.objects.create(
+        user=user,
+        action=action,
+        department=department,
+        job_card_no=str(job_card_no),
+        details=details,
+    )
+
+EXCLUDED_FIELDS = {'id', 'created_at', 'updated_at', 'created_by', 'photo_data', 'photo_name', 'photo_content_type'}
+
+def capture_snapshot(obj, fields=None):
+    """Dynamically capture a dictionary of ALL field names and values for any model instance."""
+    if not obj:
+        return {}
+    res = {}
+    for field in obj._meta.get_fields():
+        if field.is_relation and (field.many_to_many or field.one_to_many):
+            continue
+        field_name = field.name
+        if field_name in EXCLUDED_FIELDS:
+            continue
+        try:
+            val = getattr(obj, field_name, None)
+        except Exception:
+            continue
+        
+        if field_name in ('signature', 'signature_2'):
+            res[field_name] = 'Signed' if val else 'No Signature'
+        elif field.is_relation and val:
+            res[field_name] = str(val)
+        elif isinstance(val, (datetime, date)):
+            res[field_name] = val.strftime('%Y-%m-%d %H:%M') if isinstance(val, datetime) else val.strftime('%Y-%m-%d')
+        elif val is None or str(val).strip() in ('', 'None'):
+            res[field_name] = '—'
+        else:
+            res[field_name] = str(val).strip()
+
+    if hasattr(obj, 'photos') and hasattr(obj.photos, 'count'):
+        try:
+            res['photo_count'] = obj.photos.count()
+        except Exception:
+            res['photo_count'] = 0
+    return res
+
+def get_obj_summary(obj):
+    """Return a comprehensive summary string of ALL set fields for CREATE / DELETE activity log entries."""
+    snap = capture_snapshot(obj)
+    parts = []
+    for k, v in snap.items():
+        if v not in ('—', 'No Signature', 0, '0', '0.00'):
+            label = k.replace('_', ' ').title()
+            parts.append(f"{label}: {v}")
+    return ' | '.join(parts) if parts else 'Entry details recorded'
+
+def build_diff(old_vals: dict, new_vals: dict) -> str:
+    """Compare two dicts of field values and return human-readable change summary for ALL modified fields."""
+    changes = []
+    for key, old_v in old_vals.items():
+        new_v = new_vals.get(key)
+        if str(old_v) != str(new_v):
+            if key == 'photo_count':
+                diff_count = (new_v or 0) - (old_v or 0)
+                if diff_count > 0:
+                    changes.append(f"{diff_count} Photo(s) Added")
+                elif diff_count < 0:
+                    changes.append(f"{abs(diff_count)} Photo(s) Removed")
+            elif key in ('signature', 'signature_2'):
+                label = key.replace('_', ' ').title()
+                if old_v in ('No Signature', '—') and new_v == 'Signed':
+                    changes.append(f"{label} Added")
+                elif old_v == 'Signed' and new_v in ('No Signature', '—'):
+                    changes.append(f"{label} Removed")
+                else:
+                    changes.append(f"{label} Updated")
+            else:
+                label = key.replace('_', ' ').title()
+                old_disp = '—' if old_v is None or str(old_v).strip() in ('', 'None') else old_v
+                new_disp = '—' if new_v is None or str(new_v).strip() in ('', 'None') else new_v
+                changes.append(f"{label}: {old_disp} → {new_disp}")
+    return ' | '.join(changes) if changes else 'Updated record'
 
 # ── Auth Views ──────────────────────────────────────────────────────────────
 
@@ -474,6 +561,7 @@ def create_master_entry(request):
             )
 
             messages.success(request, f'Master entry "{entry}" created successfully.')
+            log_activity(request.user, 'CREATE', 'Master Entry', entry.job_card_number, f"Party: {entry.party_name or '—'} | Master: {entry.master_name or '—'}")
             return redirect('dashboard')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -598,6 +686,7 @@ def cutting_report_view(request):
             JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=True)
 
             messages.success(request, 'Cutting Report submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Cutting Report', report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -689,6 +778,7 @@ def stitching_report_view(request):
                 )
 
             messages.success(request, 'Stitching submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Stitching', report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -784,6 +874,7 @@ def jobwork_report_view(request):
                 )
 
             messages.success(request, 'Job Work submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Job Work', report.cutting_report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -886,6 +977,7 @@ def jobwork1_report_view(request):
                 )
 
             messages.success(request, 'Job Work 1 submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Job Work 1', report.cutting_report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -978,6 +1070,7 @@ def embroidery_report_view(request):
                 )
 
             messages.success(request, 'Embroidery submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Embroidery', report.cutting_report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1069,6 +1162,7 @@ def printing_report_view(request):
                 )
 
             messages.success(request, 'Printing submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Printing', report.cutting_report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1169,6 +1263,7 @@ def singleneedle_report_view(request):
                 )
 
             messages.success(request, 'Singleneedle submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Singleneedle', report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1260,6 +1355,7 @@ def sewing_report_view(request):
                 )
 
             messages.success(request, 'Sewing submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Sewing', report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1349,6 +1445,7 @@ def sewing1_report_view(request):
                 )
 
             messages.success(request, 'Sewing 1 submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Sewing 1', report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1452,6 +1549,7 @@ def finishing_report_view(request):
             JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_finishing_done=True)
 
             messages.success(request, 'Finishing Report submitted successfully!')
+            log_activity(request.user, 'CREATE', 'Finishing', report.cutting_report.job_card_no, get_obj_summary(report))
             return redirect('submission_list')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -1498,7 +1596,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p4_qs = StitchingReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).prefetch_related(
@@ -1509,7 +1607,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p5_qs = JobWorkReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).annotate(
@@ -1518,7 +1616,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p6_qs = FinishingReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).prefetch_related(
@@ -1529,7 +1627,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p7_qs = EmbroideryReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).annotate(
@@ -1538,7 +1636,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p8_qs = PrintingReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).annotate(
@@ -1547,7 +1645,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p9_qs = SingleneedleReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).prefetch_related(
@@ -1558,7 +1656,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
     p10_qs = SewingReport.objects.select_related(
         'cutting_report__master_entry', 'created_by'
     ).prefetch_related(
@@ -1569,7 +1667,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
 
     p11_qs = JobWork1Report.objects.select_related(
         'cutting_report__master_entry', 'created_by'
@@ -1581,7 +1679,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
 
     p12_qs = Sewing1Report.objects.select_related(
         'cutting_report__master_entry', 'created_by'
@@ -1593,7 +1691,7 @@ def submission_list_view(request):
             default=Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-is_mine', '-created_at')
+    ).order_by('-created_at')
 
 
     # Apply Department-Specific Master/Worker Filters if present
@@ -1987,6 +2085,71 @@ def export_excel_view(request):
         messages.error(request, f'Export failed: {e}')
         return redirect('dashboard')
 
+@login_required
+def download_sample_excel_view(request):
+    import io, openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from django.http import HttpResponse
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Job Cards Import'
+
+    headers = [
+        'Date', 'Jobcard number', 'Cutting', 'Jobworker', 'Jobwork 1',
+        'Stitching', 'Embroidery', 'Printing', 'Singleneedle', 'Sewing', 'Sewing 1', 'Finishing'
+    ]
+    ws.append(headers)
+
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='4F46E5', end_color='4F46E5', fill_type='solid')
+    align_center = Alignment(horizontal='center', vertical='center')
+
+    thin_border = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = align_center
+
+    sample_data = [
+        ['2026-07-23', 'JC-9001', 1, 2, 0, 3, 0, 0, 0, 0, 0, 4],
+        ['2026-07-23', 'JC-9002', 1, 0, 0, 2, 3, 4, 0, 0, 0, 5],
+        ['2026-07-24', 'JC-9003', 1, 0, 0, 2, 0, 0, 0, 0, 0, 3],
+        ['2026-07-24', 'JC-9004', 1, 2, 3, 4, 0, 0, 0, 0, 0, 5],
+        ['2026-07-25', 'JC-9005', 1, 0, 0, 2, 0, 0, 3, 4, 0, 5],
+    ]
+
+    for row_data in sample_data:
+        ws.append(row_data)
+
+    for row in ws.iter_rows(min_row=2, max_row=len(sample_data)+1, min_col=1, max_col=len(headers)):
+        for cell in row:
+            cell.alignment = align_center
+            cell.border = thin_border
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = openpyxl.utils.get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="sample_job_cards_import.xlsx"'
+    return response
+
 import openpyxl
 from datetime import datetime
 
@@ -2129,10 +2292,12 @@ def edit_master_entry(request, pk):
     entry = get_object_or_404(MasterEntry, pk=pk)
     if not check_edit_permission(request, entry): raise PermissionDenied
     if request.method == 'POST':
+        _fields = ['party_name', 'master_name', 'po_number', 'style_number']
+        _old = capture_snapshot(entry, _fields)
         form = MasterEntryForm(request.POST, instance=entry)
         if form.is_valid():
             entry = form.save(commit=False)
-            entry.created_at = timezone.now()
+            entry.created_by = request.user
             entry.save()
             
             # Update the JobCardRequirement with sequence values
@@ -2154,6 +2319,8 @@ def edit_master_entry(request, pk):
             )
             
             messages.success(request, 'Master entry updated.')
+            _diff = build_diff(_old, capture_snapshot(entry, _fields))
+            log_activity(request.user, 'EDIT', 'Master Entry', entry.job_card_number, _diff)
             return redirect('dashboard')
     else:
         # Pre-fill form with existing JobCardRequirement values
@@ -2180,8 +2347,11 @@ def delete_master_entry(request, pk):
     entry = get_object_or_404(MasterEntry, pk=pk)
     if not check_edit_permission(request, entry): raise PermissionDenied
     if request.method == 'POST':
+        jc_no = entry.job_card_number
+        _summary = f"Party: {entry.party_name or '—'} | Master: {entry.master_name or '—'}"
         entry.delete()
         messages.success(request, 'Master entry deleted.')
+        log_activity(request.user, 'DELETE', 'Master Entry', jc_no, _summary)
         return redirect('dashboard')
     return render(request, 'confirm_delete.html', {'object': entry, 'cancel_url': 'dashboard'})
 
@@ -2223,10 +2393,12 @@ def edit_cutting_report(request, pk):
     })
     
     if request.method == 'POST':
+        _fields = ['item_name', 'total_pcs', 'cutting_rate']
+        _old = capture_snapshot(report, _fields)
         form = CuttingReportForm(request.POST, request.FILES, instance=report)
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 report.rate_name = report.rate_definition.name
                 report.cutting_rate = report.rate_definition.total_rate
@@ -2263,6 +2435,8 @@ def edit_cutting_report(request, pk):
                         photo_content_type=photo_file.content_type
                     )
             messages.success(request, 'Cutting Report updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Cutting Report', report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = CuttingReportForm(instance=report)
@@ -2278,9 +2452,12 @@ def delete_cutting_report(request, pk):
     report = get_object_or_404(CuttingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(is_cutting_done=False)
+        jc_no = report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(is_cutting_done=False)
         report.delete()
         messages.success(request, 'Cutting Report deleted.')
+        log_activity(request.user, 'DELETE', 'Cutting Report', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2316,6 +2493,8 @@ def edit_stitching_report(request, pk):
         return redirect('edit_stitching_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['item_name', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = StitchingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2326,6 +2505,7 @@ def edit_stitching_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
+            report.created_by = request.user
             if report.rate_definition:
                 report.rate_name = report.rate_definition.name
                 report.rate_description = report.rate_definition.description
@@ -2351,6 +2531,8 @@ def edit_stitching_report(request, pk):
                 )
 
             messages.success(request, 'Stitching updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Stitching', report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = StitchingReportForm(instance=report)
@@ -2367,11 +2549,14 @@ def delete_stitching_report(request, pk):
     report = get_object_or_404(StitchingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+        jc_no = report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_stitching_done=False, is_stitching_in_progress=False
         )
         report.delete()
         messages.success(request, 'Stitching deleted.')
+        log_activity(request.user, 'DELETE', 'Stitching', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2407,6 +2592,8 @@ def edit_singleneedle_report(request, pk):
         return redirect('edit_singleneedle_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['item_name', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = SingleneedleReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2417,6 +2604,7 @@ def edit_singleneedle_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
+            report.created_by = request.user
             if report.rate_definition:
                 report.rate_name = report.rate_definition.name
                 report.rate_description = report.rate_definition.description
@@ -2442,6 +2630,8 @@ def edit_singleneedle_report(request, pk):
                 )
 
             messages.success(request, 'Singleneedle updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Singleneedle', report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = SingleneedleReportForm(instance=report)
@@ -2458,11 +2648,14 @@ def delete_singleneedle_report(request, pk):
     report = get_object_or_404(SingleneedleReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+        jc_no = report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_singleneedle_done=False, is_singleneedle_in_progress=False
         )
         report.delete()
         messages.success(request, 'Singleneedle deleted.')
+        log_activity(request.user, 'DELETE', 'Singleneedle', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2499,6 +2692,8 @@ def edit_sewing_report(request, pk):
         return redirect('edit_sewing_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['item_name', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = SewingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2509,6 +2704,7 @@ def edit_sewing_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
+            report.created_by = request.user
             if report.rate_definition:
                 report.rate_name = report.rate_definition.name
                 report.rate_description = report.rate_definition.description
@@ -2534,6 +2730,8 @@ def edit_sewing_report(request, pk):
                 )
 
             messages.success(request, 'Sewing updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Sewing', report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = SewingReportForm(instance=report)
@@ -2550,11 +2748,14 @@ def delete_sewing_report(request, pk):
     report = get_object_or_404(SewingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+        jc_no = report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_sewing_done=False, is_sewing_in_progress=False
         )
         report.delete()
         messages.success(request, 'Sewing deleted.')
+        log_activity(request.user, 'DELETE', 'Sewing', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2591,6 +2792,8 @@ def edit_sewing1_report(request, pk):
         return redirect('edit_sewing1_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['item_name', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = Sewing1ReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2601,6 +2804,7 @@ def edit_sewing1_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
+            report.created_by = request.user
             if report.rate_definition:
                 report.rate_name = report.rate_definition.name
                 report.rate_description = report.rate_definition.description
@@ -2626,6 +2830,8 @@ def edit_sewing1_report(request, pk):
                 )
 
             messages.success(request, 'Sewing 1 updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Sewing 1', report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = Sewing1ReportForm(instance=report)
@@ -2642,11 +2848,14 @@ def delete_sewing1_report(request, pk):
     report = get_object_or_404(Sewing1Report, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.job_card_no).update(
+        jc_no = report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_sewing1_done=False, is_sewing1_in_progress=False
         )
         report.delete()
         messages.success(request, 'Sewing 1 deleted.')
+        log_activity(request.user, 'DELETE', 'Sewing 1', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2685,6 +2894,8 @@ def edit_jobwork_report(request, pk):
         return redirect('edit_jobwork_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['jobworker', 'purpose', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = JobWorkReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2705,7 +2916,7 @@ def edit_jobwork_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 if not report.total_rate:
                     report.total_rate = report.rate_definition.total_rate
@@ -2731,6 +2942,8 @@ def edit_jobwork_report(request, pk):
                 )
 
             messages.success(request, 'Job Work updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Job Work', report.cutting_report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = JobWorkReportForm(instance=report)
@@ -2747,11 +2960,14 @@ def delete_jobwork_report(request, pk):
     report = get_object_or_404(JobWorkReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+        jc_no = report.cutting_report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_jobwork_done=False, is_jobwork_in_progress=False
         )
         report.delete()
         messages.success(request, 'Job Work deleted.')
+        log_activity(request.user, 'DELETE', 'Job Work', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2789,6 +3005,8 @@ def edit_jobwork1_report(request, pk):
         return redirect('edit_jobwork1_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['jobworker', 'purpose', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = JobWork1ReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2809,7 +3027,7 @@ def edit_jobwork1_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 if not report.total_rate:
                     report.total_rate = report.rate_definition.total_rate
@@ -2835,6 +3053,8 @@ def edit_jobwork1_report(request, pk):
                 )
 
             messages.success(request, 'Job Work 1 updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Job Work 1', report.cutting_report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = JobWork1ReportForm(instance=report)
@@ -2851,11 +3071,14 @@ def delete_jobwork1_report(request, pk):
     report = get_object_or_404(JobWork1Report, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+        jc_no = report.cutting_report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_jobwork1_done=False, is_jobwork1_in_progress=False
         )
         report.delete()
         messages.success(request, 'Job Work 1 deleted.')
+        log_activity(request.user, 'DELETE', 'Job Work 1', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2890,6 +3113,8 @@ def edit_embroidery_report(request, pk):
         return redirect('edit_embroidery_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['embroidery_worker', 'purpose', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = EmbroideryReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2900,7 +3125,7 @@ def edit_embroidery_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 if not report.total_rate:
                     report.total_rate = report.rate_definition.total_rate
@@ -2926,6 +3151,8 @@ def edit_embroidery_report(request, pk):
                 )
 
             messages.success(request, 'Embroidery updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Embroidery', report.cutting_report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = EmbroideryReportForm(instance=report)
@@ -2942,11 +3169,14 @@ def delete_embroidery_report(request, pk):
     report = get_object_or_404(EmbroideryReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+        jc_no = report.cutting_report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_embroidery_done=False, is_embroidery_in_progress=False
         )
         report.delete()
         messages.success(request, 'Embroidery deleted.')
+        log_activity(request.user, 'DELETE', 'Embroidery', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -2980,6 +3210,8 @@ def edit_printing_report(request, pk):
         return redirect('edit_printing_report', pk=report.id)
 
     if request.method == 'POST':
+        _fields = ['printing_worker', 'purpose', 'total_pcs', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = PrintingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         photos = request.FILES.getlist('photos')
@@ -2990,7 +3222,7 @@ def edit_printing_report(request, pk):
 
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 if not report.total_rate:
                     report.total_rate = report.rate_definition.total_rate
@@ -3016,6 +3248,8 @@ def edit_printing_report(request, pk):
                 )
 
             messages.success(request, 'Printing updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Printing', report.cutting_report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = PrintingReportForm(instance=report)
@@ -3032,11 +3266,14 @@ def delete_printing_report(request, pk):
     report = get_object_or_404(PrintingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(
+        jc_no = report.cutting_report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(
             is_printing_done=False, is_printing_in_progress=False
         )
         report.delete()
         messages.success(request, 'Printing deleted.')
+        log_activity(request.user, 'DELETE', 'Printing', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
@@ -3074,11 +3311,13 @@ def edit_finishing_report(request, pk):
     })
 
     if request.method == 'POST':
+        _fields = ['lot_no', 'total_pcs', 'total_pcs_packed', 'total_rate']
+        _old = capture_snapshot(report, _fields)
         form = FinishingReportForm(request.POST, request.FILES, instance=report)
         form.fields['cutting_report'].queryset = cutting_reports_qs
         if form.is_valid():
             report = form.save(commit=False)
-            report.created_at = timezone.now()
+            report.created_by = request.user
             if report.rate_definition:
                 if not report.total_rate:
                     report.total_rate = report.rate_definition.total_rate
@@ -3093,6 +3332,8 @@ def edit_finishing_report(request, pk):
                         photo_content_type=photo_file.content_type
                     )
             messages.success(request, 'Finishing Report updated.')
+            _diff = build_diff(_old, capture_snapshot(report, _fields))
+            log_activity(request.user, 'EDIT', 'Finishing', report.cutting_report.job_card_no, _diff)
             return redirect('submission_list')
     else:
         form = FinishingReportForm(instance=report)
@@ -3109,13 +3350,74 @@ def delete_finishing_report(request, pk):
     report = get_object_or_404(FinishingReport, pk=pk)
     if not check_edit_permission(request, report): raise PermissionDenied
     if request.method == 'POST':
-        JobCardRequirement.objects.filter(job_card_no=report.cutting_report.job_card_no).update(is_finishing_done=False)
+        jc_no = report.cutting_report.job_card_no
+        _summary = get_obj_summary(report)
+        JobCardRequirement.objects.filter(job_card_no=jc_no).update(is_finishing_done=False)
         report.delete()
         messages.success(request, 'Finishing Report deleted.')
+        log_activity(request.user, 'DELETE', 'Finishing', jc_no, _summary)
         return redirect('submission_list')
     return render(request, 'confirm_delete.html', {'object': report, 'cancel_url': 'submission_list'})
 
 from django.utils import timezone
+
+# ── Activity Log View ─────────────────────────────────────────────────────────
+
+@login_required
+def activity_log_view(request):
+    """Admin-only: shows a paginated, filterable history of all actions."""
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied
+
+    from django.contrib.auth.models import User as AuthUser
+
+    logs = ActivityLog.objects.select_related('user').all()
+
+    # ── Filters ─────────────────────────────────────────────────────────────
+    filter_user     = request.GET.get('user', '').strip()
+    filter_action   = request.GET.get('action', '').strip()
+    filter_dept     = request.GET.get('department', '').strip()
+    filter_jc       = request.GET.get('job_card_no', '').strip()
+    filter_date     = request.GET.get('date', '').strip()
+
+    if filter_user:
+        logs = logs.filter(user__username__icontains=filter_user)
+    if filter_action:
+        logs = logs.filter(action=filter_action)
+    if filter_dept:
+        logs = logs.filter(department__icontains=filter_dept)
+    if filter_jc:
+        logs = logs.filter(job_card_no__icontains=filter_jc)
+    if filter_date:
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(filter_date, '%Y-%m-%d').date()
+            logs = logs.filter(timestamp__date=date_obj)
+        except ValueError:
+            pass
+
+    paginator   = Paginator(logs, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj    = paginator.get_page(page_number)
+
+    all_users = AuthUser.objects.filter(activitylog__isnull=False).distinct().order_by('username')
+    departments = ActivityLog.objects.values_list('department', flat=True).distinct().order_by('department')
+
+    return render(request, 'activity_log.html', {
+        'page_obj':      page_obj,
+        'all_users':     all_users,
+        'departments':   departments,
+        'filter_user':   filter_user,
+        'filter_action': filter_action,
+        'filter_dept':   filter_dept,
+        'filter_jc':     filter_jc,
+        'filter_date':   filter_date,
+        'total_count':   logs.count(),
+    })
+
 
 @login_required
 def download_database(request):

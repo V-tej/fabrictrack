@@ -21,6 +21,7 @@ urlpatterns = [
     path('export/options/', views.export_options_view, name='export_options'),
     path('export/excel/', views.export_excel_view, name='export_excel'),
     path('import/job-cards/', views.import_job_cards_view, name='import_job_cards'),
+    path('download-sample-excel/', views.download_sample_excel_view, name='download_sample_excel'),
     path('download-database/', views.download_database, name='download_database'),
     path('db-image/<str:model_name>/<int:photo_id>/', views.serve_db_image, name='serve_db_image'),
     path('reset-database/', views.reset_database_view, name='reset_database'),
@@ -88,4 +89,7 @@ urlpatterns = [
     path('sewing-1/', views.sewing1_report_view, name='sewing1_report'),
     path('sewing-1/<int:pk>/edit/', views.edit_sewing1_report, name='edit_sewing1_report'),
     path('sewing-1/<int:pk>/delete/', views.delete_sewing1_report, name='delete_sewing1_report'),
+
+    # Activity Log
+    path('activity-log/', views.activity_log_view, name='activity_log'),
 ]

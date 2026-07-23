@@ -126,12 +126,15 @@
       </p>
     </div>
     <div class="form-section">
-      <form method="POST" action="{% url 'import_job_cards' %}" enctype="multipart/form-data" style="display: flex; gap: 1rem; align-items: center;">
+      <form method="POST" action="{% url 'import_job_cards' %}" enctype="multipart/form-data" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         {% csrf_token %}
-        <input type="file" name="excel_file" accept=".xlsx, .xls" required class="form-control" style="flex: 1;">
+        <input type="file" name="excel_file" accept=".xlsx, .xls" required class="form-control" style="flex: 1; min-width: 220px;">
         <button type="submit" class="btn btn-primary">
           ⬆️ Upload &amp; Import
         </button>
+        <a href="{% url 'download_sample_excel' %}" class="btn btn-secondary" style="text-decoration: none;">
+          📥 Download Sample Template
+        </a>
       </form>
     </div>
   </div>

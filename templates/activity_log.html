@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Activity History{% endblock %}
+{% block page_title %}Activity History{% endblock %}
+
+{% block content %}
+<style>
+.log-filters{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;}
+.log-filters .filter-group{display:flex;flex-direction:column;gap:.25rem;min-width:140px;}
+.log-filters label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
+.log-filters input,.log-filters select{padding:.45rem .75rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.875rem;font-family:inherit;transition:border-color .2s;}
+.log-filters input:focus,.log-filters select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+.log-filters .filter-actions{display:flex;gap:.5rem;align-items:flex-end;}
+.log-table-wrap{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.log-table{width:100%;border-collapse:collapse;font-size:.875rem;}
+.log-table thead tr{background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);color:#fff;}
+.log-table thead th{padding:.85rem 1rem;text-align:left;font-weight:600;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;}
+.log-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+.log-table tbody tr:last-child{border-bottom:none;}
+.log-table tbody tr:hover{background:rgba(99,102,241,.05);}
+.log-table td{padding:.75rem 1rem;vertical-align:middle;}
+.log-table td.ts{color:var(--text-muted);font-size:.8rem;white-space:nowrap;}
+.action-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .75rem;border-radius:20px;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.action-badge.create{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);}
+.action-badge.edit{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
+.action-badge.delete{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.dept-pill{display:inline-block;background:rgba(99,102,241,.12);color:var(--primary);border-radius:6px;padding:.2rem .55rem;font-size:.8rem;font-weight:500;}
+.jc-code{font-family:monospace;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:.15rem .45rem;font-size:.85rem;}
+.user-chip{display:inline-flex;align-items:center;gap:.4rem;font-weight:600;}
+.avatar-sm{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.empty-log{text-align:center;padding:4rem 2rem;color:var(--text-muted);}
+.empty-log .ei{font-size:3rem;margin-bottom:1rem;opacity:.4;}
+.log-pagination{display:flex;justify-content:center;align-items:center;gap:.5rem;padding:1.25rem;border-top:1px solid var(--border);flex-wrap:wrap;}
+.log-pagination a,.log-pagination span{padding:.4rem .85rem;border-radius:8px;font-size:.875rem;text-decoration:none;border:1px solid var(--border);color:var(--text);transition:all .15s;}
+.log-pagination a:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+.log-pagination span.current{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700;}
+.log-pagination span.disabled{opacity:.4;}
+.total-banner{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.7rem 1.25rem;margin-bottom:1.25rem;font-size:.875rem;display:flex;align-items:center;gap:.5rem;}
+.total-banner strong{color:var(--primary);font-size:1.1rem;}
+</style>
+
+<div class="fade-in">
+  <div class="total-banner">
+    <span>Total: <strong>{{ total_count }}</strong> log entr{{ total_count|pluralize:"y,ies" }}{% if filter_user or filter_action or filter_dept or filter_jc or filter_date %} (filtered){% endif %}</span>
+    {% if filter_user or filter_action or filter_dept or filter_jc or filter_date %}
+    <a href="{% url 'activity_log' %}" style="margin-left:auto;font-size:.82rem;" id="btn-clear-all">Clear all filters</a>
+    {% endif %}
+  </div>
+
+  <form method="get" id="log-filter-form">
+    <div class="log-filters">
+      <div class="filter-group"><label>User</label><input type="text" name="user" id="filter-user" value="{{ filter_user }}" placeholder="Search username"></div>
+      <div class="filter-group"><label>Action</label><select name="action" id="filter-action">
+          <option value="">All Actions</option>
+          <option value="CREATE" {% if filter_action == 'CREATE' %}selected{% endif %}>Created</option>
+          <option value="EDIT"   {% if filter_action == 'EDIT'   %}selected{% endif %}>Edited</option>
+          <option value="DELETE" {% if filter_action == 'DELETE' %}selected{% endif %}>Deleted</option>
+        </select></div>
+      <div class="filter-group"><label>Department</label><select name="department" id="filter-dept">
+          <option value="">All Departments</option>
+          {% for dept in departments %}<option value="{{ dept }}" {% if filter_dept == dept %}selected{% endif %}>{{ dept }}</option>{% endfor %}
+        </select></div>
+      <div class="filter-group"><label>Job Card No</label><input type="text" name="job_card_no" id="filter-jc" value="{{ filter_jc }}" placeholder="Search JC no"></div>
+      <div class="filter-group"><label>Date</label><input type="date" name="date" id="filter-date" value="{{ filter_date }}"></div>
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-apply-filters">Apply</button>
+        <a href="{% url 'activity_log' %}" class="btn btn-secondary btn-sm" id="btn-clear-filters">Clear</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="log-table-wrap">
+    {% if page_obj.object_list %}
+    <table class="log-table">
+      <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Department</th><th>Job Card No</th><th>Details</th></tr></thead>
+      <tbody>
+        {% for log in page_obj %}
+        <tr>
+          <td class="ts">{{ log.timestamp|date:"d M Y" }}<br><span style="font-size:.75rem;opacity:.75;">{{ log.timestamp|date:"H:i:s" }}</span></td>
+          <td>{% if log.user %}<span class="user-chip"><span class="avatar-sm">{{ log.user.username|slice:":1"|upper }}</span>{{ log.user.username }}</span>{% else %}<span class="text-muted">Unknown</span>{% endif %}</td>
+          <td>{% if log.action == 'CREATE' %}<span class="action-badge create">Created</span>{% elif log.action == 'EDIT' %}<span class="action-badge edit">Edited</span>{% elif log.action == 'DELETE' %}<span class="action-badge delete">Deleted</span>{% else %}<span class="action-badge">{{ log.action }}</span>{% endif %}</td>
+          <td><span class="dept-pill">{{ log.department }}</span></td>
+          <td>{% if log.job_card_no %}<code class="jc-code">{{ log.job_card_no }}</code>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+          <td style="font-size:.85rem; color: #e2e8f0; line-height: 1.45; word-break: break-word; min-width: 250px;">{{ log.details|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if page_obj.has_other_pages %}
+    <div class="log-pagination">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&user={{ filter_user }}&action={{ filter_action }}&department={{ filter_dept }}&job_card_no={{ filter_jc }}&date={{ filter_date }}" id="btn-prev-page">Prev</a>{% else %}<span class="disabled">Prev</span>{% endif %}
+      {% for num in page_obj.paginator.page_range %}{% if page_obj.number == num %}<span class="current">{{ num }}</span>{% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<a href="?page={{ num }}&user={{ filter_user }}&action={{ filter_action }}&department={{ filter_dept }}&job_card_no={{ filter_jc }}&date={{ filter_date }}">{{ num }}</a>{% endif %}{% endfor %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&user={{ filter_user }}&action={{ filter_action }}&department={{ filter_dept }}&job_card_no={{ filter_jc }}&date={{ filter_date }}" id="btn-next-page">Next</a>{% else %}<span class="disabled">Next</span>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-log"><div class="ei">scroll</div>
+      <h3 style="margin-bottom:.5rem;">No activity found</h3>
+      <p>{% if filter_user or filter_action or filter_dept or filter_jc or filter_date %}No logs match your filters. <a href="{% url 'activity_log' %}">Clear filters</a>{% else %}Activity will appear here as users create, edit, and delete job card entries.{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

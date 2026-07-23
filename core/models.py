@@ -1115,3 +1115,30 @@ class MiscellaneousReportFile(models.Model):
 
     def __str__(self):
         return f"{self.file_name} for {self.report}"
+
+
+# ── Activity / Audit Log ──────────────────────────────────────────────────────
+
+class ActivityLog(models.Model):
+    """Records every Create, Edit, and Delete action performed on job card entries."""
+    ACTION_CHOICES = [
+        ('CREATE', 'Created'),
+        ('EDIT',   'Edited'),
+        ('DELETE', 'Deleted'),
+    ]
+    user        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    action      = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    department  = models.CharField(max_length=100)   # e.g. "Cutting Report"
+    job_card_no = models.CharField(max_length=100, blank=True)
+    details     = models.TextField(blank=True)        # optional extra notes
+    timestamp   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Activity Log'
+        verbose_name_plural = 'Activity Logs'
+
+    def __str__(self):
+        username = self.user.username if self.user else 'Unknown'
+        return f"{self.get_action_display()} by {username} — {self.department} — {self.job_card_no} @ {self.timestamp.strftime('%d-%b-%Y %H:%M')}"
+

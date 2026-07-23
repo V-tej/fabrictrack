@@ -188,10 +188,16 @@
         id="nav-users">
         <span class="nav-icon">👥</span> Users
       </a>
+      <a href="{% url 'activity_log' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'activity_log' %}active{% endif %}"
+        id="nav-activity-log">
+        <span class="nav-icon">📜</span> Activity History
+      </a>
       <a href="/admin/" class="nav-item" id="nav-admin">
         <span class="nav-icon">⚙️</span> Admin Panel
       </a>
       {% endif %}
+
     </nav>
 
     <div class="sidebar-footer">
