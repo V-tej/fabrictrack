@@ -73,6 +73,8 @@ urlpatterns = [
     path('accessories/<str:job_card_no>/', views.accessories_detail_view, name='accessories_detail'),
     path('accessories/<str:job_card_no>/print/', views.accessories_print_view, name='accessories_print'),
     path('accessories-cell-photo/<int:entry_id>/<str:col>/', views.serve_accessories_cell_photo, name='serve_accessories_cell_photo'),
+    path('vendor-report/', views.vendor_report_view, name='vendor_report'),
+
 
 
     # Miscellaneous Report Routes

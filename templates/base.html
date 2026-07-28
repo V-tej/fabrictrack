@@ -58,7 +58,13 @@
         id="nav-accessories">
         <span class="nav-icon">🧷</span> Accessories
       </a>
+      <a href="{% url 'vendor_report' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'vendor_report' %}active{% endif %}"
+        id="nav-vendor-report">
+        <span class="nav-icon">🏭</span> Vendor Report
+      </a>
       {% endif %}
+
 
       {% if user.profile.person_type in 'P1,P2,P3' and not user.is_superuser %}
       <a href="{% url 'cutting_report' %}"

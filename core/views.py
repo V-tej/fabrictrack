@@ -4492,3 +4492,154 @@ def print_report_view(request, report_type, pk):
 
     return render(request, 'report_print_detail.html', context)
 
+
+@login_required
+def vendor_report_view(request):
+    from collections import defaultdict
+    from .models import MasterName, AccessoriesItemEntry
+
+    selected_vendor = request.GET.get('vendor', '').strip()
+    selected_article = request.GET.get('article', '').strip()
+    search_q = request.GET.get('q', '').strip()
+
+    # Query registered Vendor masters
+    vendor_masters = MasterName.objects.filter(department='Vendor').order_by('name', 'article')
+    
+    registered_vendor_articles = defaultdict(list)
+    all_vendors_set = set()
+    all_articles_set = set()
+
+    for vm in vendor_masters:
+        all_vendors_set.add(vm.name)
+        if vm.article:
+            if vm.article not in registered_vendor_articles[vm.name]:
+                registered_vendor_articles[vm.name].append(vm.article)
+            all_articles_set.add(vm.article)
+
+    # Collect entries from AccessoriesItemEntry across columns A, B, C, D
+    cols = ['a', 'b', 'c', 'd']
+    entries = AccessoriesItemEntry.objects.select_related('record').all()
+
+    vendor_tree = defaultdict(lambda: defaultdict(list))
+    vendor_job_cards = defaultdict(set)
+    vendor_totals = defaultdict(lambda: {'pcs': 0, 'articles': set()})
+
+    for entry in entries:
+        jc_no = entry.record.job_card_no
+        item_name = entry.item_name
+        total_pcs = entry.record.total_pcs
+
+        for col in cols:
+            v_name = getattr(entry, f'vendor_{col}', None)
+            a_name = getattr(entry, f'article_{col}', None)
+            qty = getattr(entry, f'qty_{col}', None)
+            tot = getattr(entry, f'total_{col}', None)
+            status = getattr(entry, f'status_{col}', '')
+            has_photo = bool(getattr(entry, f'photo_data_{col}', None))
+
+            if v_name:
+                v_name = v_name.strip()
+                art_key = a_name.strip() if a_name else 'Unspecified Article'
+
+                all_vendors_set.add(v_name)
+                if a_name:
+                    all_articles_set.add(a_name.strip())
+
+                # Apply Filters
+                if selected_vendor and selected_vendor.lower() != v_name.lower():
+                    continue
+                if selected_article and selected_article.lower() != art_key.lower():
+                    continue
+                if search_q:
+                    q_lower = search_q.lower()
+                    if q_lower not in jc_no.lower() and q_lower not in art_key.lower() and q_lower not in item_name.lower():
+                        continue
+
+                item_dict = {
+                    'entry_id': entry.id,
+                    'job_card_no': jc_no,
+                    'item_name': item_name,
+                    'total_pcs': total_pcs,
+                    'col': col.upper(),
+                    'qty': qty,
+                    'total': tot,
+                    'status': status,
+                    'has_photo': has_photo,
+                }
+
+                vendor_tree[v_name][art_key].append(item_dict)
+
+    # Build report list structure
+    display_vendors = sorted(list(all_vendors_set))
+    if selected_vendor:
+        display_vendors = [v for v in display_vendors if v.lower() == selected_vendor.lower()]
+
+    vendor_report_list = []
+    grand_total_articles = 0
+    grand_total_jobs = 0
+    grand_total_pcs = 0
+
+    for v_name in display_vendors:
+        articles_dict = vendor_tree[v_name]
+        
+        # Add registered articles if not already present
+        registered_arts = registered_vendor_articles.get(v_name, [])
+        for r_art in registered_arts:
+            if r_art not in articles_dict and not selected_article and not search_q:
+                articles_dict[r_art] = []
+
+        articles_list = []
+        vendor_job_set = set()
+        vendor_pcs_sum = 0
+
+        for art_name, jobs in articles_dict.items():
+            if selected_article and selected_article.lower() != art_name.lower():
+                continue
+            
+            art_job_set = set(j['job_card_no'] for j in jobs)
+            vendor_job_set.update(art_job_set)
+            art_pcs = sum((j['total'] or 0) for j in jobs)
+            vendor_pcs_sum += art_pcs
+
+            articles_list.append({
+                'name': art_name,
+                'jobs': jobs,
+                'job_count': len(art_job_set),
+                'total_entries': len(jobs),
+                'total_pcs': art_pcs,
+                'job_card_numbers': sorted(list(art_job_set))
+            })
+
+        articles_list.sort(key=lambda x: x['name'])
+        
+        if articles_list or not (selected_vendor or selected_article or search_q):
+            grand_total_articles += len(articles_list)
+            grand_total_jobs += len(vendor_job_set)
+            grand_total_pcs += vendor_pcs_sum
+
+            vendor_report_list.append({
+                'name': v_name,
+                'articles': articles_list,
+                'article_count': len(articles_list),
+                'job_card_count': len(vendor_job_set),
+                'unique_job_cards': sorted(list(vendor_job_set)),
+                'total_pcs': vendor_pcs_sum,
+            })
+
+    all_vendors_sorted = sorted(list(all_vendors_set))
+    all_articles_sorted = sorted(list(all_articles_set))
+
+    return render(request, 'vendor_report.html', {
+        'vendor_report_list': vendor_report_list,
+        'all_vendors': all_vendors_sorted,
+        'all_articles': all_articles_sorted,
+        'selected_vendor': selected_vendor,
+        'selected_article': selected_article,
+        'search_q': search_q,
+        'total_vendors_count': len(vendor_report_list),
+        'grand_total_articles': grand_total_articles,
+        'grand_total_jobs': grand_total_jobs,
+        'grand_total_pcs': grand_total_pcs,
+    })
+
+

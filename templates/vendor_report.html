@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Vendor Report — Articles & Job Cards{% endblock %}
+{% block page_title %}🏭 Vendor Articles & Job Cards Report{% endblock %}
+
+{% block content %}
+<style>
+  .vendor-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  }
+  .vendor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .vendor-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fbbf24;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .stat-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .stat-badge-highlight {
+    background: #3b82f6;
+    color: #ffffff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .jc-pill {
+    display: inline-block;
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #38bdf8;
+    font-family: monospace;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    margin-right: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+  .article-card {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .article-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .vendor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .vendor-table th {
+    background: #1e293b;
+    color: #94a3b8;
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    font-weight: 600;
+    border-bottom: 1px solid #334155;
+  }
+  .vendor-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    vertical-align: middle;
+  }
+
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .sidebar, .topbar, .filter-card, .btn-no-print { display: none !important; }
+    .vendor-card { background: #fff !important; border: 1px solid #ccc !important; box-shadow: none !important; color: #000 !important; margin-bottom: 1.5rem !important; }
+    .vendor-title { color: #000 !important; }
+    .article-card { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #000 !important; }
+    .article-title { color: #000 !important; }
+    .vendor-table th { background: #e2e8f0 !important; color: #000 !important; }
+    .vendor-table td { color: #000 !important; border-bottom: 1px solid #e2e8f0 !important; }
+    .stat-badge { background: #e2e8f0 !important; color: #000 !important; }
+    .jc-pill { background: #f1f5f9 !important; color: #000 !important; border-color: #cbd5e1 !important; }
+  }
+</style>
+
+<div class="fade-in">
+  <!-- Top Bar Actions -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;" class="btn-no-print">
+    <div>
+      <h2 style="margin:0; font-size:1.4rem; color:#f1f5f9;">Vendor Articles & Job Cards Report</h2>
+      <p style="margin:0.25rem 0 0 0; color:#94a3b8; font-size:0.85rem;">Check assigned articles and associated job cards per vendor.</p>
+    </div>
+    <div style="display:flex; gap:0.75rem;">
+      <button onclick="window.print()" class="btn btn-primary" style="font-size:0.85rem; background:#7c3aed; border-color:#7c3aed;">🖨️ Print / PDF</button>
+    </div>
+  </div>
+
+  <!-- Stats Overview Cards -->
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;" class="btn-no-print">
+    <div style="background:#1e293b; border:1px solid #334155; padding:1.25rem; border-radius:10px; text-align:center;">
+      <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Total Vendors</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#fbbf24; margin-top:0.25rem;">{{ total_vendors_count }}</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; padding:1.25rem; border-radius:10px; text-align:center;">
+      <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Total Active Articles</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#60a5fa; margin-top:0.25rem;">{{ grand_total_articles }}</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; padding:1.25rem; border-radius:10px; text-align:center;">
+      <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Total Job Cards</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#34d399; margin-top:0.25rem;">{{ grand_total_jobs }}</div>
+    </div>
+    <div style="background:#1e293b; border:1px solid #334155; padding:1.25rem; border-radius:10px; text-align:center;">
+      <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; text-transform:uppercase;">Total Accessories Pcs</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#a78bfa; margin-top:0.25rem;">{{ grand_total_pcs }}</div>
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <div class="section-card filter-card" style="margin-bottom:2rem; padding:1.25rem;">
+    <form method="get" style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+      <!-- Vendor Selector -->
+      <div style="display:flex; flex-direction:column; gap:0.35rem; min-width:180px;">
+        <label style="font-size:0.8rem; color:#94a3b8; font-weight:500;">Filter Vendor:</label>
+        <select name="vendor" onchange="this.form.submit()" style="padding:0.45rem 0.75rem; border-radius:6px; background:#0f172a; border:1px solid #334155; color:#f1f5f9; font-size:0.85rem;">
+          <option value="">-- All Vendors --</option>
+          {% for v in all_vendors %}
+            <option value="{{ v }}" {% if selected_vendor == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Article Selector -->
+      <div style="display:flex; flex-direction:column; gap:0.35rem; min-width:180px;">
+        <label style="font-size:0.8rem; color:#94a3b8; font-weight:500;">Filter Article:</label>
+        <select name="article" onchange="this.form.submit()" style="padding:0.45rem 0.75rem; border-radius:6px; background:#0f172a; border:1px solid #334155; color:#f1f5f9; font-size:0.85rem;">
+          <option value="">-- All Articles --</option>
+          {% for art in all_articles %}
+            <option value="{{ art }}" {% if selected_article == art %}selected{% endif %}>{{ art }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Search Input -->
+      <div style="display:flex; flex-direction:column; gap:0.35rem; min-width:200px; flex:1;">
+        <label style="font-size:0.8rem; color:#94a3b8; font-weight:500;">Search Job Card / Item:</label>
+        <input type="text" name="q" value="{{ search_q }}" placeholder="Job Card No. or Item Name..." style="padding:0.45rem 0.75rem; border-radius:6px; background:#0f172a; border:1px solid #334155; color:#f1f5f9; font-size:0.85rem;">
+      </div>
+
+      <div style="display:flex; gap:0.5rem; align-self:flex-end;">
+        <button type="submit" class="btn btn-primary" style="font-size:0.85rem; height:36px; padding:0 1.25rem;">Apply Filter</button>
+        {% if selected_vendor or selected_article or search_q %}
+          <a href="{% url 'vendor_report' %}" class="btn btn-secondary" style="font-size:0.85rem; height:36px; padding:0 0.85rem; display:inline-flex; align-items:center;">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Vendor Data List -->
+  {% if vendor_report_list %}
+    {% for vendor in vendor_report_list %}
+      <div class="vendor-card">
+        <!-- Vendor Header Summary -->
+        <div class="vendor-header">
+          <div>
+            <h3 class="vendor-title">
+              🏢 {{ vendor.name }}
+            </h3>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <span class="stat-badge">📦 {{ vendor.article_count }} Article(s)</span>
+            <span class="stat-badge-highlight">🏷️ {{ vendor.job_card_count }} Job Card(s)</span>
+            <span class="stat-badge" style="background:#7c3aed; color:#fff;">📊 {{ vendor.total_pcs }} Total Pcs</span>
+          </div>
+        </div>
+
+        <!-- Job Card Numbers Summary -->
+        {% if vendor.unique_job_cards %}
+          <div style="margin-bottom: 1.25rem;">
+            <span style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.4rem;">JOB CARD NUMBERS ASSIGNED:</span>
+            <div>
+              {% for jc in vendor.unique_job_cards %}
+                <a href="{% url 'accessories_detail' jc %}" target="_blank" class="jc-pill" title="View Accessories for {{ jc }}">#{{ jc }}</a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Articles Breakdown -->
+        {% if vendor.articles %}
+          {% for article in vendor.articles %}
+            <div class="article-card">
+              <div class="article-title">
+                <span>🎨 Article: <strong style="color: #60a5fa;">{{ article.name }}</strong></span>
+                <div style="display:flex; gap:0.5rem; font-size:0.8rem;">
+                  <span class="stat-badge">{{ article.job_count }} Job(s)</span>
+                  <span class="stat-badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">{{ article.total_pcs }} Pcs</span>
+                </div>
+              </div>
+
+              {% if article.jobs %}
+                <div style="overflow-x: auto;">
+                  <table class="vendor-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 40px;">#</th>
+                        <th>Job Card No.</th>
+                        <th>Item Name</th>
+                        <th style="width: 60px; text-align: center;">Col</th>
+                        <th style="width: 90px; text-align: center;">Qty</th>
+                        <th style="width: 90px; text-align: center;">Total Pcs</th>
+                        <th style="width: 90px; text-align: center;">Status</th>
+                        <th style="width: 80px; text-align: center;">Photo</th>
+                        <th class="btn-no-print" style="width: 70px; text-align: center;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for job in article.jobs %}
+                        <tr>
+                          <td style="color:#94a3b8; text-align:center;">{{ forloop.counter }}</td>
+                          <td>
+                            <a href="{% url 'accessories_detail' job.job_card_no %}" target="_blank" style="color: #38bdf8; font-weight: 600; text-decoration: none;">
+                              <code>#{{ job.job_card_no }}</code>
+                            </a>
+                          </td>
+                          <td style="font-weight: 500;">{{ job.item_name }}</td>
+                          <td style="text-align: center; color: #94a3b8; font-weight: 600;">{{ job.col }}</td>
+                          <td style="text-align: center; font-weight: 600;">{{ job.qty|default:"—" }}</td>
+                          <td style="text-align: center; font-weight: 700; color: #fbbf24;">{{ job.total|default:"0" }}</td>
+                          <td style="text-align: center;">
+                            {% if job.status == 'green' %}
+                              <span style="color:#22c55e; font-weight:600;">🟢 Green</span>
+                            {% elif job.status == 'red' %}
+                              <span style="color:#ef4444; font-weight:600;">🔴 Red</span>
+                            {% elif job.status == 'yellow' %}
+                              <span style="color:#fbbf24; font-weight:600;">🟡 Yellow</span>
+                            {% else %}
+                              <span style="color:#9ca3af;">—</span>
+                            {% endif %}
+                          </td>
+                          <td style="text-align: center;">
+                            {% if job.has_photo %}
+                              <a href="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" target="_blank" title="Click to view photo">
+                                <img src="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" alt="Photo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fbbf24; vertical-align: middle;">
+                              </a>
+                            {% else %}
+                              <span style="color: #64748b; font-size: 0.75rem;">None</span>
+                            {% endif %}
+                          </td>
+                          <td class="btn-no-print" style="text-align: center;">
+                            <a href="{% url 'accessories_detail' job.job_card_no %}" target="_blank" class="btn btn-sm" style="padding: 0.15rem 0.5rem; font-size: 0.75rem; background: #3b82f6; color: #fff; border: none; text-decoration: none;">View</a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <p style="color: #64748b; font-size: 0.85rem; margin: 0.5rem 0 0 0;">No active job card entries assigned to this article yet.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: #64748b; font-size: 0.9rem; margin: 0;">No articles assigned to this vendor.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="section-card" style="text-align: center; padding: 3rem 1.5rem;">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">🏭</div>
+      <h3 style="color: #f1f5f9; margin-bottom: 0.5rem;">No Vendor Articles Found</h3>
+      <p style="color: #94a3b8; font-size: 0.9rem;">No vendor assignments match your current filter criteria.</p>
+      {% if selected_vendor or selected_article or search_q %}
+        <a href="{% url 'vendor_report' %}" class="btn btn-primary" style="margin-top: 0.5rem;">Reset All Filters</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
