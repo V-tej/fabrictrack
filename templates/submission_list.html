@@ -41,7 +41,6 @@
     </a>
   </div>
 
-
   {% if show_p1 %}
   <div class="section-card" id="submissionsCard" style="order: {% if person_type in 'P1,P2,P3' %}1{% else %}10{% endif %};">
     <div class="section-header-row">
@@ -2301,6 +2300,189 @@
       if (input) { input.value = ''; }
       filterByJobCard(inputId, cardId);
     }
+
+    // Intercept form submissions and link clicks to preserve date filters
+    document.addEventListener('DOMContentLoaded', function() {
+        // Restore scroll to the section that was filtered (prevents visible scroll-up-and-back)
+        const scrollToId = sessionStorage.getItem('submissions_scroll_to_id');
+        if (scrollToId) {
+            const targetEl = document.getElementById(scrollToId);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+                requestAnimationFrame(() => {
+                    targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+                });
+            }
+            sessionStorage.removeItem('submissions_scroll_to_id');
+        }
+
+
+        const dateVals = {
+            cutting: { from: "{{ date_from_cutting|default:'' }}", to: "{{ date_to_cutting|default:'' }}" },
+            stitching: { from: "{{ date_from_stitching|default:'' }}", to: "{{ date_to_stitching|default:'' }}" },
+            job_work: { from: "{{ date_from_job_work|default:'' }}", to: "{{ date_to_job_work|default:'' }}" },
+            job_work1: { from: "{{ date_from_job_work1|default:'' }}", to: "{{ date_to_job_work1|default:'' }}" },
+            finishing: { from: "{{ date_from_finishing|default:'' }}", to: "{{ date_to_finishing|default:'' }}" },
+            embroidery: { from: "{{ date_from_embroidery|default:'' }}", to: "{{ date_to_embroidery|default:'' }}" },
+            printing: { from: "{{ date_from_printing|default:'' }}", to: "{{ date_to_printing|default:'' }}" },
+            singleneedle: { from: "{{ date_from_singleneedle|default:'' }}", to: "{{ date_to_singleneedle|default:'' }}" },
+            sewing: { from: "{{ date_from_sewing|default:'' }}", to: "{{ date_to_sewing|default:'' }}" },
+            sewing1: { from: "{{ date_from_sewing1|default:'' }}", to: "{{ date_to_sewing1|default:'' }}" }
+        };
+
+        // 1. Inject date inputs inside every header action form
+        document.querySelectorAll('.header-actions form').forEach(form => {
+            const selectEl = form.querySelector('select');
+            if (!selectEl) return;
+
+            const selectName = selectEl.name; // e.g. "master_name_stitching"
+            const deptSuffix = selectName.replace('master_name_', ''); // e.g. "stitching"
+            const inputFromName = `date_from_${deptSuffix}`;
+            const inputToName = `date_to_${deptSuffix}`;
+
+            if (form.querySelector(`input[name="${inputFromName}"]`)) return;
+
+            const dateFromVal = dateVals[deptSuffix]?.from || '';
+            const dateToVal = dateVals[deptSuffix]?.to || '';
+
+            const dateContainer = document.createElement('div');
+            dateContainer.className = 'date-filter-group';
+            dateContainer.style.cssText = 'display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 0.25rem; flex-wrap: nowrap;';
+
+            // From Date
+            const labelFrom = document.createElement('span');
+            labelFrom.style.cssText = 'font-size: 0.8rem; color: #94a3b8; font-weight: 500;';
+            labelFrom.textContent = 'From:';
+            
+            const inputFrom = document.createElement('input');
+            inputFrom.type = 'date';
+            inputFrom.name = inputFromName;
+            inputFrom.value = dateFromVal;
+            inputFrom.style.cssText = 'padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.8rem; outline: none; height: 32px; width: 125px; box-sizing: border-box;';
+
+            // To Date
+            const labelTo = document.createElement('span');
+            labelTo.style.cssText = 'font-size: 0.8rem; color: #94a3b8; font-weight: 500;';
+            labelTo.textContent = 'To:';
+
+            const inputTo = document.createElement('input');
+            inputTo.type = 'date';
+            inputTo.name = inputToName;
+            inputTo.value = dateToVal;
+            inputTo.style.cssText = 'padding: 0.25rem 0.5rem; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.8rem; outline: none; height: 32px; width: 125px; box-sizing: border-box;';
+
+            // Helper: save section card ID so page reloads scroll back to this section
+            function saveSectionScroll() {
+                const sectionCard = form.closest('.section-card');
+                if (sectionCard && sectionCard.id) {
+                    sessionStorage.setItem('submissions_scroll_to_id', sectionCard.id);
+                }
+            }
+
+            // Apply button
+            const applyBtn = document.createElement('button');
+            applyBtn.type = 'button';
+            applyBtn.textContent = 'Apply';
+            applyBtn.style.cssText = 'padding: 0 0.6rem; height: 32px; border-radius: 6px; border: none; background: #3b82f6; color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap;';
+            applyBtn.addEventListener('click', function() {
+                saveSectionScroll();
+                form.submit();
+            });
+
+            // Clear button — clears both date inputs then submits
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.textContent = '✕';
+            clearBtn.title = 'Clear date filter';
+            clearBtn.style.cssText = 'padding: 0 0.5rem; height: 32px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #94a3b8; font-size: 0.78rem; cursor: pointer; white-space: nowrap;';
+            clearBtn.addEventListener('click', function() {
+                inputFrom.value = '';
+                inputTo.value = '';
+                saveSectionScroll();
+                form.submit();
+            });
+
+            dateContainer.appendChild(labelFrom);
+            dateContainer.appendChild(inputFrom);
+            dateContainer.appendChild(labelTo);
+            dateContainer.appendChild(inputTo);
+            dateContainer.appendChild(applyBtn);
+            // Only show clear button if a date is active
+            if (dateFromVal || dateToVal) {
+                dateContainer.appendChild(clearBtn);
+            }
+
+            // Prepend inside the form
+            form.insertBefore(dateContainer, form.firstChild);
+        });
+
+        // 2. Intercept GET form submissions to propagate all existing date and master selections
+        document.querySelectorAll('form[method="get"]').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                document.querySelectorAll('.header-actions form').forEach(otherForm => {
+                    if (otherForm === form) return;
+
+                    // Propagate other forms' select dropdowns
+                    const select = otherForm.querySelector('select');
+                    if (select && select.value && !form.querySelector(`input[name="${select.name}"]`)) {
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = select.name;
+                        hiddenInput.value = select.value;
+                        form.appendChild(hiddenInput);
+                    }
+
+                    // Propagate other forms' date inputs
+                    otherForm.querySelectorAll('input[type="date"]').forEach(dateInput => {
+                        if (dateInput.value && !form.querySelector(`input[name="${dateInput.name}"]`)) {
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = dateInput.name;
+                            hiddenInput.value = dateInput.value;
+                            form.appendChild(hiddenInput);
+                        }
+                    });
+                });
+            });
+        });
+
+        // 3. Intercept link clicks to propagate all active filters (selects and dates)
+        document.querySelectorAll('a').forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href) return;
+            
+            if (href.startsWith('?') || href.includes('submissions') || href.includes('submission_list')) {
+                link.addEventListener('click', function(e) {
+                    if (href.includes('print') || href.includes('edit') || href.includes('delete') || href.includes('new') || href.includes('export')) {
+                        return;
+                    }
+                    
+                    e.preventDefault();
+                    const url = new URL(this.href, window.location.origin);
+                    
+                    // Propagate selects
+                    document.querySelectorAll('.header-actions form select').forEach(select => {
+                        if (select.value) {
+                            url.searchParams.set(select.name, select.value);
+                        } else {
+                            url.searchParams.delete(select.name);
+                        }
+                    });
+
+                    // Propagate date fields
+                    document.querySelectorAll('.header-actions form input[type="date"]').forEach(dateInput => {
+                        if (dateInput.value) {
+                            url.searchParams.set(dateInput.name, dateInput.value);
+                        } else {
+                            url.searchParams.delete(dateInput.name);
+                        }
+                    });
+
+                    window.location.href = url.toString();
+                });
+            }
+        });
+    });
   </script>
 
 </div>

@@ -72,6 +72,8 @@ urlpatterns = [
     path('accessories-item/<int:pk>/delete/', views.accessories_delete_item_view, name='accessories_delete_item'),
     path('accessories/<str:job_card_no>/', views.accessories_detail_view, name='accessories_detail'),
     path('accessories/<str:job_card_no>/print/', views.accessories_print_view, name='accessories_print'),
+    path('accessories-cell-photo/<int:entry_id>/<str:col>/', views.serve_accessories_cell_photo, name='serve_accessories_cell_photo'),
+
 
     # Miscellaneous Report Routes
     path('miscellaneous/', views.miscellaneous_report_view, name='miscellaneous_report'),

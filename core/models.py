@@ -1076,6 +1076,20 @@ class AccessoriesItemEntry(models.Model):
     article_c = models.CharField(max_length=150, blank=True, null=True)
     article_d = models.CharField(max_length=150, blank=True, null=True)
 
+    # Photo uploads for yellow status (per column)
+    photo_data_a          = models.BinaryField(null=True, blank=True)
+    photo_name_a          = models.CharField(max_length=255, blank=True, null=True)
+    photo_content_type_a  = models.CharField(max_length=100, blank=True, null=True)
+    photo_data_b          = models.BinaryField(null=True, blank=True)
+    photo_name_b          = models.CharField(max_length=255, blank=True, null=True)
+    photo_content_type_b  = models.CharField(max_length=100, blank=True, null=True)
+    photo_data_c          = models.BinaryField(null=True, blank=True)
+    photo_name_c          = models.CharField(max_length=255, blank=True, null=True)
+    photo_content_type_c  = models.CharField(max_length=100, blank=True, null=True)
+    photo_data_d          = models.BinaryField(null=True, blank=True)
+    photo_name_d          = models.CharField(max_length=255, blank=True, null=True)
+    photo_content_type_d  = models.CharField(max_length=100, blank=True, null=True)
+
     class Meta:
         ordering = ['sr_no']
         unique_together = ('record', 'sr_no')

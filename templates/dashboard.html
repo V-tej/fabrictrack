@@ -136,9 +136,9 @@
         <thead>
           <tr>
             <th style="position: sticky; left: 0; z-index: 3; background: #111827; min-width: 120px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Job Card No</th>
-            <th>Date Assigned</th>
+            <th style="position: sticky; left: 120px; z-index: 3; background: #111827; min-width: 120px;">Date Assigned</th>
             {% if person_type == 'ADMIN' or user.is_superuser %}
-              <th>Cutting</th>
+              <th style="position: sticky; left: 240px; z-index: 3; background: #111827; min-width: 160px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Cutting</th>
               <th>Jobwork</th>
               <th>Jobwork 1</th>
               <th>Embroidery</th>
@@ -157,9 +157,9 @@
           {% with cutting_info=task.cutting_report_info %}
           <tr data-active-step="{{ task.active_step }}">
             <td style="position: sticky; left: 0; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);"><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
-            <td>{{ task.date|date:"d-b-Y" }}</td>
+            <td style="position: sticky; left: 120px; z-index: 2; background: #161d2e;">{{ task.date|date:"d-b-Y" }}</td>
              {% if person_type == 'ADMIN' or user.is_superuser %}
-              <td data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
+              <td style="position: sticky; left: 240px; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);" data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
                 {% if task.requires_cutting %}
                   {% if task.is_cutting_done %}
                     <span style="color:#22c55e;">✅ Done</span>

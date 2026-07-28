@@ -101,6 +101,17 @@
                     <select name="item_{{ entry.sr_no }}_article_a" class="article-select" data-sr="{{ entry.sr_no }}" data-col="a" data-selected="{{ entry.article_a|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Article...</option>
                     </select>
+                    {% if entry.photo_data_a %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                        <span>View</span>
+                      </a>
+                    {% endif %}
+                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                      📷
+                      <input type="file" name="item_{{ entry.sr_no }}_photo_a" accept="image/*" style="display:none;" onchange="showFileName(this)">
+                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_a %}Replace{% else %}Upload{% endif %}</span>
+                    </label>
                   </div>
                 </div>
               </td>
@@ -137,6 +148,17 @@
                     <select name="item_{{ entry.sr_no }}_article_b" class="article-select" data-sr="{{ entry.sr_no }}" data-col="b" data-selected="{{ entry.article_b|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Article...</option>
                     </select>
+                    {% if entry.photo_data_b %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                        <span>View</span>
+                      </a>
+                    {% endif %}
+                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                      📷
+                      <input type="file" name="item_{{ entry.sr_no }}_photo_b" accept="image/*" style="display:none;" onchange="showFileName(this)">
+                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_b %}Replace{% else %}Upload{% endif %}</span>
+                    </label>
                   </div>
                 </div>
               </td>
@@ -173,6 +195,17 @@
                     <select name="item_{{ entry.sr_no }}_article_c" class="article-select" data-sr="{{ entry.sr_no }}" data-col="c" data-selected="{{ entry.article_c|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Article...</option>
                     </select>
+                    {% if entry.photo_data_c %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                        <span>View</span>
+                      </a>
+                    {% endif %}
+                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                      📷
+                      <input type="file" name="item_{{ entry.sr_no }}_photo_c" accept="image/*" style="display:none;" onchange="showFileName(this)">
+                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_c %}Replace{% else %}Upload{% endif %}</span>
+                    </label>
                   </div>
                 </div>
               </td>
@@ -209,6 +242,17 @@
                     <select name="item_{{ entry.sr_no }}_article_d" class="article-select" data-sr="{{ entry.sr_no }}" data-col="d" data-selected="{{ entry.article_d|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Article...</option>
                     </select>
+                    {% if entry.photo_data_d %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                        <span>View</span>
+                      </a>
+                    {% endif %}
+                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                      📷
+                      <input type="file" name="item_{{ entry.sr_no }}_photo_d" accept="image/*" style="display:none;" onchange="showFileName(this)">
+                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_d %}Replace{% else %}Upload{% endif %}</span>
+                    </label>
                   </div>
                 </div>
               </td>
@@ -515,5 +559,16 @@
     }
   });
 })();
+
+function showFileName(input) {
+  if (input.files && input.files[0]) {
+    const labelSpan = input.parentElement.querySelector('.file-label-text');
+    if (labelSpan) {
+      const name = input.files[0].name;
+      labelSpan.textContent = name.length > 10 ? name.substring(0, 8) + '...' : name;
+      labelSpan.style.color = '#34d399';
+    }
+  }
+}
 </script>
 {% endblock %}

@@ -78,10 +78,15 @@
             <span class="{% if entry.status_a == 'green' %}cell-green{% elif entry.status_a == 'yellow' %}cell-yellow{% else %}cell-red{% endif %}">
               {{ entry.total_a }}
             </span>
-            {% if entry.status_a == 'yellow' and entry.vendor_a %}
-              <div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_a }}</div>
-              {% if entry.article_a %}
-                <div style="font-size:9px; color:#6b7280;">A: {{ entry.article_a }}</div>
+            {% if entry.status_a == 'yellow' %}
+              {% if entry.vendor_a %}<div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_a }}</div>{% endif %}
+              {% if entry.article_a %}<div style="font-size:9px; color:#6b7280;">A: {{ entry.article_a }}</div>{% endif %}
+              {% if entry.photo_data_a %}
+                <div style="margin-top:3px;">
+                  <a href="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" target="_blank" title="Click to view full photo">
+                    <img src="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" alt="Photo" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #d97706; cursor:pointer; display:inline-block;">
+                  </a>
+                </div>
               {% endif %}
             {% endif %}
           {% else %}—{% endif %}
@@ -94,10 +99,15 @@
             <span class="{% if entry.status_b == 'green' %}cell-green{% elif entry.status_b == 'yellow' %}cell-yellow{% else %}cell-red{% endif %}">
               {{ entry.total_b }}
             </span>
-            {% if entry.status_b == 'yellow' and entry.vendor_b %}
-              <div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_b }}</div>
-              {% if entry.article_b %}
-                <div style="font-size:9px; color:#6b7280;">A: {{ entry.article_b }}</div>
+            {% if entry.status_b == 'yellow' %}
+              {% if entry.vendor_b %}<div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_b }}</div>{% endif %}
+              {% if entry.article_b %}<div style="font-size:9px; color:#6b7280;">A: {{ entry.article_b }}</div>{% endif %}
+              {% if entry.photo_data_b %}
+                <div style="margin-top:3px;">
+                  <a href="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" target="_blank" title="Click to view full photo">
+                    <img src="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" alt="Photo" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #d97706; cursor:pointer; display:inline-block;">
+                  </a>
+                </div>
               {% endif %}
             {% endif %}
           {% else %}—{% endif %}
@@ -110,10 +120,15 @@
             <span class="{% if entry.status_c == 'green' %}cell-green{% elif entry.status_c == 'yellow' %}cell-yellow{% else %}cell-red{% endif %}">
               {{ entry.total_c }}
             </span>
-            {% if entry.status_c == 'yellow' and entry.vendor_c %}
-              <div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_c }}</div>
-              {% if entry.article_c %}
-                <div style="font-size:9px; color:#6b7280;">A: {{ entry.article_c }}</div>
+            {% if entry.status_c == 'yellow' %}
+              {% if entry.vendor_c %}<div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_c }}</div>{% endif %}
+              {% if entry.article_c %}<div style="font-size:9px; color:#6b7280;">A: {{ entry.article_c }}</div>{% endif %}
+              {% if entry.photo_data_c %}
+                <div style="margin-top:3px;">
+                  <a href="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" target="_blank" title="Click to view full photo">
+                    <img src="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" alt="Photo" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #d97706; cursor:pointer; display:inline-block;">
+                  </a>
+                </div>
               {% endif %}
             {% endif %}
           {% else %}—{% endif %}
@@ -126,10 +141,15 @@
             <span class="{% if entry.status_d == 'green' %}cell-green{% elif entry.status_d == 'yellow' %}cell-yellow{% else %}cell-red{% endif %}">
               {{ entry.total_d }}
             </span>
-            {% if entry.status_d == 'yellow' and entry.vendor_d %}
-              <div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_d }}</div>
-              {% if entry.article_d %}
-                <div style="font-size:9px; color:#6b7280;">A: {{ entry.article_d }}</div>
+            {% if entry.status_d == 'yellow' %}
+              {% if entry.vendor_d %}<div style="font-size:9px; color:#6b7280; margin-top:2px;">V: {{ entry.vendor_d }}</div>{% endif %}
+              {% if entry.article_d %}<div style="font-size:9px; color:#6b7280;">A: {{ entry.article_d }}</div>{% endif %}
+              {% if entry.photo_data_d %}
+                <div style="margin-top:3px;">
+                  <a href="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" target="_blank" title="Click to view full photo">
+                    <img src="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" alt="Photo" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #d97706; cursor:pointer; display:inline-block;">
+                  </a>
+                </div>
               {% endif %}
             {% endif %}
           {% else %}—{% endif %}

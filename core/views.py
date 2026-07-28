@@ -1590,6 +1590,28 @@ def submission_list_view(request):
     filter_param = request.GET.get('filter')
     page_number = request.GET.get('page', '1')
 
+    date_from_cutting = request.GET.get('date_from_cutting', '')
+    date_to_cutting = request.GET.get('date_to_cutting', '')
+    date_from_stitching = request.GET.get('date_from_stitching', '')
+    date_to_stitching = request.GET.get('date_to_stitching', '')
+    date_from_job_work = request.GET.get('date_from_job_work', '')
+    date_to_job_work = request.GET.get('date_to_job_work', '')
+    date_from_job_work1 = request.GET.get('date_from_job_work1', '')
+    date_to_job_work1 = request.GET.get('date_to_job_work1', '')
+    date_from_finishing = request.GET.get('date_from_finishing', '')
+    date_to_finishing = request.GET.get('date_to_finishing', '')
+    date_from_embroidery = request.GET.get('date_from_embroidery', '')
+    date_to_embroidery = request.GET.get('date_to_embroidery', '')
+    date_from_printing = request.GET.get('date_from_printing', '')
+    date_to_printing = request.GET.get('date_to_printing', '')
+    date_from_singleneedle = request.GET.get('date_from_singleneedle', '')
+    date_to_singleneedle = request.GET.get('date_to_singleneedle', '')
+    date_from_sewing = request.GET.get('date_from_sewing', '')
+    date_to_sewing = request.GET.get('date_to_sewing', '')
+    date_from_sewing1 = request.GET.get('date_from_sewing1', '')
+    date_to_sewing1 = request.GET.get('date_to_sewing1', '')
+
+
     # Base querysets with optimized prefetching to avoid N+1 queries
     # All users see all querysets, ordered by current user's first, then by date descending
     reports_qs = CuttingReport.objects.select_related(
@@ -1698,6 +1720,117 @@ def submission_list_view(request):
             output_field=IntegerField()
         )
     ).order_by('-created_at')
+
+    # Apply Date Filters independently if present
+    if date_from_cutting:
+        try:
+            reports_qs = reports_qs.filter(created_at__date__gte=datetime.strptime(date_from_cutting, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_cutting:
+        try:
+            reports_qs = reports_qs.filter(created_at__date__lte=datetime.strptime(date_to_cutting, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_stitching:
+        try:
+            p4_qs = p4_qs.filter(created_at__date__gte=datetime.strptime(date_from_stitching, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_stitching:
+        try:
+            p4_qs = p4_qs.filter(created_at__date__lte=datetime.strptime(date_to_stitching, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_job_work:
+        try:
+            p5_qs = p5_qs.filter(created_at__date__gte=datetime.strptime(date_from_job_work, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_job_work:
+        try:
+            p5_qs = p5_qs.filter(created_at__date__lte=datetime.strptime(date_to_job_work, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_embroidery:
+        try:
+            p7_qs = p7_qs.filter(created_at__date__gte=datetime.strptime(date_from_embroidery, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_embroidery:
+        try:
+            p7_qs = p7_qs.filter(created_at__date__lte=datetime.strptime(date_to_embroidery, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_printing:
+        try:
+            p8_qs = p8_qs.filter(created_at__date__gte=datetime.strptime(date_from_printing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_printing:
+        try:
+            p8_qs = p8_qs.filter(created_at__date__lte=datetime.strptime(date_to_printing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_finishing:
+        try:
+            p6_qs = p6_qs.filter(created_at__date__gte=datetime.strptime(date_from_finishing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_finishing:
+        try:
+            p6_qs = p6_qs.filter(created_at__date__lte=datetime.strptime(date_to_finishing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_singleneedle:
+        try:
+            p9_qs = p9_qs.filter(created_at__date__gte=datetime.strptime(date_from_singleneedle, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_singleneedle:
+        try:
+            p9_qs = p9_qs.filter(created_at__date__lte=datetime.strptime(date_to_singleneedle, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_sewing:
+        try:
+            p10_qs = p10_qs.filter(created_at__date__gte=datetime.strptime(date_from_sewing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_sewing:
+        try:
+            p10_qs = p10_qs.filter(created_at__date__lte=datetime.strptime(date_to_sewing, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_job_work1:
+        try:
+            p11_qs = p11_qs.filter(created_at__date__gte=datetime.strptime(date_from_job_work1, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_job_work1:
+        try:
+            p11_qs = p11_qs.filter(created_at__date__lte=datetime.strptime(date_to_job_work1, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    if date_from_sewing1:
+        try:
+            p12_qs = p12_qs.filter(created_at__date__gte=datetime.strptime(date_from_sewing1, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+    if date_to_sewing1:
+        try:
+            p12_qs = p12_qs.filter(created_at__date__lte=datetime.strptime(date_to_sewing1, '%Y-%m-%d').date())
+        except ValueError:
+            pass
 
 
     # Apply Department-Specific Master/Worker Filters if present
@@ -1886,6 +2019,26 @@ def submission_list_view(request):
         'master_name_singleneedle': master_name_singleneedle,
         'master_name_sewing': master_name_sewing,
         'master_name_sewing1': master_name_sewing1,
+        'date_from_cutting': date_from_cutting,
+        'date_to_cutting': date_to_cutting,
+        'date_from_stitching': date_from_stitching,
+        'date_to_stitching': date_to_stitching,
+        'date_from_job_work': date_from_job_work,
+        'date_to_job_work': date_to_job_work,
+        'date_from_job_work1': date_from_job_work1,
+        'date_to_job_work1': date_to_job_work1,
+        'date_from_finishing': date_from_finishing,
+        'date_to_finishing': date_to_finishing,
+        'date_from_embroidery': date_from_embroidery,
+        'date_to_embroidery': date_to_embroidery,
+        'date_from_printing': date_from_printing,
+        'date_to_printing': date_to_printing,
+        'date_from_singleneedle': date_from_singleneedle,
+        'date_to_singleneedle': date_to_singleneedle,
+        'date_from_sewing': date_from_sewing,
+        'date_to_sewing': date_to_sewing,
+        'date_from_sewing1': date_from_sewing1,
+        'date_to_sewing1': date_to_sewing1,
     })
 
 
@@ -3478,6 +3631,24 @@ def serve_db_image(request, model_name, photo_id):
     return response
 
 
+def serve_accessories_cell_photo(request, entry_id, col):
+    from .models import AccessoriesItemEntry
+    entry = get_object_or_404(AccessoriesItemEntry, pk=entry_id)
+    c = col.lower()
+    photo_data = getattr(entry, f'photo_data_{c}', None)
+    photo_name = getattr(entry, f'photo_name_{c}', None) or 'photo.jpg'
+    content_type = getattr(entry, f'photo_content_type_{c}', None) or 'image/jpeg'
+    
+    if not photo_data:
+        raise Http404("Photo not found")
+        
+    response = HttpResponse(photo_data, content_type=content_type)
+    response['Content-Disposition'] = f'inline; filename="{photo_name}"'
+    response['Cache-Control'] = 'public, max-age=31536000'
+    return response
+
+
+
 @login_required
 def reset_database_view(request):
     if not request.user.is_superuser:
@@ -3978,8 +4149,18 @@ def accessories_detail_view(request, job_card_no):
             entry.article_b = request.POST.get(f'{prefix}_article_b', '').strip() or None
             entry.article_c = request.POST.get(f'{prefix}_article_c', '').strip() or None
             entry.article_d = request.POST.get(f'{prefix}_article_d', '').strip() or None
-            
+
+            # Save per-cell yellow-status photos if uploaded
+            for col in ['a', 'b', 'c', 'd']:
+                file_key = f'{prefix}_photo_{col}'
+                photo_file = request.FILES.get(file_key)
+                if photo_file:
+                    setattr(entry, f'photo_data_{col}', photo_file.read())
+                    setattr(entry, f'photo_name_{col}', photo_file.name)
+                    setattr(entry, f'photo_content_type_{col}', photo_file.content_type)
+
             entry.save()
+
 
         record.notes = request.POST.get('notes', '').strip()
         record.save(update_fields=['notes', 'updated_at'])
