@@ -222,11 +222,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'stitching' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -270,11 +269,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'stitching' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_stitching_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -321,11 +319,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'jobwork' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_jobwork_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -373,11 +370,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'jobwork1' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_jobwork1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -433,11 +429,10 @@
             <td><strong>{{ report.total_pcs }}</strong></td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'embroidery' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_embroidery_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -493,11 +488,10 @@
             <td><strong>{{ report.total_pcs }}</strong></td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'printing' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_printing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -551,11 +545,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'singleneedle' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -599,11 +592,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'singleneedle' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_singleneedle_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -655,11 +647,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'sewing' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -703,11 +694,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'sewing' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_sewing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -759,11 +749,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'sewing1' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -807,11 +796,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'sewing1' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_sewing1_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -857,11 +845,10 @@
             <td>{{ report.photos.count }} photo{{ report.photos.count|pluralize }}</td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'finishing' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
               {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db;" title="Edit">✏️</a>
-              <a href="{% url 'delete_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</a>
-              {% else %}
-              <span class="text-muted">—</span>
+              <a href="{% url 'delete_finishing_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></a>
               {% endif %}
             </td>
           </tr>
@@ -943,12 +930,14 @@
             </td>
             <td>{{ report.created_by.username|default:"—" }}</td>
             <td style="white-space: nowrap;">
+              <a href="{% url 'print_report' 'miscellaneous' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; text-decoration:none;" title="Print Report">🖨️</a>
+              {% if user.is_superuser or user.profile.person_type == 'ADMIN' %}
               <a href="{% url 'edit_miscellaneous_report' report.id %}" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; text-decoration:none;" title="Edit">✏️</a>
-              <form method="POST" action="{% url 'delete_miscellaneous_report' report.id %}" style="display:inline;"
-                    onsubmit="return confirm('Delete this miscellaneous report?');">
+              <form method="POST" action="{% url 'delete_miscellaneous_report' report.id %}" style="display:inline;" onsubmit="return confirm('Delete this miscellaneous report?');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#ef4444; border:1px solid #fca5a5;" title="Delete">🗑️</button>
+                <button type="submit" class="btn btn-sm" style="padding:0.25rem 0.5rem; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; display:inline-flex; align-items:center; justify-content:center;" title="Delete"><span style="color:#ef4444; filter:drop-shadow(0px 0px 1px rgba(0,0,0,0.55)); font-size: 1rem;">🗑️</span></button>
               </form>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

@@ -336,6 +336,7 @@ def manage_masters(request):
             name = request.POST.get('name')
             department = request.POST.get('department')
             upi_id = request.POST.get('upi_id', '').strip() or None
+            article = request.POST.get('article', '').strip() or None
             master_id = request.POST.get('master_id')
             if name and department:
                 from .models import MasterName
@@ -345,12 +346,15 @@ def manage_masters(request):
                         master.name = name.strip()
                         master.department = department
                         master.upi_id = upi_id
+                        master.article = article if department == 'Vendor' else None
                         master.save()
                         messages.success(request, f'Successfully updated master {name}!')
                 else:
+                    master_article = article if department == 'Vendor' else None
                     master, created = MasterName.objects.get_or_create(
                         name=name.strip(),
                         department=department,
+                        article=master_article,
                         defaults={'upi_id': upi_id}
                     )
                     if not created:
@@ -409,10 +413,12 @@ def manage_masters(request):
             return redirect('manage_masters')
 
     from .models import MasterName, RateDefinition
-    masters = MasterName.objects.all().order_by('department', 'name')
+    masters = MasterName.objects.exclude(department='Vendor').order_by('department', 'name')
+    vendors = MasterName.objects.filter(department='Vendor').order_by('name', 'article')
     rate_definitions = RateDefinition.objects.all().order_by('name')
     context = {
         'masters': masters,
+        'vendors': vendors,
         'rate_definitions': rate_definitions,
         'person_type': person_type
     }
@@ -561,7 +567,7 @@ def create_master_entry(request):
             )
 
             messages.success(request, f'Master entry "{entry}" created successfully.')
-            log_activity(request.user, 'CREATE', 'Master Entry', entry.job_card_number, f"Party: {entry.party_name or '—'} | Master: {entry.master_name or '—'}")
+            log_activity(request.user, 'CREATE', 'Master Entry', entry.job_card_number, f"Job Card: {entry.job_card_number} | Date: {entry.date}")
             return redirect('dashboard')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -2292,7 +2298,7 @@ def edit_master_entry(request, pk):
     entry = get_object_or_404(MasterEntry, pk=pk)
     if not check_edit_permission(request, entry): raise PermissionDenied
     if request.method == 'POST':
-        _fields = ['party_name', 'master_name', 'po_number', 'style_number']
+        _fields = ['date', 'job_card_number']
         _old = capture_snapshot(entry, _fields)
         form = MasterEntryForm(request.POST, instance=entry)
         if form.is_valid():
@@ -2348,7 +2354,7 @@ def delete_master_entry(request, pk):
     if not check_edit_permission(request, entry): raise PermissionDenied
     if request.method == 'POST':
         jc_no = entry.job_card_number
-        _summary = f"Party: {entry.party_name or '—'} | Master: {entry.master_name or '—'}"
+        _summary = f"Job Card: {entry.job_card_number} | Date: {entry.date}"
         entry.delete()
         messages.success(request, 'Master entry deleted.')
         log_activity(request.user, 'DELETE', 'Master Entry', jc_no, _summary)
@@ -3835,21 +3841,34 @@ def accessories_view(request):
         .annotate(total=Sum('total_pcs'), item_name=Max('item_name'))
         .order_by('job_card_no')
     )
-    existing = {r.job_card_no: r for r in AccessoriesRecord.objects.prefetch_related('entries').all()}
+    existing = {r.job_card_no: r for r in AccessoriesRecord.objects.prefetch_related('entries', 'photos').all()}
+    cutting_reports = {cr.job_card_no: cr for cr in CuttingReport.objects.prefetch_related('photos').all()}
 
     job_cards = []
     for jc in jc_data:
         rec = existing.get(jc['job_card_no'])
+        cr = cutting_reports.get(jc['job_card_no'])
         if rec and rec.is_started:
             status = 'complete' if rec.is_complete else 'pending'
         else:
             status = 'new'
+            
+        # Collect photos from both cutting report and accessories record
+        job_card_photos = []
+        if cr:
+            for p in cr.photos.all():
+                job_card_photos.append({'id': p.id, 'type': 'cutting'})
+        if rec:
+            for p in rec.photos.all():
+                job_card_photos.append({'id': p.id, 'type': 'accessories'})
+
         job_cards.append({
             'job_card_no': jc['job_card_no'],
             'total_pcs':   jc['total'],
             'item_name':   jc['item_name'] or '—',
             'record':      rec,
             'status':      status,
+            'photos':      job_card_photos,
         })
 
     # Find all unique item names in database entries, subtract standard ones, and sort the rest
@@ -3949,6 +3968,17 @@ def accessories_detail_view(request, job_card_no):
             entry.status_b = request.POST.get(f'{prefix}_status_b', '')
             entry.status_c = request.POST.get(f'{prefix}_status_c', '')
             entry.status_d = request.POST.get(f'{prefix}_status_d', '')
+            
+            # Save vendor and article values (always save or only if status is yellow)
+            entry.vendor_a  = request.POST.get(f'{prefix}_vendor_a', '').strip() or None
+            entry.vendor_b  = request.POST.get(f'{prefix}_vendor_b', '').strip() or None
+            entry.vendor_c  = request.POST.get(f'{prefix}_vendor_c', '').strip() or None
+            entry.vendor_d  = request.POST.get(f'{prefix}_vendor_d', '').strip() or None
+            entry.article_a = request.POST.get(f'{prefix}_article_a', '').strip() or None
+            entry.article_b = request.POST.get(f'{prefix}_article_b', '').strip() or None
+            entry.article_c = request.POST.get(f'{prefix}_article_c', '').strip() or None
+            entry.article_d = request.POST.get(f'{prefix}_article_d', '').strip() or None
+            
             entry.save()
 
         record.notes = request.POST.get('notes', '').strip()
@@ -3979,10 +4009,22 @@ def accessories_detail_view(request, job_card_no):
         return redirect('accessories_detail', job_card_no=job_card_no)
 
     custom_names_obj = record.entries.exclude(item_name__in=ACCESSORIES_ITEMS).order_by('sr_no')
+    
+    # Query masters in Vendor department and group articles by vendor
+    from collections import defaultdict
+    from .models import MasterName
+    vendor_groups = defaultdict(list)
+    for m in MasterName.objects.filter(department='Vendor').order_by('name', 'article'):
+        if m.article and m.article not in vendor_groups[m.name]:
+            vendor_groups[m.name].append(m.article)
+            
+    import json
+    vendor_groups_json = json.dumps(dict(vendor_groups))
 
     return render(request, 'accessories_detail.html', {
         'record': record, 'entries': entries, 'is_admin': is_admin,
         'custom_names_obj': custom_names_obj,
+        'vendor_groups_json': vendor_groups_json,
     })
 
 
@@ -4190,3 +4232,82 @@ def edit_miscellaneous_report(request, pk):
         'report': report,
         'is_edit': True,
     })
+
+
+from decimal import Decimal
+
+@login_required
+def print_report_view(request, report_type, pk):
+    # Mapping report types to Django models and their image serve strings
+    model_mapping = {
+        'cutting': (CuttingReport, 'cutting'),
+        'stitching': (StitchingReport, 'p4'),
+        'jobwork': (JobWorkReport, 'jobwork'),
+        'jobwork1': (JobWork1Report, 'jobwork1'),
+        'embroidery': (EmbroideryReport, 'embroidery'),
+        'printing': (PrintingReport, 'printing'),
+        'singleneedle': (SingleneedleReport, 'singleneedle'),
+        'sewing': (SewingReport, 'sewing'),
+        'sewing1': (Sewing1Report, 'sewing1'),
+        'finishing': (FinishingReport, 'finishing'),
+        'miscellaneous': (MiscellaneousReport, 'misc'),
+    }
+
+    if report_type not in model_mapping:
+        raise Http404("Report type not found")
+
+    model_class, image_model_name = model_mapping[report_type]
+    report = get_object_or_404(model_class, pk=pk)
+
+    # Get all model fields in a key-value format (excluding technical/relation fields)
+    excluded_fields = {
+        'id', 'signature', 'signature_2', 'created_at', 'updated_at',
+        'created_by', 'cutting_report', 'master_entry', 'rate_definition'
+    }
+    
+    fields_list = []
+    for field in report._meta.fields:
+        if field.name in excluded_fields:
+            continue
+        
+        val = getattr(report, field.name)
+        if val is None:
+            val_str = '—'
+        elif isinstance(val, bool):
+            val_str = 'Yes' if val else 'No'
+        elif hasattr(val, 'strftime'):
+            val_str = val.strftime('%d-%b-%Y')
+        elif isinstance(val, (int, float, Decimal)):
+            val_str = str(val)
+        else:
+            val_str = str(val)
+
+        fields_list.append({
+            'label': field.verbose_name.title() if hasattr(field, 'verbose_name') else field.name.replace('_', ' ').title(),
+            'value': val_str
+        })
+
+    color_details = None
+    if report_type == 'cutting' and hasattr(report, 'color_details'):
+        color_details = report.color_details.all()
+
+    photos = []
+    files = []
+    if report_type == 'miscellaneous':
+        files = report.files.all() if hasattr(report, 'files') else []
+    else:
+        photos = report.photos.all() if hasattr(report, 'photos') else []
+
+    context = {
+        'report': report,
+        'report_type': report_type,
+        'report_type_title': report_type.replace('_', ' ').title(),
+        'fields_list': fields_list,
+        'color_details': color_details,
+        'photos': photos,
+        'files': files,
+        'image_model_name': image_model_name,
+    }
+
+    return render(request, 'report_print_detail.html', context)
+

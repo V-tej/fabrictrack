@@ -174,6 +174,75 @@
     </div>
   </div>
 
+  <!-- COLUMN 3: VENDORS & ARTICLES -->
+  <div>
+    <div class="section-card" style="margin-bottom: 2rem;">
+      <h2 class="section-title" id="vendorFormCardTitle">Add New Vendor & Article</h2>
+      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;" id="vendorForm">
+        {% csrf_token %}
+        <input type="hidden" name="master_id" id="editVendorId" value="">
+        <!-- Automatically set department to 'Vendor' -->
+        <input type="hidden" name="department" value="Vendor">
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Vendor Name (e.g., V1, V2)</label>
+          <input type="text" name="name" id="vendorNameInput" class="form-control" required placeholder="Enter vendor name...">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Article Name</label>
+          <input type="text" name="article" id="vendorArticleInput" class="form-control" required placeholder="Enter article name...">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem; display: flex; gap: 10px;">
+          <button type="submit" name="add_master" id="btnSaveVendor" class="btn btn-primary" style="flex: 1; background: #fbbf24; border-color: #fbbf24; color: #1e293b; font-weight: 700;">Add Vendor & Article</button>
+          <button type="button" id="btnCancelEditVendor" class="btn btn-secondary" style="display: none; background: #475569; border-color: #475569;">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="section-card">
+      <h2 class="section-title">Current Vendors & Articles</h2>
+      {% if vendors %}
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Article</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for vendor in vendors %}
+              <tr>
+                <td style="font-weight: 700; color: #fbbf24;">{{ vendor.name }}</td>
+                <td style="font-size: 0.9rem;">{{ vendor.article }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-edit-vendor" data-id="{{ vendor.id }}" data-name="{{ vendor.name }}" data-article="{{ vendor.article }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
+                    Edit
+                  </button>
+                  <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ vendor.name }} - {{ vendor.article }}?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="master_id" value="{{ vendor.id }}">
+                    <button type="submit" name="delete_master" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; background: #fee2e2; color: #ef4444; border-color: #fca5a5;">
+                      Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon">🏪</div>
+          <p>No vendors or articles created yet. Add one above to get started.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -218,6 +287,44 @@ document.addEventListener('DOMContentLoaded', function() {
         masterFormTitle.textContent = 'Add New Master / Worker';
         btnSaveMaster.textContent = 'Add Master';
         btnCancelEditMaster.style.display = 'none';
+    });
+
+    // Edit Vendor
+    const btnEditVendors = document.querySelectorAll('.btn-edit-vendor');
+    const vendorFormTitle = document.querySelector('#vendorFormCardTitle');
+    const editVendorIdInput = document.querySelector('#editVendorId');
+    const vendorNameInput = document.querySelector('#vendorNameInput');
+    const vendorArticleInput = document.querySelector('#vendorArticleInput');
+    const btnSaveVendor = document.querySelector('#btnSaveVendor');
+    const btnCancelEditVendor = document.querySelector('#btnCancelEditVendor');
+
+    btnEditVendors.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            const article = this.getAttribute('data-article');
+
+            editVendorIdInput.value = id;
+            vendorNameInput.value = name;
+            vendorArticleInput.value = article;
+
+            vendorFormTitle.textContent = 'Edit Vendor & Article';
+            btnSaveVendor.textContent = 'Save Vendor & Article';
+            btnCancelEditVendor.style.display = 'inline-block';
+            
+            // Scroll to the form
+            document.querySelector('#vendorForm').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    btnCancelEditVendor.addEventListener('click', function() {
+        editVendorIdInput.value = '';
+        vendorNameInput.value = '';
+        vendorArticleInput.value = '';
+
+        vendorFormTitle.textContent = 'Add New Vendor & Article';
+        btnSaveVendor.textContent = 'Add Vendor & Article';
+        btnCancelEditVendor.style.display = 'none';
     });
 
     // Edit Rate

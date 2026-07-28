@@ -92,4 +92,7 @@ urlpatterns = [
 
     # Activity Log
     path('activity-log/', views.activity_log_view, name='activity_log'),
+
+    # Print Report Route
+    path('report/<str:report_type>/<int:pk>/print/', views.print_report_view, name='print_report'),
 ]

@@ -109,17 +109,33 @@
   <!-- ── Pending Tasks ──────────────────────────────────────────────── -->
   {% if pending_tasks %}
   <div class="section-card" id="pending-tasks" style="border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.02);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
       <h2 class="section-title" style="color: #f59e0b; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
         ⏳ Pending Tasks <span class="badge" style="background: #f59e0b; color: #fff;">{{ pending_tasks.count }}</span>
       </h2>
       <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="max-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
     </div>
-    <div class="table-wrapper">
-      <table class="data-table">
+    <!-- Status Filter Buttons -->
+    <div id="pendingStatusFilters" style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <button class="pending-filter-btn active" data-filter="all" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #f59e0b; background: #f59e0b; color: #fff; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">All</button>
+      <button class="pending-filter-btn" data-filter="pending1" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(1)</button>
+      <button class="pending-filter-btn" data-filter="pending2" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(2)</button>
+      <button class="pending-filter-btn" data-filter="pending3" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(3)</button>
+      <button class="pending-filter-btn" data-filter="pending4" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(4)</button>
+      <button class="pending-filter-btn" data-filter="pending5" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(5)</button>
+      <button class="pending-filter-btn" data-filter="pending6" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(6)</button>
+      <button class="pending-filter-btn" data-filter="pending7" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(7)</button>
+      <button class="pending-filter-btn" data-filter="pending8" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(8)</button>
+      <button class="pending-filter-btn" data-filter="pending9" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(9)</button>
+      <button class="pending-filter-btn" data-filter="pending10" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #ef4444; background: transparent; color: #ef4444; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">Pending(10)</button>
+      <button class="pending-filter-btn" data-filter="done" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #22c55e; background: transparent; color: #22c55e; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">✅ Done</button>
+      <button class="pending-filter-btn" data-filter="inprogress" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #f59e0b; background: transparent; color: #f59e0b; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🔄 In Progress</button>
+    </div>
+    <div class="table-wrapper" style="overflow-x: auto;">
+      <table class="data-table" id="pendingTasksTable" style="min-width: 900px;">
         <thead>
           <tr>
-            <th>Job Card No</th>
+            <th style="position: sticky; left: 0; z-index: 3; background: #111827; min-width: 120px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Job Card No</th>
             <th>Date Assigned</th>
             {% if person_type == 'ADMIN' or user.is_superuser %}
               <th>Cutting</th>
@@ -136,18 +152,27 @@
             <th>Action</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="pendingTasksBody">
           {% for task in pending_tasks %}
-          <tr>
-            <td><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
+          {% with cutting_info=task.cutting_report_info %}
+          <tr data-active-step="{{ task.active_step }}">
+            <td style="position: sticky; left: 0; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);"><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
             <td>{{ task.date|date:"d-b-Y" }}</td>
-            {% if person_type == 'ADMIN' or user.is_superuser %}
-              <td>
+             {% if person_type == 'ADMIN' or user.is_superuser %}
+              <td data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
                 {% if task.requires_cutting %}
-                  {% if task.is_cutting_done %}✅ Done{% else %}❌ Pending({{ task.requires_cutting }}){% endif %}
+                  {% if task.is_cutting_done %}
+                    <span style="color:#22c55e;">✅ Done</span>
+                    {% if cutting_info %}
+                      <div style="font-size:0.78rem; color:#94a3b8; margin-top:3px; line-height:1.3;">
+                        <span title="Fabric Type &amp; Quality" style="display:block;">🧵 {{ cutting_info.fabric_type_quality }}</span>
+                        <span title="Item Name" style="display:block;">📦 {{ cutting_info.item_name }}</span>
+                      </div>
+                    {% endif %}
+                  {% else %}❌ Pending({{ task.requires_cutting }}){% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_jobwork %}{% if task.is_jobwork_done %}done{% elif task.is_jobwork_in_progress %}inprogress{% else %}pending{{ task.requires_jobwork }}{% endif %}{% endif %}">
                 {% if task.requires_jobwork %}
                   {% if task.is_jobwork_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -158,7 +183,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_jobwork1 %}{% if task.is_jobwork1_done %}done{% elif task.is_jobwork1_in_progress %}inprogress{% else %}pending{{ task.requires_jobwork1 }}{% endif %}{% endif %}">
                 {% if task.requires_jobwork1 %}
                   {% if task.is_jobwork1_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -169,7 +194,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_embroidery %}{% if task.is_embroidery_done %}done{% elif task.is_embroidery_in_progress %}inprogress{% else %}pending{{ task.requires_embroidery }}{% endif %}{% endif %}">
                 {% if task.requires_embroidery %}
                   {% if task.is_embroidery_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -180,7 +205,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_printing %}{% if task.is_printing_done %}done{% elif task.is_printing_in_progress %}inprogress{% else %}pending{{ task.requires_printing }}{% endif %}{% endif %}">
                 {% if task.requires_printing %}
                   {% if task.is_printing_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -191,7 +216,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_stitching %}{% if task.is_stitching_done %}done{% elif task.is_stitching_in_progress %}inprogress{% else %}pending{{ task.requires_stitching }}{% endif %}{% endif %}">
                 {% if task.requires_stitching %}
                   {% if task.is_stitching_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -202,7 +227,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_singleneedle %}{% if task.is_singleneedle_done %}done{% elif task.is_singleneedle_in_progress %}inprogress{% else %}pending{{ task.requires_singleneedle }}{% endif %}{% endif %}">
                 {% if task.requires_singleneedle %}
                   {% if task.is_singleneedle_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -213,7 +238,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_sewing %}{% if task.is_sewing_done %}done{% elif task.is_sewing_in_progress %}inprogress{% else %}pending{{ task.requires_sewing }}{% endif %}{% endif %}">
                 {% if task.requires_sewing %}
                   {% if task.is_sewing_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -224,7 +249,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_sewing1 %}{% if task.is_sewing1_done %}done{% elif task.is_sewing1_in_progress %}inprogress{% else %}pending{{ task.requires_sewing1 }}{% endif %}{% endif %}">
                 {% if task.requires_sewing1 %}
                   {% if task.is_sewing1_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -235,7 +260,7 @@
                   {% endif %}
                 {% else %}—{% endif %}
               </td>
-              <td>
+              <td data-status="{% if task.requires_finishing %}{% if task.is_finishing_done %}done{% else %}pending{{ task.requires_finishing }}{% endif %}{% endif %}">
                 {% if task.requires_finishing %}
                   {% if task.is_finishing_done %}✅ Done{% else %}❌ Pending({{ task.requires_finishing }}){% endif %}
                 {% else %}—{% endif %}
@@ -363,6 +388,7 @@
               {% endif %}
             </td>
           </tr>
+          {% endwith %}
           {% endfor %}
         </tbody>
       </table>
@@ -560,125 +586,150 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('pendingSearch');
-    const tableBody = document.querySelector('#pending-tasks tbody');
+    const tableBody   = document.getElementById('pendingTasksBody');
     if (!tableBody) return;
-    
-    const rows = Array.from(tableBody.querySelectorAll('tr'));
-    let filteredRows = [...rows];
-    let currentPage = 1;
+
+    const allRows = Array.from(tableBody.querySelectorAll('tr'));
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let currentPage   = 1;
     const itemsPerPage = 10;
-    
-    // Create pagination container
-    const card = document.getElementById('pending-tasks');
-    const paginationContainer = document.createElement('div');
-    paginationContainer.id = 'pendingPagination';
-    paginationContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; gap: 1rem;';
-    
-    paginationContainer.innerHTML = `
-      <div style="font-size: 0.9rem; color: var(--text-muted);" id="paginationInfo">Showing 1-10 of 10 tasks</div>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn btn-secondary" id="btnPrev" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #334155; border-color: #334155;">Previous</button>
-        <button class="btn btn-secondary" id="btnNext" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #334155; border-color: #334155;">Next</button>
-      </div>
-    `;
-    
-    card.appendChild(paginationContainer);
-    
-    const btnPrev = document.getElementById('btnPrev');
-    const btnNext = document.getElementById('btnNext');
-    const paginationInfo = document.getElementById('paginationInfo');
-    
-    function renderPage() {
-      const totalItems = filteredRows.length;
-      const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-      
-      if (currentPage > totalPages) currentPage = totalPages;
-      if (currentPage < 1) currentPage = 1;
-      
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-      
-      // Hide all rows first
-      rows.forEach(r => r.style.display = 'none');
-      
-      // Show only active rows for this page
-      filteredRows.slice(startIndex, endIndex).forEach(r => r.style.display = '');
-      
-      // Update pagination info
-      if (totalItems === 0) {
-        paginationInfo.textContent = 'Showing 0-0 of 0 tasks';
-      } else {
-        paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalItems} tasks (Page ${currentPage} of ${totalPages})`;
-      }
-      
-      // Enable/Disable buttons
-      btnPrev.disabled = (currentPage === 1);
-      btnPrev.style.opacity = (currentPage === 1) ? '0.5' : '1';
-      btnPrev.style.cursor = (currentPage === 1) ? 'not-allowed' : 'pointer';
-      
-      btnNext.disabled = (currentPage === totalPages);
-      btnNext.style.opacity = (currentPage === totalPages) ? '0.5' : '1';
-      btnNext.style.cursor = (currentPage === totalPages) ? 'not-allowed' : 'pointer';
-      
-      // Hide container if total items is less than or equal to itemsPerPage
-      if (totalItems <= itemsPerPage) {
-        paginationContainer.style.display = 'none';
-      } else {
-        paginationContainer.style.display = 'flex';
-      }
-    }
-    
-    btnPrev.addEventListener('click', function() {
-      if (currentPage > 1) {
-        currentPage--;
-        renderPage();
-      }
-    });
-    
-    btnNext.addEventListener('click', function() {
-      const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderPage();
-      }
-    });
-    
-    if (searchInput) {
-      searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        
-        filteredRows = rows.filter(row => {
-          const jobCardCell = row.querySelector('td:first-child');
-          if (jobCardCell) {
-            const text = jobCardCell.textContent.toLowerCase();
-            return text.includes(searchTerm);
-          }
-          return false;
+
+    // ── Status filter buttons ─────────────────────────────────────────────
+    var filterBtns = document.querySelectorAll('.pending-filter-btn');
+    filterBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        currentFilter = this.dataset.filter;
+        currentPage   = 1;
+
+        filterBtns.forEach(function(b) {
+          b.style.background = 'transparent';
+          if (b.dataset.filter === 'done') b.style.color = '#22c55e';
+          else if (b.dataset.filter === 'all') b.style.color = '#fff';
+          else if (b.dataset.filter === 'inprogress') b.style.color = '#f59e0b';
+          else b.style.color = '#ef4444';
         });
-        
-        currentPage = 1;
-        renderPage();
+        if (currentFilter === 'done') { this.style.background = '#22c55e'; this.style.color = '#fff'; }
+        else if (currentFilter === 'inprogress') { this.style.background = '#f59e0b'; this.style.color = '#fff'; }
+        else if (currentFilter === 'all') { this.style.background = '#f59e0b'; this.style.color = '#fff'; }
+        else { this.style.background = '#ef4444'; this.style.color = '#fff'; }
+
+        applyFilters();
+      });
+    });
+
+    // ── Search ────────────────────────────────────────────────────────────
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        currentSearch = this.value.toLowerCase().trim();
+        currentPage   = 1;
+        applyFilters();
       });
     }
-    
-    // Initial page load
-    renderPage();
+
+    // ── Filter + pagination ───────────────────────────────────────────────
+    var lastFiltered = allRows.slice();
+
+    function applyFilters() {
+      lastFiltered = allRows.filter(function(row) {
+        if (currentSearch) {
+          var cell = row.querySelector('td:first-child');
+          if (!cell || !cell.textContent.toLowerCase().includes(currentSearch)) return false;
+        }
+        if (currentFilter !== 'all') {
+          var cells = row.querySelectorAll('td[data-status]');
+          var hasMatchingCell = false;
+          cells.forEach(function(c) {
+            var status = (c.getAttribute('data-status') || '').trim();
+            if (status === currentFilter) {
+              hasMatchingCell = true;
+            }
+          });
+          if (!hasMatchingCell) return false;
+        }
+        return true;
+      });
+
+      // Update visibility of individual status cells
+      allRows.forEach(function(row) {
+        var cells = row.querySelectorAll('td[data-status]');
+        cells.forEach(function(cell) {
+          var status = (cell.getAttribute('data-status') || '').trim();
+          if (currentFilter === 'all') {
+            cell.style.visibility = '';
+          } else {
+            if (status === currentFilter) {
+              cell.style.visibility = '';
+            } else {
+              cell.style.visibility = 'hidden';
+            }
+          }
+        });
+      });
+
+      renderPage();
+    }
+
+    var card = document.getElementById('pending-tasks');
+    var paginationContainer = document.createElement('div');
+    paginationContainer.id = 'pendingPagination';
+    paginationContainer.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;flex-wrap:wrap;gap:1rem;';
+    paginationContainer.innerHTML = '<div style="font-size:0.9rem;color:var(--text-muted);" id="paginationInfo">Showing tasks</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" id="btnPrev" style="padding:0.35rem 0.75rem;font-size:0.85rem;background:#334155;border-color:#334155;">Previous</button><button class="btn btn-secondary" id="btnNext" style="padding:0.35rem 0.75rem;font-size:0.85rem;background:#334155;border-color:#334155;">Next</button></div>';
+    card.appendChild(paginationContainer);
+
+    var btnPrev = document.getElementById('btnPrev');
+    var btnNext = document.getElementById('btnNext');
+    var paginationInfo = document.getElementById('paginationInfo');
+
+    function renderPage() {
+      var totalItems = lastFiltered.length;
+      var totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      var startIndex = (currentPage - 1) * itemsPerPage;
+      var endIndex   = Math.min(startIndex + itemsPerPage, totalItems);
+
+      allRows.forEach(function(r) { r.style.display = 'none'; });
+      lastFiltered.slice(startIndex, endIndex).forEach(function(r) { r.style.display = ''; });
+
+      paginationInfo.textContent = totalItems === 0
+        ? 'No tasks match this filter'
+        : 'Showing ' + (startIndex + 1) + '–' + endIndex + ' of ' + totalItems + ' tasks (Page ' + currentPage + ' of ' + totalPages + ')';
+
+      btnPrev.disabled = currentPage === 1;
+      btnPrev.style.opacity = currentPage === 1 ? '0.5' : '1';
+      btnPrev.style.cursor  = currentPage === 1 ? 'not-allowed' : 'pointer';
+      btnNext.disabled = currentPage >= totalPages;
+      btnNext.style.opacity = currentPage >= totalPages ? '0.5' : '1';
+      btnNext.style.cursor  = currentPage >= totalPages ? 'not-allowed' : 'pointer';
+      paginationContainer.style.display = totalItems <= itemsPerPage ? 'none' : 'flex';
+    }
+
+    btnPrev.addEventListener('click', function() {
+      if (currentPage > 1) { currentPage--; renderPage(); }
+    });
+    btnNext.addEventListener('click', function() {
+      var totalPages = Math.ceil(lastFiltered.length / itemsPerPage);
+      if (currentPage < totalPages) { currentPage++; renderPage(); }
+    });
+
+    applyFilters();
   });
 
   // ── Completed Job Cards Search ────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    const completedSearch = document.getElementById('completedSearch');
-    const completedBody   = document.getElementById('completedTableBody');
+    var completedSearch = document.getElementById('completedSearch');
+    var completedBody   = document.getElementById('completedTableBody');
     if (!completedSearch || !completedBody) return;
-
     completedSearch.addEventListener('input', function() {
-      const term = this.value.toLowerCase().trim();
+      var term = this.value.toLowerCase().trim();
       completedBody.querySelectorAll('tr').forEach(function(row) {
-        const jobCardCell = row.querySelector('td:first-child');
-        const text = jobCardCell ? jobCardCell.textContent.toLowerCase() : '';
-        row.style.display = text.includes(term) ? '' : 'none';
+        var cell = row.querySelector('td:first-child');
+        row.style.display = (cell && cell.textContent.toLowerCase().includes(term)) ? '' : 'none';
       });
     });
   });
 </script>
 {% endblock %}
+

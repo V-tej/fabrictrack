@@ -71,16 +71,20 @@ class MasterName(models.Model):
         ('Singleneedle', 'Singleneedle'),
         ('Sewing', 'Sewing'),
         ('Sewing 1', 'Sewing 1'),
+        ('Vendor', 'Vendor'),
     ]
     name = models.CharField(max_length=100)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
     upi_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="UPI ID / VPA")
+    article = models.CharField(max_length=150, blank=True, null=True)
 
     class Meta:
         ordering = ['department', 'name']
-        unique_together = ('name', 'department')
+        unique_together = ('name', 'department', 'article')
 
     def __str__(self):
+        if self.department == 'Vendor' and self.article:
+            return f"{self.name} - {self.article}"
         return f"{self.name} ({self.department})"
 
 
@@ -755,6 +759,40 @@ class JobCardRequirement(models.Model):
     def __str__(self):
         return f"Requirement: {self.job_card_no}"
 
+    @property
+    def active_step(self):
+        """
+        Returns the 'current active step' of this job card as a string token:
+          - "pendingN"   → the first required step that is not yet done, with sequence N
+          - "inprogress" → the first incomplete required step is currently in-progress
+          - "done"       → all required steps are completed
+        This is used by the dashboard filter buttons so that clicking "Pending(3)"
+        shows ONLY job cards whose FIRST incomplete step is step 3.
+        """
+        steps = [
+            (self.requires_cutting,      self.is_cutting_done,      False),
+            (self.requires_jobwork,      self.is_jobwork_done,      self.is_jobwork_in_progress),
+            (self.requires_jobwork1,     self.is_jobwork1_done,     self.is_jobwork1_in_progress),
+            (self.requires_embroidery,   self.is_embroidery_done,   self.is_embroidery_in_progress),
+            (self.requires_printing,     self.is_printing_done,     self.is_printing_in_progress),
+            (self.requires_stitching,    self.is_stitching_done,    self.is_stitching_in_progress),
+            (self.requires_singleneedle, self.is_singleneedle_done, self.is_singleneedle_in_progress),
+            (self.requires_sewing,       self.is_sewing_done,       self.is_sewing_in_progress),
+            (self.requires_sewing1,      self.is_sewing1_done,      self.is_sewing1_in_progress),
+            (self.requires_finishing,    self.is_finishing_done,    False),
+        ]
+        # Filter only required (seq > 0) and not yet done
+        incomplete = [(seq, in_prog) for seq, done, in_prog in steps if seq > 0 and not done]
+        if not incomplete:
+            return 'done'
+        # Find the step with the minimum sequence number
+        min_seq = min(seq for seq, _ in incomplete)
+        # Check if the minimum-sequence step is in-progress
+        for seq, in_prog in incomplete:
+            if seq == min_seq and in_prog:
+                return 'inprogress'
+        return f'pending{min_seq}'
+
     def is_step_enabled(self, step_seq, step_done_attr):
         """A step is enabled if all required steps with a lower sequence number are done."""
         if step_seq == 0:
@@ -925,6 +963,18 @@ class JobCardRequirement(models.Model):
         r = Sewing1Report.objects.filter(job_card_no=self.job_card_no).first()
         return r.created_by if r else None
 
+    @property
+    def cutting_report_info(self):
+        """Returns dict with fabric_type_quality and item_name from the latest CuttingReport."""
+        from .models import CuttingReport
+        r = CuttingReport.objects.filter(job_card_no=self.job_card_no).first()
+        if r:
+            return {
+                'fabric_type_quality': r.fabric_type_quality,
+                'item_name': r.item_name,
+            }
+        return None
+
 
 # ── Accessories ──────────────────────────────────────────────────────────────
 
@@ -958,10 +1008,10 @@ class AccessoriesRecord(models.Model):
                (e.qty_b is not None and e.qty_b > 0) or \
                (e.qty_c is not None and e.qty_c > 0) or \
                (e.qty_d is not None and e.qty_d > 0) or \
-               e.status_a in ['green', 'red'] or \
-               e.status_b in ['green', 'red'] or \
-               e.status_c in ['green', 'red'] or \
-               e.status_d in ['green', 'red']:
+               e.status_a in ['green', 'red', 'yellow'] or \
+               e.status_b in ['green', 'red', 'yellow'] or \
+               e.status_c in ['green', 'red', 'yellow'] or \
+               e.status_d in ['green', 'red', 'yellow']:
                 return True
         return False
 
@@ -974,35 +1024,35 @@ class AccessoriesRecord(models.Model):
             if e.qty_a and e.qty_a > 0:
                 if e.status_a != 'green':
                     return False
-            elif e.status_a == 'red':
+            elif e.status_a in ['red', 'yellow']:
                 return False
             
             # Check B
             if e.qty_b and e.qty_b > 0:
                 if e.status_b != 'green':
                     return False
-            elif e.status_b == 'red':
+            elif e.status_b in ['red', 'yellow']:
                 return False
 
             # Check C
             if e.qty_c and e.qty_c > 0:
                 if e.status_c != 'green':
                     return False
-            elif e.status_c == 'red':
+            elif e.status_c in ['red', 'yellow']:
                 return False
 
             # Check D
             if e.qty_d and e.qty_d > 0:
                 if e.status_d != 'green':
                     return False
-            elif e.status_d == 'red':
+            elif e.status_d in ['red', 'yellow']:
                 return False
         return True
 
 
 class AccessoriesItemEntry(models.Model):
     """One row in the accessories table — one item per job card."""
-    STATUS_CHOICES = [('green', 'Green'), ('red', 'Red'), ('', 'Not Set')]
+    STATUS_CHOICES = [('green', 'Green'), ('red', 'Red'), ('yellow', 'Yellow'), ('', 'Not Set')]
 
     record    = models.ForeignKey(AccessoriesRecord, on_delete=models.CASCADE, related_name='entries')
     sr_no     = models.PositiveIntegerField()
@@ -1015,6 +1065,16 @@ class AccessoriesItemEntry(models.Model):
     status_b  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
     status_c  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
     status_d  = models.CharField(max_length=10, choices=STATUS_CHOICES, default='', blank=True)
+
+    # Vendor and Article details for yellow status
+    vendor_a  = models.CharField(max_length=150, blank=True, null=True)
+    vendor_b  = models.CharField(max_length=150, blank=True, null=True)
+    vendor_c  = models.CharField(max_length=150, blank=True, null=True)
+    vendor_d  = models.CharField(max_length=150, blank=True, null=True)
+    article_a = models.CharField(max_length=150, blank=True, null=True)
+    article_b = models.CharField(max_length=150, blank=True, null=True)
+    article_c = models.CharField(max_length=150, blank=True, null=True)
+    article_d = models.CharField(max_length=150, blank=True, null=True)
 
     class Meta:
         ordering = ['sr_no']
