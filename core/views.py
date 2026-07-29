@@ -1611,6 +1611,8 @@ def submission_list_view(request):
     date_from_sewing1 = request.GET.get('date_from_sewing1', '')
     date_to_sewing1 = request.GET.get('date_to_sewing1', '')
 
+    # Job card search — filters Cutting Reports by job_card_no
+    jc_search = request.GET.get('jc', '').strip()
 
     # Base querysets with optimized prefetching to avoid N+1 queries
     # All users see all querysets, ordered by current user's first, then by date descending
@@ -1733,6 +1735,10 @@ def submission_list_view(request):
         except ValueError:
             pass
 
+    # Apply job card number search filter (server-side)
+    if jc_search:
+        reports_qs = reports_qs.filter(job_card_no__icontains=jc_search)
+
     if date_from_stitching:
         try:
             p4_qs = p4_qs.filter(created_at__date__gte=datetime.strptime(date_from_stitching, '%Y-%m-%d').date())
@@ -1831,6 +1837,22 @@ def submission_list_view(request):
             p12_qs = p12_qs.filter(created_at__date__lte=datetime.strptime(date_to_sewing1, '%Y-%m-%d').date())
         except ValueError:
             pass
+
+    # Apply job card number search to ALL department querysets (server-side, searches full DB)
+    if jc_search:
+        p4_qs  = p4_qs.filter(job_card_no__icontains=jc_search)
+        p5_qs  = p5_qs.filter(job_card_no__icontains=jc_search)
+        # FinishingReport has no job_card_no — search via lot_no and cutting_report FK
+        p6_qs  = p6_qs.filter(
+            Q(lot_no__icontains=jc_search) |
+            Q(cutting_report__job_card_no__icontains=jc_search)
+        )
+        p7_qs  = p7_qs.filter(job_card_no__icontains=jc_search)
+        p8_qs  = p8_qs.filter(job_card_no__icontains=jc_search)
+        p9_qs  = p9_qs.filter(job_card_no__icontains=jc_search)
+        p10_qs = p10_qs.filter(job_card_no__icontains=jc_search)
+        p11_qs = p11_qs.filter(job_card_no__icontains=jc_search)
+        p12_qs = p12_qs.filter(job_card_no__icontains=jc_search)
 
 
     # Apply Department-Specific Master/Worker Filters if present
@@ -1944,17 +1966,35 @@ def submission_list_view(request):
             p12_in_progress = [r for r in page_obj if not r.line_out_date]
             p12_completed = [r for r in page_obj if r.line_out_date]
     else:
-        # Overview mode: show latest 10 items for each list to ensure fast rendering
-        reports = reports_qs[:ITEMS_OVERVIEW]
-        
-        p4_in_progress = p4_qs.filter(line_out_date__isnull=True)[:ITEMS_OVERVIEW]
-        p4_completed = p4_qs.filter(line_out_date__isnull=False)[:ITEMS_OVERVIEW]
-        
-        p5_in_progress = p5_qs.filter(jobwork_out__isnull=True)[:ITEMS_OVERVIEW]
-        p5_completed = p5_qs.filter(jobwork_out__isnull=False)[:ITEMS_OVERVIEW]
-
-        p11_in_progress = p11_qs.filter(jobwork_out__isnull=True)[:ITEMS_OVERVIEW]
-        p11_completed = p11_qs.filter(jobwork_out__isnull=False)[:ITEMS_OVERVIEW]
+        if jc_search:
+            # When searching by job card, show ALL matching records across every department
+            reports = reports_qs
+            p4_in_progress = list(p4_qs.filter(line_out_date__isnull=True))
+            p4_completed   = list(p4_qs.filter(line_out_date__isnull=False))
+            p5_in_progress = list(p5_qs.filter(jobwork_out__isnull=True))
+            p5_completed   = list(p5_qs.filter(jobwork_out__isnull=False))
+            p11_in_progress = list(p11_qs.filter(jobwork_out__isnull=True))
+            p11_completed   = list(p11_qs.filter(jobwork_out__isnull=False))
+            p6_reports = p6_qs
+            p7_in_progress = list(p7_qs.filter(embroidery_out__isnull=True))
+            p7_completed   = list(p7_qs.filter(embroidery_out__isnull=False))
+            p8_in_progress = list(p8_qs.filter(printing_out__isnull=True))
+            p8_completed   = list(p8_qs.filter(printing_out__isnull=False))
+            p9_in_progress = list(p9_qs.filter(line_out_date__isnull=True))
+            p9_completed   = list(p9_qs.filter(line_out_date__isnull=False))
+            p10_in_progress = list(p10_qs.filter(line_out_date__isnull=True))
+            p10_completed   = list(p10_qs.filter(line_out_date__isnull=False))
+            p12_in_progress = list(p12_qs.filter(line_out_date__isnull=True))
+            p12_completed   = list(p12_qs.filter(line_out_date__isnull=False))
+        else:
+            # Overview mode: show latest 10 items for each list to ensure fast rendering
+            reports = reports_qs[:ITEMS_OVERVIEW]
+            p4_in_progress = p4_qs.filter(line_out_date__isnull=True)[:ITEMS_OVERVIEW]
+            p4_completed = p4_qs.filter(line_out_date__isnull=False)[:ITEMS_OVERVIEW]
+            p5_in_progress = p5_qs.filter(jobwork_out__isnull=True)[:ITEMS_OVERVIEW]
+            p5_completed = p5_qs.filter(jobwork_out__isnull=False)[:ITEMS_OVERVIEW]
+            p11_in_progress = p11_qs.filter(jobwork_out__isnull=True)[:ITEMS_OVERVIEW]
+            p11_completed = p11_qs.filter(jobwork_out__isnull=False)[:ITEMS_OVERVIEW]
         
         p6_reports = p6_qs[:ITEMS_OVERVIEW]
         
@@ -2039,6 +2079,7 @@ def submission_list_view(request):
         'date_to_sewing': date_to_sewing,
         'date_from_sewing1': date_from_sewing1,
         'date_to_sewing1': date_to_sewing1,
+        'jc_search': jc_search,
     })
 
 

@@ -5,6 +5,25 @@
 {% block content %}
 <div class="fade-in" style="display: flex; flex-direction: column;">
 
+  <!-- Global Job Card Search -->
+  <div style="margin-bottom: 1.25rem;">
+    <form method="get" id="globalJcSearchForm" style="display:inline-flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <!-- No filter param here — global search always shows ALL departments -->
+      <div style="position:relative; display:inline-flex; align-items:center;">
+        <span style="position:absolute;left:10px;color:#94a3b8;font-size:15px;pointer-events:none;">🔍</span>
+        <input type="text" name="jc" id="globalJcInput" value="{{ jc_search }}" placeholder="Search Job Card No. across all departments..." title="Press Enter to search all departments"
+          style="padding:0.45rem 2.5rem 0.45rem 2.2rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.9rem;outline:none;height:38px;width:320px;max-width:100%;">
+        {% if jc_search %}
+        <a href="{% url 'submission_list' %}" style="position:absolute;right:10px;color:#94a3b8;font-size:14px;text-decoration:none;line-height:1;" title="Clear search">✕</a>
+        {% endif %}
+      </div>
+      <button type="submit" style="padding:0 1rem;height:38px;border-radius:8px;border:none;background:#3b82f6;color:#fff;font-size:0.85rem;font-weight:600;cursor:pointer;white-space:nowrap;">Search All</button>
+      {% if jc_search %}
+      <span style="font-size:0.82rem;color:#94a3b8;align-self:center;">Showing results for <strong style="color:#fbbf24;">"{{ jc_search }}"</strong> across all departments</span>
+      {% endif %}
+    </form>
+  </div>
+
   <div class="tabs-container" style="margin-bottom: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
     <a href="{% url 'submission_list' %}" class="btn {% if not filter_param %}btn-primary{% else %}btn-secondary{% endif %} btn-sm" style="border-radius: 20px; padding: 0.5rem 1.25rem; font-weight: 500; font-size: 0.9rem; text-decoration: none;">
       All Departments
@@ -65,9 +84,17 @@
           </select>
         </form>
         <div class="job-card-search-wrap" style="display:inline-flex;align-items:center;position:relative;">
-          <span style="position:absolute;left:8px;color:#94a3b8;font-size:14px;pointer-events:none;">🔍</span>
-          <input type="text" id="jcSearch_p1" placeholder="Job Card No..." oninput="filterByJobCard('jcSearch_p1','submissionsCard')" style="padding:0.3rem 0.6rem 0.3rem 1.8rem;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:0.85rem;outline:none;height:32px;width:150px;" />
-          <button onclick="clearJcSearch('jcSearch_p1','submissionsCard')" style="position:absolute;right:6px;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:0;line-height:1;" title="Clear">✕</button>
+          <form method="get" id="cuttingJcSearchForm" style="margin:0;display:inline-flex;align-items:center;position:relative;">
+            <input type="hidden" name="filter" value="p1">
+            {% if master_name_cutting %}<input type="hidden" name="master_name_cutting" value="{{ master_name_cutting }}">{% endif %}
+            {% if date_from_cutting %}<input type="hidden" name="date_from_cutting" value="{{ date_from_cutting }}">{% endif %}
+            {% if date_to_cutting %}<input type="hidden" name="date_to_cutting" value="{{ date_to_cutting }}">{% endif %}
+            <span style="position:absolute;left:8px;color:#94a3b8;font-size:14px;pointer-events:none;">🔍</span>
+            <input type="text" id="jcSearch_p1" name="jc" value="{{ jc_search }}" placeholder="Job Card No..." title="Press Enter to search all records" style="padding:0.3rem 1.8rem 0.3rem 1.8rem;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:0.85rem;outline:none;height:32px;width:165px;" />
+            {% if jc_search %}
+            <a href="?filter=p1{% if master_name_cutting %}&master_name_cutting={{ master_name_cutting }}{% endif %}" style="position:absolute;right:6px;color:#94a3b8;cursor:pointer;font-size:13px;text-decoration:none;line-height:1;" title="Clear search">✕</a>
+            {% endif %}
+          </form>
         </div>
         {% if not filter_param %}
         <a href="?filter=p1" class="btn btn-secondary btn-sm" style="height: 32px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0;">View All</a>
