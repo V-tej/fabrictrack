@@ -549,25 +549,41 @@ def create_master_entry(request):
             entry.save()
 
             # Also create/update JobCardRequirement based on sequence fields
+            req_data = {
+                'date': entry.date,
+                'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
+                'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
+                'requires_jobwork1':     form.cleaned_data.get('requires_jobwork1', 0),
+                'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
+                'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
+                'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
+                'requires_printing':     form.cleaned_data.get('requires_printing', 0),
+                'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
+                'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
+                'requires_sewing1':      form.cleaned_data.get('requires_sewing1', 0),
+            }
             JobCardRequirement.objects.update_or_create(
                 job_card_no=entry.job_card_number,
-                defaults={
-                    'date': entry.date,
-                    'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
-                    'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
-                    'requires_jobwork1':     form.cleaned_data.get('requires_jobwork1', 0),
-                    'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
-                    'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
-                    'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
-                    'requires_printing':     form.cleaned_data.get('requires_printing', 0),
-                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
-                    'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
-                    'requires_sewing1':      form.cleaned_data.get('requires_sewing1', 0),
-                }
+                defaults=req_data,
             )
 
+            # Build detailed create log including sequences
+            req_parts = [f"Job Card: {entry.job_card_number}", f"Date: {entry.date}"]
+            _seq_labels = {
+                'requires_cutting': 'Cutting', 'requires_jobwork': 'Job Work',
+                'requires_jobwork1': 'Job Work 1', 'requires_stitching': 'Stitching',
+                'requires_finishing': 'Finishing', 'requires_embroidery': 'Embroidery',
+                'requires_printing': 'Printing', 'requires_singleneedle': 'Singleneedle',
+                'requires_sewing': 'Sewing', 'requires_sewing1': 'Sewing 1',
+            }
+            for field, label in _seq_labels.items():
+                val = req_data.get(field, 0)
+                if val:
+                    req_parts.append(f"{label} Seq: {val}")
+            _create_details = ' | '.join(req_parts)
+
             messages.success(request, f'Master entry "{entry}" created successfully.')
-            log_activity(request.user, 'CREATE', 'Master Entry', entry.job_card_number, f"Job Card: {entry.job_card_number} | Date: {entry.date}")
+            log_activity(request.user, 'CREATE', 'Master Entry', entry.job_card_number, _create_details)
             return redirect('dashboard')
         else:
             messages.error(request, 'Please fix the errors below.')
@@ -2491,35 +2507,61 @@ def check_edit_permission(request, obj):
 def edit_master_entry(request, pk):
     entry = get_object_or_404(MasterEntry, pk=pk)
     if not check_edit_permission(request, entry): raise PermissionDenied
+
+    # Sequence field mapping: form field -> human label
+    _SEQ_LABELS = {
+        'requires_cutting': 'Cutting Seq', 'requires_jobwork': 'Job Work Seq',
+        'requires_jobwork1': 'Job Work 1 Seq', 'requires_stitching': 'Stitching Seq',
+        'requires_finishing': 'Finishing Seq', 'requires_embroidery': 'Embroidery Seq',
+        'requires_printing': 'Printing Seq', 'requires_singleneedle': 'Singleneedle Seq',
+        'requires_sewing': 'Sewing Seq', 'requires_sewing1': 'Sewing 1 Seq',
+    }
+
     if request.method == 'POST':
-        _fields = ['date', 'job_card_number']
-        _old = capture_snapshot(entry, _fields)
+        # Snapshot BEFORE: MasterEntry fields + existing JobCardRequirement sequences
+        _old = {
+            'Date': str(entry.date),
+            'Job Card Number': str(entry.job_card_number),
+        }
+        _old_req = JobCardRequirement.objects.filter(job_card_no=entry.job_card_number).first()
+        for field, label in _SEQ_LABELS.items():
+            _old[label] = str(getattr(_old_req, field, 0) or 0) if _old_req else '0'
+
         form = MasterEntryForm(request.POST, instance=entry)
         if form.is_valid():
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.save()
-            
+
             # Update the JobCardRequirement with sequence values
+            new_req_data = {
+                'date': entry.date,
+                'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
+                'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
+                'requires_jobwork1':     form.cleaned_data.get('requires_jobwork1', 0),
+                'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
+                'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
+                'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
+                'requires_printing':     form.cleaned_data.get('requires_printing', 0),
+                'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
+                'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
+                'requires_sewing1':      form.cleaned_data.get('requires_sewing1', 0),
+            }
             JobCardRequirement.objects.update_or_create(
                 job_card_no=entry.job_card_number,
-                defaults={
-                    'date': entry.date,
-                    'requires_cutting':      form.cleaned_data.get('requires_cutting', 0),
-                    'requires_jobwork':      form.cleaned_data.get('requires_jobwork', 0),
-                    'requires_jobwork1':     form.cleaned_data.get('requires_jobwork1', 0),
-                    'requires_stitching':    form.cleaned_data.get('requires_stitching', 0),
-                    'requires_finishing':    form.cleaned_data.get('requires_finishing', 0),
-                    'requires_embroidery':   form.cleaned_data.get('requires_embroidery', 0),
-                    'requires_printing':     form.cleaned_data.get('requires_printing', 0),
-                    'requires_singleneedle': form.cleaned_data.get('requires_singleneedle', 0),
-                    'requires_sewing':       form.cleaned_data.get('requires_sewing', 0),
-                    'requires_sewing1':      form.cleaned_data.get('requires_sewing1', 0),
-                }
+                defaults=new_req_data,
             )
-            
+
+            # Snapshot AFTER: updated MasterEntry + new requirement values
+            _new = {
+                'Date': str(entry.date),
+                'Job Card Number': str(entry.job_card_number),
+            }
+            for field, label in _SEQ_LABELS.items():
+                _new[label] = str(new_req_data.get(field, 0))
+
+            _diff = build_diff(_old, _new)
             messages.success(request, 'Master entry updated.')
-            _diff = build_diff(_old, capture_snapshot(entry, _fields))
             log_activity(request.user, 'EDIT', 'Master Entry', entry.job_card_number, _diff)
             return redirect('dashboard')
     else:
@@ -2548,7 +2590,22 @@ def delete_master_entry(request, pk):
     if not check_edit_permission(request, entry): raise PermissionDenied
     if request.method == 'POST':
         jc_no = entry.job_card_number
-        _summary = f"Job Card: {entry.job_card_number} | Date: {entry.date}"
+        # Build rich delete summary including requirement sequences
+        _summary_parts = [f"Job Card: {entry.job_card_number}", f"Date: {entry.date}"]
+        _del_req = JobCardRequirement.objects.filter(job_card_no=jc_no).first()
+        if _del_req:
+            _del_seq_map = {
+                'requires_cutting': 'Cutting', 'requires_jobwork': 'Job Work',
+                'requires_jobwork1': 'Job Work 1', 'requires_stitching': 'Stitching',
+                'requires_finishing': 'Finishing', 'requires_embroidery': 'Embroidery',
+                'requires_printing': 'Printing', 'requires_singleneedle': 'Singleneedle',
+                'requires_sewing': 'Sewing', 'requires_sewing1': 'Sewing 1',
+            }
+            for field, label in _del_seq_map.items():
+                val = getattr(_del_req, field, 0)
+                if val:
+                    _summary_parts.append(f"{label} Seq: {val}")
+        _summary = ' | '.join(_summary_parts)
         entry.delete()
         messages.success(request, 'Master entry deleted.')
         log_activity(request.user, 'DELETE', 'Master Entry', jc_no, _summary)
@@ -3717,8 +3774,54 @@ from .forms import MasterPaymentForm
 from .models import MasterPayment, MasterName
 from .utils import calculate_master_earnings
 
+# ── Ledger Password Lock ──────────────────────────────────────────────────────
+
+_LEDGER_SESSION_KEY = 'ledger_unlocked'
+
+def _ledger_is_unlocked(request):
+    return request.session.get(_LEDGER_SESSION_KEY) is True
+
+@login_required
+def ledger_unlock_view(request):
+    """Password gate for the Master Ledger section."""
+    from django.conf import settings as dj_settings
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied
+
+    if _ledger_is_unlocked(request):
+        return redirect('master_ledger_list')
+
+    error = None
+    if request.method == 'POST':
+        entered = request.POST.get('password', '')
+        if entered == dj_settings.LEDGER_PASSWORD:
+            request.session[_LEDGER_SESSION_KEY] = True
+            next_url = request.POST.get('next') or request.GET.get('next') or ''
+            return redirect(next_url if next_url else 'master_ledger_list')
+        else:
+            error = 'Incorrect password. Please try again.'
+
+    return render(request, 'ledger_unlock.html', {
+        'error': error,
+        'next': request.GET.get('next', ''),
+    })
+
+@login_required
+def ledger_lock_view(request):
+    """Clears the ledger session key — locks the section again."""
+    request.session.pop(_LEDGER_SESSION_KEY, None)
+    messages.success(request, 'Master Ledger has been locked.')
+    return redirect('ledger_unlock')
+
+# ── Ledger Views ──────────────────────────────────────────────────────────────
+
 @login_required
 def master_ledger_list_view(request):
+    if not _ledger_is_unlocked(request):
+        return redirect(f'/ledger/unlock/?next=/ledger/')
     is_admin = request.user.is_superuser or (
         hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
     )
@@ -3727,12 +3830,21 @@ def master_ledger_list_view(request):
 
     from django.utils.dateparse import parse_date
     start_date_str = request.GET.get('start_date', '').strip()
-    end_date_str = request.GET.get('end_date', '').strip()
+    end_date_str   = request.GET.get('end_date', '').strip()
+    item_name_str  = request.GET.get('item_name', '').strip()
 
     start_date = parse_date(start_date_str) if start_date_str else None
-    end_date = parse_date(end_date_str) if end_date_str else None
+    end_date   = parse_date(end_date_str)   if end_date_str   else None
 
     masters = MasterName.objects.all().order_by('department', 'name')
+
+    # Filter by item_name (article field on MasterName)
+    if item_name_str:
+        masters = masters.filter(
+            Q(article__icontains=item_name_str) |
+            Q(name__icontains=item_name_str)
+        )
+
     ledger_data = []
 
     for master in masters:
@@ -3763,11 +3875,14 @@ def master_ledger_list_view(request):
         'is_admin': is_admin,
         'start_date': start_date_str,
         'end_date': end_date_str,
+        'item_name': item_name_str,
     })
 
 
 @login_required
 def master_ledger_detail_view(request, pk):
+    if not _ledger_is_unlocked(request):
+        return redirect(f'/ledger/unlock/?next=/ledger/{pk}/')
     is_admin = request.user.is_superuser or (
         hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
     )
@@ -3777,11 +3892,12 @@ def master_ledger_detail_view(request, pk):
     master = get_object_or_404(MasterName, pk=pk)
 
     from django.utils.dateparse import parse_date
-    start_date_str = request.GET.get('start_date', '').strip()
-    end_date_str = request.GET.get('end_date', '').strip()
+    start_date_str  = request.GET.get('start_date', '').strip()
+    end_date_str    = request.GET.get('end_date', '').strip()
+    item_name_filter = request.GET.get('item_name', '').strip()
 
     start_date_obj = parse_date(start_date_str) if start_date_str else None
-    end_date_obj = parse_date(end_date_str) if end_date_str else None
+    end_date_obj   = parse_date(end_date_str)   if end_date_str   else None
 
     from .models import (
         CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
@@ -3796,11 +3912,13 @@ def master_ledger_detail_view(request, pk):
         pcs = int(r.total_pcs or 0)
         amount = rate * pcs
         if amount > 0:
+            item_label = f" [{r.item_name}]" if getattr(r, 'item_name', '') else ''
             events.append({
                 'date': r.master_entry.date,
                 'created_at': r.created_at,
                 'type': 'earning',
-                'description': f"Cutting: {pcs} Pcs @ ₹{rate:.2f} (Job Card: {r.job_card_no})",
+                'item_name': getattr(r, 'item_name', '') or '',
+                'description': f"Cutting{item_label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card: {r.job_card_no})",
                 'amount': amount
             })
 
@@ -3813,11 +3931,13 @@ def master_ledger_detail_view(request, pk):
             if amount > 0:
                 d = getattr(r, date_field) or r.created_at.date()
                 jc = getattr(r, jc_field, '')
+                item_label = f" [{r.item_name}]" if getattr(r, 'item_name', '') else ''
                 events.append({
                     'date': d,
                     'created_at': r.created_at,
                     'type': 'earning',
-                    'description': f"{label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card/Lot: {jc})",
+                    'item_name': getattr(r, 'item_name', '') or '',
+                    'description': f"{label}{item_label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card/Lot: {jc})",
                     'amount': amount
                 })
 
@@ -3836,6 +3956,7 @@ def master_ledger_detail_view(request, pk):
             'date': p.date,
             'created_at': p.created_at,
             'type': 'payment',
+            'item_name': '',
             'description': f"Paid via {p.get_payment_mode_display()}{period_str}" + (f" (Ref: {p.reference_no})" if p.reference_no else "") + (f" - {p.remarks}" if p.remarks else ""),
             'amount': float(p.amount),
             'payment_id': p.id
@@ -3877,20 +3998,28 @@ def master_ledger_detail_view(request, pk):
     range_paid = sum(e['amount'] for e in active_events if e['type'] == 'payment')
     range_balance_change = range_earnings - range_paid
 
+    # Apply item_name filter to active events (earnings only, payments always shown)
+    if item_name_filter:
+        active_events = [
+            e for e in active_events
+            if e['type'] == 'payment' or item_name_filter.lower() in e['item_name'].lower()
+        ]
+
     return render(request, 'master_ledger_detail.html', {
         'master': master,
         'events': reversed(active_events),  # Show newest first in table
         'total_earnings': range_earnings if (start_date_obj or end_date_obj) else total_earnings_all,
         'total_paid': range_paid if (start_date_obj or end_date_obj) else total_paid_all,
         'current_balance': (opening_balance + range_balance_change) if (start_date_obj or end_date_obj) else current_balance_all,
-        
+
         'total_earnings_all': total_earnings_all,
         'total_paid_all': total_paid_all,
         'current_balance_all': current_balance_all,
         'opening_balance': opening_balance,
-        
+
         'start_date': start_date_str,
         'end_date': end_date_str,
+        'item_name_filter': item_name_filter,
         'is_admin': is_admin,
     })
 
@@ -4684,3 +4813,34 @@ def vendor_report_view(request):
     })
 
 
+
+
+@login_required
+def progress_tracker_view(request):
+    "Pending task progress grouped by user level for admin."
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        raise PermissionDenied('Only administrators can view the progress tracker.')
+
+    base_qs = JobCardRequirement.objects.all().order_by('-date', '-id')
+    departments = [
+        {'id': 'cutting',     'label': 'Cutting',     'levels': 'P1/P2/P3', 'color': '#3b82f6', 'tasks': base_qs.filter(requires_cutting__gt=0,     is_cutting_done=False),     'field': 'cutting'},
+        {'id': 'stitching',   'label': 'Stitching',   'levels': 'P4',       'color': '#ec4899', 'tasks': base_qs.filter(requires_stitching__gt=0,   is_stitching_done=False),   'field': 'stitching'},
+        {'id': 'jobwork',     'label': 'Job Work',    'levels': 'P5',       'color': '#f59e0b', 'tasks': base_qs.filter(requires_jobwork__gt=0,      is_jobwork_done=False),     'field': 'jobwork'},
+        {'id': 'finishing',   'label': 'Finishing',   'levels': 'P6',       'color': '#8b5cf6', 'tasks': base_qs.filter(requires_finishing__gt=0,   is_finishing_done=False),   'field': 'finishing'},
+        {'id': 'embroidery',  'label': 'Embroidery',  'levels': 'P7',       'color': '#06b6d4', 'tasks': base_qs.filter(requires_embroidery__gt=0,  is_embroidery_done=False),  'field': 'embroidery'},
+        {'id': 'printing',    'label': 'Printing',    'levels': 'P8',       'color': '#10b981', 'tasks': base_qs.filter(requires_printing__gt=0,    is_printing_done=False),    'field': 'printing'},
+        {'id': 'singleneedle','label': 'Singleneedle','levels': 'P9',       'color': '#f97316', 'tasks': base_qs.filter(requires_singleneedle__gt=0,is_singleneedle_done=False),'field': 'singleneedle'},
+        {'id': 'sewing',      'label': 'Sewing',      'levels': 'P10',      'color': '#a78bfa', 'tasks': base_qs.filter(requires_sewing__gt=0,      is_sewing_done=False),      'field': 'sewing'},
+        {'id': 'jobwork1',    'label': 'Job Work 1',  'levels': 'P11',      'color': '#fbbf24', 'tasks': base_qs.filter(requires_jobwork1__gt=0,    is_jobwork1_done=False),    'field': 'jobwork1'},
+        {'id': 'sewing1',     'label': 'Sewing 1',    'levels': 'P12',      'color': '#34d399', 'tasks': base_qs.filter(requires_sewing1__gt=0,     is_sewing1_done=False),     'field': 'sewing1'},
+    ]
+    for dept in departments:
+        dept['count'] = dept['tasks'].count()
+    total_pending = sum(d['count'] for d in departments)
+    return render(request, 'progress_tracker.html', {
+        'departments': departments,
+        'total_pending': total_pending,
+    })

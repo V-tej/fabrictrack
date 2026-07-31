@@ -189,6 +189,11 @@
         id="nav-master-ledger">
         <span class="nav-icon">💰</span> Master Ledger
       </a>
+      <a href="{% url 'progress_tracker' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'progress_tracker' %}active{% endif %}"
+        id="nav-progress-tracker">
+        <span class="nav-icon">📊</span> Progress Tracker
+      </a>
       <a href="{% url 'manage_users' %}"
         class="nav-item {% if request.resolver_match.url_name == 'manage_users' %}active{% endif %}"
         id="nav-users">

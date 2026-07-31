@@ -3,6 +3,12 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
+<style>
+@keyframes pulse-current {
+  0%, 100% { box-shadow: 0 0 6px rgba(99,102,241,0.4); }
+  50%       { box-shadow: 0 0 16px rgba(99,102,241,0.85); }
+}
+</style>
 <div class="dashboard-grid fade-in">
 
   <!-- ── Stats Row ──────────────────────────────────────────────────── -->
@@ -131,12 +137,28 @@
       <button class="pending-filter-btn" data-filter="done" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #22c55e; background: transparent; color: #22c55e; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">✅ Done</button>
       <button class="pending-filter-btn" data-filter="inprogress" style="padding: 0.3rem 0.85rem; border-radius: 20px; border: 1.5px solid #f59e0b; background: transparent; color: #f59e0b; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🔄 In Progress</button>
     </div>
+    <!-- Current Step (Dept) Filter Buttons -->
+    <div id="pendingDeptFilters" style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; padding: 0.6rem 0.75rem; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2); border-radius: 10px; align-items: center;">
+      <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-right: 4px;">▶ Current Step:</span>
+      <button class="dept-filter-btn active" data-dept="all" onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #6366f1; background: #6366f1; color: #fff; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">All</button>
+      <button class="dept-filter-btn" data-dept="Cutting"      onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #3b82f6; background: transparent; color: #60a5fa; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">✂️ Cutting</button>
+      <button class="dept-filter-btn" data-dept="Stitching"   onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #ec4899; background: transparent; color: #f472b6; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🧵 Stitching</button>
+      <button class="dept-filter-btn" data-dept="Job Work"    onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #f59e0b; background: transparent; color: #fbbf24; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🔧 Job Work</button>
+      <button class="dept-filter-btn" data-dept="Job Work 1"  onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #fbbf24; background: transparent; color: #fde68a; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🔩 Job Work 1</button>
+      <button class="dept-filter-btn" data-dept="Embroidery"  onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #06b6d4; background: transparent; color: #22d3ee; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🌸 Embroidery</button>
+      <button class="dept-filter-btn" data-dept="Printing"    onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #10b981; background: transparent; color: #34d399; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🖨️ Printing</button>
+      <button class="dept-filter-btn" data-dept="Singleneedle" onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #f97316; background: transparent; color: #fb923c; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🪡 Singleneedle</button>
+      <button class="dept-filter-btn" data-dept="Sewing"      onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #a78bfa; background: transparent; color: #c4b5fd; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🧶 Sewing</button>
+      <button class="dept-filter-btn" data-dept="Sewing 1"   onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #34d399; background: transparent; color: #6ee7b7; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🪢 Sewing 1</button>
+      <button class="dept-filter-btn" data-dept="Finishing"   onclick="filterByDept(this)" style="padding: 0.25rem 0.75rem; border-radius: 20px; border: 1.5px solid #8b5cf6; background: transparent; color: #a78bfa; font-size: 0.78rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">🏁 Finishing</button>
+    </div>
     <div class="table-wrapper" style="overflow-x: auto;">
       <table class="data-table" id="pendingTasksTable" style="min-width: 900px;">
         <thead>
           <tr>
             <th style="position: sticky; left: 0; z-index: 3; background: #111827; min-width: 120px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Job Card No</th>
             <th style="position: sticky; left: 120px; z-index: 3; background: #111827; min-width: 120px;">Date Assigned</th>
+            <th style="min-width: 320px;">Job Flow (Current Step)</th>
             {% if person_type == 'ADMIN' or user.is_superuser %}
               <th style="position: sticky; left: 240px; z-index: 3; background: #111827; min-width: 160px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Cutting</th>
               <th>Jobwork</th>
@@ -155,9 +177,34 @@
         <tbody id="pendingTasksBody">
           {% for task in pending_tasks %}
           {% with cutting_info=task.cutting_report_info %}
-          <tr data-active-step="{{ task.active_step }}">
+          {% with flow=task.flow_steps %}
+          <tr data-active-step="{{ task.active_step }}" data-current-dept="{% for s in flow %}{% if s.status == 'current' or s.status == 'inprogress' %}{{ s.label }}{% endif %}{% endfor %}">
             <td style="position: sticky; left: 0; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);"><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
             <td style="position: sticky; left: 120px; z-index: 2; background: #161d2e;">{{ task.date|date:"d-b-Y" }}</td>
+            <td>
+              <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 2px;">
+                {% for step in flow %}
+                  <span style="
+                    display: inline-flex; align-items: center; gap: 3px;
+                    font-size: 0.72rem; font-weight: 700; padding: 3px 8px;
+                    border-radius: 20px; white-space: nowrap;
+                    {% if step.status == 'done' %}
+                      background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.3);
+                    {% elif step.status == 'inprogress' %}
+                      background: rgba(245,158,11,0.15); color: #f59e0b; border: 1.5px solid #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.3);
+                    {% elif step.status == 'current' %}
+                      background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1.5px solid #6366f1; box-shadow: 0 0 8px rgba(99,102,241,0.4); animation: pulse-current 1.8s ease-in-out infinite;
+                    {% else %}
+                      background: rgba(255,255,255,0.04); color: #475569; border: 1px solid rgba(255,255,255,0.08);
+                    {% endif %}
+                  " title="Seq {{ step.seq }} — {{ step.status }}">
+                    {% if step.status == 'done' %}✅{% elif step.status == 'inprogress' %}🔄{% elif step.status == 'current' %}▶{% else %}⏳{% endif %}
+                    {{ step.label }}
+                  </span>
+                  {% if not forloop.last %}<span style="color: #334155; font-size: 0.65rem;">›</span>{% endif %}
+                {% endfor %}
+              </div>
+            </td>
              {% if person_type == 'ADMIN' or user.is_superuser %}
               <td style="position: sticky; left: 240px; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);" data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
                 {% if task.requires_cutting %}
@@ -389,6 +436,7 @@
             </td>
           </tr>
           {% endwith %}
+          {% endwith %}
           {% endfor %}
         </tbody>
       </table>
@@ -592,6 +640,7 @@
     const allRows = Array.from(tableBody.querySelectorAll('tr'));
     let currentFilter = 'all';
     let currentSearch = '';
+    let currentDept   = 'all';
     let currentPage   = 1;
     const itemsPerPage = 10;
 
@@ -632,20 +681,25 @@
 
     function applyFilters() {
       lastFiltered = allRows.filter(function(row) {
+        // 1. Search filter
         if (currentSearch) {
           var cell = row.querySelector('td:first-child');
           if (!cell || !cell.textContent.toLowerCase().includes(currentSearch)) return false;
         }
+        // 2. Status filter (existing Pending(N)/Done/InProgress)
         if (currentFilter !== 'all') {
           var cells = row.querySelectorAll('td[data-status]');
           var hasMatchingCell = false;
           cells.forEach(function(c) {
             var status = (c.getAttribute('data-status') || '').trim();
-            if (status === currentFilter) {
-              hasMatchingCell = true;
-            }
+            if (status === currentFilter) hasMatchingCell = true;
           });
           if (!hasMatchingCell) return false;
+        }
+        // 3. Current-dept filter (new)
+        if (currentDept !== 'all') {
+          var rowDept = (row.getAttribute('data-current-dept') || '').trim();
+          if (rowDept !== currentDept) return false;
         }
         return true;
       });
@@ -717,6 +771,57 @@
     applyFilters();
   });
 
+  // ── Dept (Current Step) Filter ────────────────────────────────────────
+  function filterByDept(btn) {
+    var dept = btn.getAttribute('data-dept');
+    // Update active state on dept buttons
+    document.querySelectorAll('.dept-filter-btn').forEach(function(b) {
+      b.style.background = 'transparent';
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    btn.style.background = '#6366f1';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#6366f1';
+
+    // Reach into the closure of the DOMContentLoaded block
+    var tableBody = document.getElementById('pendingTasksBody');
+    if (!tableBody) return;
+    var allRows = Array.from(tableBody.querySelectorAll('tr'));
+    var currentFilter = (document.querySelector('.pending-filter-btn.active') || {}).dataset && document.querySelector('.pending-filter-btn.active').dataset.filter || 'all';
+    var currentSearch = (document.getElementById('pendingSearch') || {}).value ? document.getElementById('pendingSearch').value.toLowerCase().trim() : '';
+
+    var filtered = allRows.filter(function(row) {
+      if (currentSearch) {
+        var cell = row.querySelector('td:first-child');
+        if (!cell || !cell.textContent.toLowerCase().includes(currentSearch)) return false;
+      }
+      if (currentFilter !== 'all') {
+        var cells = row.querySelectorAll('td[data-status]');
+        var hasMatch = false;
+        cells.forEach(function(c) {
+          if ((c.getAttribute('data-status') || '').trim() === currentFilter) hasMatch = true;
+        });
+        if (!hasMatch) return false;
+      }
+      if (dept !== 'all') {
+        var rowDept = (row.getAttribute('data-current-dept') || '').trim();
+        if (rowDept !== dept) return false;
+      }
+      return true;
+    });
+
+    allRows.forEach(function(r) { r.style.display = 'none'; });
+    filtered.forEach(function(r) { r.style.display = ''; });
+
+    // Update pagination info text
+    var info = document.getElementById('paginationInfo');
+    if (info) {
+      info.textContent = filtered.length === 0
+        ? 'No tasks match this filter'
+        : 'Showing ' + filtered.length + ' task' + (filtered.length !== 1 ? 's' : '') + ' for current step: ' + (dept === 'all' ? 'All Departments' : dept);
+    }
+  }
   // ── Completed Job Cards Search ────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     var completedSearch = document.getElementById('completedSearch');

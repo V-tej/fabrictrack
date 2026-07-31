@@ -793,6 +793,49 @@ class JobCardRequirement(models.Model):
                 return 'inprogress'
         return f'pending{min_seq}'
 
+    @property
+    def flow_steps(self):
+        """
+        Returns the ordered pipeline steps for this job card as a list of dicts:
+          [{'label': 'Cutting', 'seq': 1, 'status': 'done'|'inprogress'|'current'|'waiting'}, ...]
+        Only includes steps that are required (seq > 0). Sorted by sequence number.
+        Status:
+          'done'       - completed
+          'inprogress' - in-date submitted, out-date pending
+          'current'    - the next step that needs to be actioned (first pending after all prior done)
+          'waiting'    - pending but blocked by earlier incomplete steps
+        """
+        all_steps = [
+            {'label': 'Cutting',     'seq': self.requires_cutting,      'done': self.is_cutting_done,      'inprog': False},
+            {'label': 'Job Work',    'seq': self.requires_jobwork,      'done': self.is_jobwork_done,      'inprog': self.is_jobwork_in_progress},
+            {'label': 'Job Work 1',  'seq': self.requires_jobwork1,     'done': self.is_jobwork1_done,     'inprog': self.is_jobwork1_in_progress},
+            {'label': 'Embroidery',  'seq': self.requires_embroidery,   'done': self.is_embroidery_done,   'inprog': self.is_embroidery_in_progress},
+            {'label': 'Printing',    'seq': self.requires_printing,     'done': self.is_printing_done,     'inprog': self.is_printing_in_progress},
+            {'label': 'Stitching',   'seq': self.requires_stitching,    'done': self.is_stitching_done,    'inprog': self.is_stitching_in_progress},
+            {'label': 'Singleneedle','seq': self.requires_singleneedle, 'done': self.is_singleneedle_done, 'inprog': self.is_singleneedle_in_progress},
+            {'label': 'Sewing',      'seq': self.requires_sewing,       'done': self.is_sewing_done,       'inprog': self.is_sewing_in_progress},
+            {'label': 'Sewing 1',    'seq': self.requires_sewing1,      'done': self.is_sewing1_done,      'inprog': self.is_sewing1_in_progress},
+            {'label': 'Finishing',   'seq': self.requires_finishing,    'done': self.is_finishing_done,    'inprog': False},
+        ]
+        # Only required steps, sorted by sequence
+        required = sorted([s for s in all_steps if s['seq'] > 0], key=lambda x: x['seq'])
+        # Find the first non-done step — that's 'current'; everything after is 'waiting'
+        current_found = False
+        result = []
+        for s in required:
+            if s['done']:
+                status = 'done'
+            elif s['inprog']:
+                status = 'inprogress'
+                current_found = True
+            elif not current_found:
+                status = 'current'
+                current_found = True
+            else:
+                status = 'waiting'
+            result.append({'label': s['label'], 'seq': s['seq'], 'status': status})
+        return result
+
     def is_step_enabled(self, step_seq, step_done_attr):
         """A step is enabled if all required steps with a lower sequence number are done."""
         if step_seq == 0:

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Ledger — Enter Password{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block content %}
+<style>
+  .lock-wrap {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lock-card {
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1);
+    text-align: center;
+    animation: fadeUp 0.4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-8px); }
+    40%       { transform: translateX(8px); }
+    60%       { transform: translateX(-6px); }
+    80%       { transform: translateX(6px); }
+  }
+  .shake { animation: shake 0.4s ease; }
+
+  .lock-icon {
+    font-size: 3rem;
+    margin-bottom: 1.25rem;
+    display: block;
+    filter: drop-shadow(0 0 12px rgba(99,102,241,0.5));
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(99,102,241,0.4)); }
+    50%       { filter: drop-shadow(0 0 22px rgba(99,102,241,0.8)); }
+  }
+
+  .lock-title {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 0.35rem 0;
+  }
+  .lock-sub {
+    font-size: 0.88rem;
+    color: #64748b;
+    margin: 0 0 2rem 0;
+  }
+
+  .pw-wrap {
+    position: relative;
+    margin-bottom: 1.25rem;
+  }
+  .pw-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 10px;
+    padding: 0.75rem 2.75rem 0.75rem 1rem;
+    color: #f1f5f9;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+  }
+  .pw-wrap input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+  }
+  .pw-toggle {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .pw-toggle:hover { color: #a5b4fc; }
+
+  .unlock-btn {
+    width: 100%;
+    padding: 0.8rem;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .unlock-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .unlock-btn:active { transform: translateY(0); }
+
+  .error-msg {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    color: #fca5a5;
+    font-size: 0.875rem;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.1rem;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lock-footer {
+    margin-top: 1.75rem;
+    font-size: 0.78rem;
+    color: #334155;
+  }
+</style>
+
+<div class="lock-wrap">
+  <div class="lock-card {% if error %}shake{% endif %}" id="lockCard">
+
+    <span class="lock-icon">🔐</span>
+    <h1 class="lock-title">Master Ledger</h1>
+    <p class="lock-sub">This section is password protected. Enter the ledger password to continue.</p>
+
+    {% if error %}
+    <div class="error-msg">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form method="post" id="unlockForm">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+      <div class="pw-wrap">
+        <input
+          type="password"
+          name="password"
+          id="pwInput"
+          placeholder="Enter ledger password"
+          autofocus
+          autocomplete="current-password"
+          required
+        >
+        <button type="button" class="pw-toggle" onclick="togglePw()" id="pwToggleBtn" title="Show/hide password">👁</button>
+      </div>
+
+      <button type="submit" class="unlock-btn">
+        🔓 Unlock Ledger
+      </button>
+    </form>
+
+    <div class="lock-footer">
+      🛡 Ledger access is session-based and will reset when you log out.
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw() {
+  const inp = document.getElementById('pwInput');
+  const btn = document.getElementById('pwToggleBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+// Re-trigger shake on load if error present
+{% if error %}
+(function() {
+  const card = document.getElementById('lockCard');
+  card.classList.remove('shake');
+  void card.offsetWidth; // reflow
+  card.classList.add('shake');
+})();
+{% endif %}
+</script>
+{% endblock %}

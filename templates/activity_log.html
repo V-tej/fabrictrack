@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 {% block title %}Activity History{% endblock %}
 {% block page_title %}Activity History{% endblock %}
 
@@ -36,6 +37,10 @@
 .log-pagination span.disabled{opacity:.4;}
 .total-banner{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:.7rem 1.25rem;margin-bottom:1.25rem;font-size:.875rem;display:flex;align-items:center;gap:.5rem;}
 .total-banner strong{color:var(--primary);font-size:1.1rem;}
+.detail-chips{display:flex;flex-wrap:wrap;gap:.3rem .4rem;align-items:flex-start;}
+.detail-chip{display:inline-block;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);border-radius:5px;padding:.15rem .5rem;font-size:.78rem;color:#c4c9f5;line-height:1.4;white-space:nowrap;}
+.detail-chip.arrow{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.22);color:#fcd34d;}
+.detail-chip.empty{background:transparent;border:none;color:var(--text-muted);font-style:italic;font-size:.8rem;}
 </style>
 
 <div class="fade-in">
@@ -80,7 +85,21 @@
           <td>{% if log.action == 'CREATE' %}<span class="action-badge create">Created</span>{% elif log.action == 'EDIT' %}<span class="action-badge edit">Edited</span>{% elif log.action == 'DELETE' %}<span class="action-badge delete">Deleted</span>{% else %}<span class="action-badge">{{ log.action }}</span>{% endif %}</td>
           <td><span class="dept-pill">{{ log.department }}</span></td>
           <td>{% if log.job_card_no %}<code class="jc-code">{{ log.job_card_no }}</code>{% else %}<span class="text-muted">-</span>{% endif %}</td>
-          <td style="font-size:.85rem; color: #e2e8f0; line-height: 1.45; word-break: break-word; min-width: 250px;">{{ log.details|default:"-" }}</td>
+          <td style="min-width:260px;">
+            {% if log.details and log.details != "-" %}
+              <div class="detail-chips">
+                {% for part in log.details|split:" | " %}
+                  {% if part|contains:"→" %}
+                    <span class="detail-chip arrow">{{ part }}</span>
+                  {% else %}
+                    <span class="detail-chip">{{ part }}</span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="detail-chip empty">No details recorded</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

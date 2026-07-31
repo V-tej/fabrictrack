@@ -11,7 +11,10 @@
       <h2 style="margin: 0; font-size: 1.5rem; color: #fff;">Master Account Balances</h2>
       <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: var(--text-muted);">Track earnings, payments, and balances due to each master/worker.</p>
     </div>
-    <div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="{% url 'ledger_lock' %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); color: #fca5a5;" title="Lock the ledger section">
+        🔒 Lock Ledger
+      </a>
       <a href="{% url 'record_payment' %}" class="btn btn-primary" style="background: #10b981; border-color: #10b981;">
         ➕ Record Payment
       </a>
@@ -72,7 +75,7 @@
                 </span>
               </td>
               <td>
-                <a href="{% url 'master_ledger_detail' item.master.pk %}{% if start_date or end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}" style="color: #60a5fa; font-weight: 600; text-decoration: none; hover: text-decoration: underline;">
+                <a href="{% url 'master_ledger_detail' item.master.pk %}{% if start_date or end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}" style="color: #60a5fa; font-weight: 600; text-decoration: none;">
                   {{ item.master.name }}
                 </a>
               </td>

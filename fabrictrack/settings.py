@@ -13,6 +13,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fabrictrack-change-this-in
 
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
+# Master Ledger section password (set in .env as LEDGER_PASSWORD)
+LEDGER_PASSWORD = os.getenv('LEDGER_PASSWORD', 'ledger@1234')
+
 ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [

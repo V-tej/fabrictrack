@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}Progress Tracker{% endblock %}
+{% block page_title %}📊 Progress Tracker{% endblock %}
+
+{% block content %}
+<style>
+  .tab-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .tab-btn {
+    padding: 0.45rem 1rem;
+    border-radius: 30px;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #94a3b8;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.09); color: #f1f5f9; }
+  .tab-btn.active { color: #fff !important; border-color: transparent !important; }
+  .tab-btn .count-dot {
+    background: rgba(0,0,0,0.25);
+    border-radius: 20px;
+    padding: 0 7px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .dept-panel { display: none; }
+  .dept-panel.active { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .dept-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .dept-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+  .level-badge {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.08);
+    color: #94a3b8;
+    font-weight: 600;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-chip {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .summary-chip:hover { transform: translateY(-2px); background: rgba(255,255,255,0.07); }
+  .summary-chip .sc-label { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+  .summary-chip .sc-value { font-size: 1.6rem; font-weight: 800; display: block; line-height: 1; }
+  .summary-chip .sc-sub { font-size: 0.72rem; color: #475569; margin-top: 2px; display: block; }
+</style>
+
+<div class="fade-in" style="display: flex; flex-direction: column; gap: 1.75rem;">
+
+  <!-- Emoji helper: resolved in template to avoid Python encoding issues -->
+  <!-- Overview chips -->
+  <div class="summary-grid">
+    {% for dept in departments %}
+    <div class="summary-chip" style="border-color: {{ dept.color }}33;" onclick="activateTab('{{ dept.id }}')">
+      <span class="sc-label">
+        {% if dept.id == 'cutting' %}✂️
+        {% elif dept.id == 'stitching' %}🧵
+        {% elif dept.id == 'jobwork' %}🔧
+        {% elif dept.id == 'finishing' %}🏁
+        {% elif dept.id == 'embroidery' %}🌸
+        {% elif dept.id == 'printing' %}🖨️
+        {% elif dept.id == 'singleneedle' %}🪡
+        {% elif dept.id == 'sewing' %}🧶
+        {% elif dept.id == 'jobwork1' %}🔩
+        {% elif dept.id == 'sewing1' %}🪢
+        {% endif %}
+        {{ dept.label }}
+      </span>
+      <span class="sc-value" style="color: {% if dept.count > 0 %}#ef4444{% else %}#22c55e{% endif %};">
+        {{ dept.count }}
+      </span>
+      <span class="sc-sub">{{ dept.levels }} &bull; {% if dept.count == 0 %}All clear{% else %}pending{% endif %}</span>
+    </div>
+    {% endfor %}
+    <div class="summary-chip" style="border-color: #f59e0b55; cursor: default;">
+      <span class="sc-label">🔢 Total</span>
+      <span class="sc-value" style="color: #f59e0b;">{{ total_pending }}</span>
+      <span class="sc-sub">across all depts</span>
+    </div>
+  </div>
+
+  <!-- Tabbed section -->
+  <div class="section-card">
+
+    <!-- Tab bar -->
+    <div class="tab-bar" id="deptTabBar">
+      {% for dept in departments %}
+      <button
+        class="tab-btn {% if forloop.first %}active{% endif %}"
+        id="tab-{{ dept.id }}"
+        data-target="panel-{{ dept.id }}"
+        data-color="{{ dept.color }}"
+        onclick="switchTab(this)"
+        style="{% if forloop.first %}background: {{ dept.color }}; border-color: {{ dept.color }}; color: #fff;{% endif %}"
+      >
+        {% if dept.id == 'cutting' %}✂️
+        {% elif dept.id == 'stitching' %}🧵
+        {% elif dept.id == 'jobwork' %}🔧
+        {% elif dept.id == 'finishing' %}🏁
+        {% elif dept.id == 'embroidery' %}🌸
+        {% elif dept.id == 'printing' %}🖨️
+        {% elif dept.id == 'singleneedle' %}🪡
+        {% elif dept.id == 'sewing' %}🧶
+        {% elif dept.id == 'jobwork1' %}🔩
+        {% elif dept.id == 'sewing1' %}🪢
+        {% endif %} {{ dept.label }}
+        <span class="count-dot" style="{% if dept.count > 0 %}color: #fca5a5;{% endif %}">{{ dept.count }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Panels -->
+    {% for dept in departments %}
+    <div class="dept-panel {% if forloop.first %}active{% endif %}" id="panel-{{ dept.id }}">
+
+      <div class="dept-header">
+        <h2 class="dept-title" style="color: {{ dept.color }};">
+          {% if dept.id == 'cutting' %}✂️
+          {% elif dept.id == 'stitching' %}🧵
+          {% elif dept.id == 'jobwork' %}🔧
+          {% elif dept.id == 'finishing' %}🏁
+          {% elif dept.id == 'embroidery' %}🌸
+          {% elif dept.id == 'printing' %}🖨️
+          {% elif dept.id == 'singleneedle' %}🪡
+          {% elif dept.id == 'sewing' %}🧶
+          {% elif dept.id == 'jobwork1' %}🔩
+          {% elif dept.id == 'sewing1' %}🪢
+          {% endif %} {{ dept.label }}
+          <span class="level-badge">User Level: {{ dept.levels }}</span>
+          {% if dept.count > 0 %}
+          <span style="font-size: 0.82rem; font-weight: 700; background: {{ dept.color }}22; color: {{ dept.color }}; border: 1px solid {{ dept.color }}44; border-radius: 20px; padding: 0.15rem 0.65rem;">
+            {{ dept.count }} Pending
+          </span>
+          {% else %}
+          <span style="font-size: 0.82rem; font-weight: 700; background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; border-radius: 20px; padding: 0.15rem 0.65rem;">
+            ✅ All Clear
+          </span>
+          {% endif %}
+        </h2>
+        <input
+          type="text"
+          placeholder="🔍 Search job card..."
+          class="form-control"
+          style="max-width: 220px; background: rgba(255,255,255,0.05); border: 1px solid {{ dept.color }}55; height: 36px; font-size: 0.85rem;"
+          oninput="filterTable(this, 'table-{{ dept.id }}')"
+        >
+      </div>
+
+      {% if dept.tasks %}
+      <div class="table-wrapper" style="overflow-x: auto;">
+        <table class="data-table" id="table-{{ dept.id }}">
+          <thead>
+            <tr>
+              <th>Job Card No</th>
+              <th>Date Assigned</th>
+              <th>Seq Required</th>
+              <th>Status</th>
+              <th style="text-align:center;">View</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for task in dept.tasks %}
+            <tr>
+              <td>
+                <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700;">
+                  {{ task.job_card_no }}
+                </span>
+              </td>
+              <td style="color: #94a3b8; font-size: 0.9rem;">{{ task.date|date:"d M Y" }}</td>
+              <td>
+                <span style="font-weight: 600; color: {{ dept.color }}; font-size: 0.9rem;">
+                  {% if dept.field == 'cutting' %}Seq {{ task.requires_cutting }}
+                  {% elif dept.field == 'stitching' %}Seq {{ task.requires_stitching }}
+                  {% elif dept.field == 'jobwork' %}Seq {{ task.requires_jobwork }}
+                  {% elif dept.field == 'finishing' %}Seq {{ task.requires_finishing }}
+                  {% elif dept.field == 'embroidery' %}Seq {{ task.requires_embroidery }}
+                  {% elif dept.field == 'printing' %}Seq {{ task.requires_printing }}
+                  {% elif dept.field == 'singleneedle' %}Seq {{ task.requires_singleneedle }}
+                  {% elif dept.field == 'sewing' %}Seq {{ task.requires_sewing }}
+                  {% elif dept.field == 'jobwork1' %}Seq {{ task.requires_jobwork1 }}
+                  {% elif dept.field == 'sewing1' %}Seq {{ task.requires_sewing1 }}
+                  {% endif %}
+                </span>
+              </td>
+              <td>
+                {% if dept.field == 'cutting' %}
+                  {% if task.is_cutting_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'stitching' %}
+                  {% if task.is_stitching_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_stitching_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'jobwork' %}
+                  {% if task.is_jobwork_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_jobwork_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'finishing' %}
+                  {% if task.is_finishing_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'embroidery' %}
+                  {% if task.is_embroidery_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_embroidery_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'printing' %}
+                  {% if task.is_printing_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_printing_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'singleneedle' %}
+                  {% if task.is_singleneedle_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_singleneedle_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'sewing' %}
+                  {% if task.is_sewing_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_sewing_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'jobwork1' %}
+                  {% if task.is_jobwork1_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_jobwork1_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% elif dept.field == 'sewing1' %}
+                  {% if task.is_sewing1_done %}<span style="color:#22c55e;font-size:.85rem;">✅ Done</span>
+                  {% elif task.is_sewing1_in_progress %}<span style="color:#f59e0b;font-size:.85rem;">🔄 In Progress</span>
+                  {% else %}<span style="color:#ef4444;font-size:.85rem;">❌ Pending</span>{% endif %}
+                {% endif %}
+              </td>
+              <td style="text-align:center;">
+                {% if task.master_entry_id %}
+                  <a href="{% url 'job_card_detail' task.master_entry_id %}" style="color: {{ dept.color }}; font-size: 0.85rem; text-decoration: none; font-weight: 600;">📋 View</a>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding: 2.5rem 0;">
+        <div class="empty-icon">✅</div>
+        <p style="color: #22c55e; font-weight: 600; font-size: 1rem;">No pending tasks for {{ dept.label }} — all clear!</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+
+<script>
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.style.background = '';
+    b.style.borderColor = '';
+    b.style.color = '';
+  });
+  document.querySelectorAll('.dept-panel').forEach(p => p.classList.remove('active'));
+
+  btn.classList.add('active');
+  const color = btn.dataset.color;
+  btn.style.background = color;
+  btn.style.borderColor = color;
+  btn.style.color = '#fff';
+
+  document.getElementById(btn.dataset.target).classList.add('active');
+}
+
+function activateTab(deptId) {
+  const btn = document.getElementById('tab-' + deptId);
+  if (btn) {
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    switchTab(btn);
+  }
+}
+
+function filterTable(input, tableId) {
+  const q = input.value.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

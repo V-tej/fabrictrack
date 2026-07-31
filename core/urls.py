@@ -29,6 +29,8 @@ urlpatterns = [
     path('job-card/<int:pk>/print/', views.job_card_print_view, name='job_card_print'),
 
     # Ledger & Payment Routes
+    path('ledger/unlock/', views.ledger_unlock_view, name='ledger_unlock'),
+    path('ledger/lock/', views.ledger_lock_view, name='ledger_lock'),
     path('ledger/', views.master_ledger_list_view, name='master_ledger_list'),
     path('ledger/<int:pk>/', views.master_ledger_detail_view, name='master_ledger_detail'),
     path('ledger/payment/new/', views.record_payment_view, name='record_payment'),
@@ -96,6 +98,9 @@ urlpatterns = [
 
     # Activity Log
     path('activity-log/', views.activity_log_view, name='activity_log'),
+
+    # Progress Tracker (Admin)
+    path('progress/', views.progress_tracker_view, name='progress_tracker'),
 
     # Print Report Route
     path('report/<str:report_type>/<int:pk>/print/', views.print_report_view, name='print_report'),
