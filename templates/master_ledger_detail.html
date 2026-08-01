@@ -5,15 +5,33 @@
 {% block content %}
 <style>
 @media print {
-  /* Hide everything that's not the ledger content */
-  nav, .sidebar, .topbar, .navbar, header, footer,
-  .no-print, form, .btn, a.btn { display: none !important; }
+  /* ── Hide ALL navigation, sidebar, topbar, controls ────────────────── */
+  aside, aside.sidebar, #sidebar, .sidebar,
+  nav, header, footer,
+  .topbar, .navbar, .sidebar-brand, .sidebar-nav, .sidebar-footer,
+  .no-print, form, .btn, a.btn,
+  button:not(.print-only) { display: none !important; }
 
-  body, html { background: #fff !important; color: #000 !important; }
+  /* ── Force full page width — remove sidebar layout ──────────────────── */
+  body, html {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Override any flex/grid layout from the main wrapper */
+  .main-content, #main-content, main, .content-wrapper,
+  .main-wrapper, [class*="main"], [class*="content"] {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 
   .fade-in { gap: 1rem !important; }
 
-  /* Stat cards */
+  /* ── Stat cards ─────────────────────────────────────────────────────── */
   .stat-card {
     background: #f8f9fa !important;
     border: 1px solid #dee2e6 !important;
@@ -23,7 +41,7 @@
   }
   .stat-value, .stat-label, p, strong { color: #000 !important; }
 
-  /* Table */
+  /* ── Table ──────────────────────────────────────────────────────────── */
   .section-card { background: #fff !important; border: 1px solid #ccc !important; }
   .section-title { color: #000 !important; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -44,14 +62,26 @@
     padding: 6px 8px !important;
     color: #000 !important;
   }
-  .data-table tbody tr:nth-child(even) td { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  /* Force ALL text inside table to black */
-  .data-table, .data-table * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .data-table tbody tr:nth-child(even) td {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Force ALL table text to black */
+  .data-table, .data-table * {
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
-  /* Print header */
+  /* ── Hide the Action column (delete buttons) ────────────────────────── */
+  .data-table th:last-child,
+  .data-table td:last-child { display: none !important; }
+
+  /* ── Print header ───────────────────────────────────────────────────── */
   .print-header { display: block !important; }
 
-  /* Page settings */
+  /* ── Page settings ──────────────────────────────────────────────────── */
   @page { margin: 1.5cm; size: A4 landscape; }
 }
 
