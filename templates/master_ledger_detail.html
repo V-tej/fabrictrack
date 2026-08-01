@@ -12,6 +12,9 @@
   .no-print, form, .btn, a.btn,
   button:not(.print-only) { display: none !important; }
 
+  /* ── KEY FIX: reset the CSS variable that drives sidebar margin ──────── */
+  :root { --sidebar-w: 0 !important; }
+
   /* ── Force full page width — remove sidebar layout ──────────────────── */
   body, html {
     background: #fff !important;
@@ -74,6 +77,22 @@
     print-color-adjust: exact;
   }
 
+  /* ── Prevent data from being clipped / cut off ───────────────────────── */
+  .table-wrapper {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+  .data-table {
+    table-layout: auto !important;
+    width: 100% !important;
+    word-break: break-word;
+  }
+  .data-table td, .data-table th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal !important;
+  }
+
   /* ── Hide the Action column (delete buttons) ────────────────────────── */
   .data-table th:last-child,
   .data-table td:last-child { display: none !important; }
@@ -81,8 +100,8 @@
   /* ── Print header ───────────────────────────────────────────────────── */
   .print-header { display: block !important; }
 
-  /* ── Page settings ──────────────────────────────────────────────────── */
-  @page { margin: 1.5cm; size: A4 landscape; }
+  /* ── Page settings — tighter margins = more data space ──────────────── */
+  @page { margin: 1cm; size: A4 landscape; }
 }
 
 .print-header { display: none; }
