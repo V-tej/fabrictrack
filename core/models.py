@@ -36,6 +36,12 @@ class UserProfile(models.Model):
         null=True,
         help_text='Password required for this user to view their ledger statement.'
     )
+    plain_password = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text='Stores cleartext password for admin reference and reset dialog.'
+    )
 
     def __str__(self):
         return f"{self.user.username} ({self.get_person_type_display()})"

@@ -478,6 +478,7 @@ def add_user(request):
 
         profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'person_type': person_type})
         profile.statement_password = statement_password if statement_password else None
+        profile.plain_password = password
         if linked_master_ids:
             masters = MasterName.objects.filter(pk__in=linked_master_ids)
             profile.linked_masters.set(masters)
@@ -522,6 +523,11 @@ def reset_user_password(request, user_id):
         else:
             target_user.set_password(new_password)
             target_user.save()
+            
+            profile, _ = UserProfile.objects.get_or_create(user=target_user)
+            profile.plain_password = new_password
+            profile.save()
+
             messages.success(request, f'Password for "{target_user.username}" reset successfully.')
     return redirect('manage_users')
 

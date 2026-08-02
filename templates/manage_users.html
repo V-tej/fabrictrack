@@ -279,7 +279,7 @@
           <td>
             <div class="action-btns">
               <!-- Reset Password -->
-              <button class="btn-sm btn-reset" onclick="openResetModal({{ u.id }}, '{{ u.username }}')">
+              <button class="btn-sm btn-reset" onclick="openResetModal({{ u.id }}, '{{ u.username }}', '{% if u.profile.plain_password %}{{ u.profile.plain_password }}{% endif %}')">
                 🔑 Password
               </button>
               <!-- Edit Role -->
@@ -364,8 +364,9 @@
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal('resetPasswordModal')">✕</button>
     <h3>🔑 Reset Password</h3>
-    <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin: -0.5rem 0 1.2rem 0;">
-      Resetting password for: <strong id="reset-username-label" style="color: #7ecfff;"></strong>
+    <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin: -0.5rem 0 1.2rem 0; line-height: 1.5;">
+      Resetting password for: <strong id="reset-username-label" style="color: #7ecfff;"></strong><br>
+      Existing Password: <strong id="reset-existing-password-label" style="color: #34d399; font-family: monospace; font-size: 0.95rem;"></strong>
     </p>
     <form method="post" id="resetPasswordForm" action="">
       {% csrf_token %}
@@ -532,8 +533,9 @@
     });
   });
 
-  function openResetModal(userId, username) {
+  function openResetModal(userId, username, plainPassword) {
     document.getElementById('reset-username-label').textContent = username;
+    document.getElementById('reset-existing-password-label').textContent = plainPassword || 'None Set / Encrypted';
     document.getElementById('resetPasswordForm').action = '/manage-users/' + userId + '/reset-password/';
     document.getElementById('reset-password-input').value = '';
     openModal('resetPasswordModal');
