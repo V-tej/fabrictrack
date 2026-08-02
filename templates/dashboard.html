@@ -119,7 +119,12 @@
       <h2 class="section-title" style="color: #f59e0b; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
         ⏳ Pending Tasks <span class="badge" style="background: #f59e0b; color: #fff;">{{ pending_tasks.count }}</span>
       </h2>
-      <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="max-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;">
+        <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="width: 220px; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
+        <button onclick="printPendingTasks()" style="display: inline-flex; align-items: center; gap: 5px; padding: 0.45rem 1rem; border-radius: 8px; border: none; background: #6366f1; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'" title="Print visible pending tasks">
+          🖨️ Print
+        </button>
+      </div>
     </div>
     <!-- Status Filter Buttons -->
     <div id="pendingStatusFilters" style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem;">
@@ -158,9 +163,9 @@
           <tr>
             <th style="position: sticky; left: 0; z-index: 3; background: #111827; min-width: 120px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Job Card No</th>
             <th style="position: sticky; left: 120px; z-index: 3; background: #111827; min-width: 120px;">Date Assigned</th>
-            <th style="min-width: 320px;">Job Flow (Current Step)</th>
+            <th style="position: sticky; left: 240px; z-index: 3; background: #111827; min-width: 320px; box-shadow: 2px 0 6px rgba(0,0,0,0.5);">Job Flow (Current Step)</th>
             {% if person_type == 'ADMIN' or user.is_superuser %}
-              <th style="position: sticky; left: 240px; z-index: 3; background: #111827; min-width: 160px; box-shadow: 2px 0 5px rgba(0,0,0,0.4);">Cutting</th>
+              <th style="position: sticky; left: 560px; z-index: 3; background: #111827; min-width: 160px; box-shadow: 2px 0 5px rgba(0,0,0,0.5);">Cutting</th>
               <th>Jobwork</th>
               <th>Jobwork 1</th>
               <th>Embroidery</th>
@@ -181,7 +186,7 @@
           <tr data-active-step="{{ task.active_step }}" data-current-dept="{% for s in flow %}{% if s.status == 'current' or s.status == 'inprogress' %}{{ s.label }}{% endif %}{% endfor %}">
             <td style="position: sticky; left: 0; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);"><span class="badge" style="background: #fef3c7; color: #d97706; font-weight: bold;">{{ task.job_card_no }}</span></td>
             <td style="position: sticky; left: 120px; z-index: 2; background: #161d2e;">{{ task.date|date:"d-b-Y" }}</td>
-            <td>
+            <td style="position: sticky; left: 240px; z-index: 2; background: #161d2e; box-shadow: 2px 0 6px rgba(0,0,0,0.5); min-width: 320px;">
               <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 2px;">
                 {% for step in flow %}
                   <span style="
@@ -206,7 +211,7 @@
               </div>
             </td>
              {% if person_type == 'ADMIN' or user.is_superuser %}
-              <td style="position: sticky; left: 240px; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.4);" data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
+              <td style="position: sticky; left: 560px; z-index: 2; background: #161d2e; box-shadow: 2px 0 5px rgba(0,0,0,0.5); min-width: 160px;" data-status="{% if task.requires_cutting %}{% if task.is_cutting_done %}done{% else %}pending{{ task.requires_cutting }}{% endif %}{% endif %}">
                 {% if task.requires_cutting %}
                   {% if task.is_cutting_done %}
                     <span style="color:#22c55e;">✅ Done</span>
@@ -822,7 +827,68 @@
         : 'Showing ' + filtered.length + ' task' + (filtered.length !== 1 ? 's' : '') + ' for current step: ' + (dept === 'all' ? 'All Departments' : dept);
     }
   }
-  // ── Completed Job Cards Search ────────────────────────────────────────
+
+  // \u2500\u2500 Print Pending Tasks \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  function printPendingTasks() {
+    var tableBody = document.getElementById('pendingTasksBody');
+    if (!tableBody) return;
+
+    // Collect only visible rows
+    var visibleRows = Array.from(tableBody.querySelectorAll('tr')).filter(function(r) {
+      return r.style.display !== 'none';
+    });
+
+    // Build table rows HTML
+    var rowsHtml = visibleRows.map(function(row) {
+      var cells = row.querySelectorAll('td');
+      var jobCard  = cells[0] ? cells[0].textContent.trim() : '';
+      var date     = cells[1] ? cells[1].textContent.trim() : '';
+      var flowCell = cells[2] ? cells[2].innerText.trim().replace(/\s+/g, ' ') : '';
+
+      // Collect dept status cells (3 onwards, skip last Action cell)
+      var deptCells = '';
+      for (var i = 3; i < cells.length - 1; i++) {
+        var txt = cells[i].textContent.trim().replace(/\s+/g, ' ');
+        deptCells += '<td style="border:1px solid #ccc;padding:5px 7px;font-size:10px;white-space:nowrap;">' + txt + '</td>';
+      }
+
+      return '<tr><td style="border:1px solid #ccc;padding:5px 8px;font-weight:700;white-space:nowrap;">' + jobCard + '</td>'
+           + '<td style="border:1px solid #ccc;padding:5px 8px;white-space:nowrap;">' + date + '</td>'
+           + '<td style="border:1px solid #ccc;padding:5px 8px;font-size:10px;">' + flowCell + '</td>'
+           + deptCells + '</tr>';
+    }).join('');
+
+    // Build full print page
+    var w = window.open('', '_blank', 'width=1200,height=800');
+    w.document.write('\
+<!DOCTYPE html><html><head><meta charset="UTF-8">\
+<title>Pending Tasks \u2014 FabricTrack</title>\
+<style>\
+  @page { size: A4 landscape; margin: 1cm; }\
+  body { font-family: Inter, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; margin: 0; padding: 0; }\
+  h2 { font-size: 1.1rem; margin: 0 0 0.5rem 0; }\
+  p  { margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #555; }\
+  table { width: 100%; border-collapse: collapse; table-layout: auto; }\
+  th { background: #1e293b; color: #fff; border: 1px solid #334155; padding: 6px 8px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }\
+  td { border: 1px solid #ccc; padding: 5px 8px; vertical-align: top; }\
+  tr:nth-child(even) td { background: #f8f8f8; }\
+  .print-btn { display: block; margin: 0.75rem auto; padding: 0.4rem 1.5rem; background: #1e293b; color: #fff; border: none; cursor: pointer; border-radius: 4px; font-size: 0.9rem; }\
+  @media print { .print-btn { display: none; } }\
+</style></head><body>\
+<h2>\u23f3 Pending Tasks &mdash; FabricTrack</h2>\
+<p>Printed: ' + new Date().toLocaleString('en-IN') + ' &nbsp;|&nbsp; Showing ' + visibleRows.length + ' task(s)</p>\
+<button class="print-btn" onclick="window.print()">Print</button>\
+<table><thead><tr>\
+<th>Job Card No</th><th>Date</th><th>Job Flow (Current Step)</th>' +
+(document.querySelector('#pendingTasksTable th:nth-child(4)') ?
+  Array.from(document.querySelectorAll('#pendingTasksTable thead th')).slice(3, -1).map(function(h){ return '<th>' + h.textContent.trim() + '</th>'; }).join('') : '') +
+'</tr></thead><tbody>' + rowsHtml + '</tbody></table>\
+</body></html>');
+    w.document.close();
+    w.focus();
+  }
+
+  // \u2500\u2500 Completed Job Cards Search \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   document.addEventListener('DOMContentLoaded', function() {
     var completedSearch = document.getElementById('completedSearch');
     var completedBody   = document.getElementById('completedTableBody');

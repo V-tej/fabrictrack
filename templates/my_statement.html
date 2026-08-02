@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}My Statement — {{ master.name }}{% endblock %}
+{% block page_title %}💰 My Statement{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+  :root { --sidebar-w: 0 !important; }
+  aside, #sidebar, .sidebar, nav, header, footer, .topbar,
+  .no-print, form, .btn, a.btn, button:not(.print-only) { display: none !important; }
+  body, html { background: #fff !important; color: #000 !important; margin: 0 !important; padding: 0 !important; }
+  .main-wrapper, .main-content, main { margin-left: 0 !important; padding-left: 0 !important; width: 100% !important; }
+  .stat-card { background: #f8f9fa !important; border: 1px solid #dee2e6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .stat-value, .stat-label, p, strong { color: #000 !important; }
+  .section-card { background: #fff !important; border: 1px solid #ccc !important; }
+  .section-title { color: #000 !important; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .data-table th { background: #fff !important; color: #000 !important; border: 1px solid #999 !important; border-bottom: 2px solid #000 !important; padding: 6px 8px !important; font-size: 9.5px !important; text-transform: uppercase; }
+  .data-table td { border: 1px solid #ccc !important; padding: 5px 8px !important; color: #000 !important; }
+  .data-table, .data-table * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .data-table th:last-child, .data-table td:last-child { display: none !important; }
+  .print-header { display: block !important; }
+  @page { margin: 1cm; size: A4 landscape; }
+}
+.print-header { display: none; }
+</style>
+
+<div class="fade-in" style="display: flex; flex-direction: column; gap: 2rem;">
+
+  <!-- Actions -->
+  <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div style="font-size: 0.9rem; color: var(--text-muted);">
+      Viewing your personal ledger statement
+    </div>
+    <button onclick="window.print()" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1.25rem;">
+      🖨️ Print Statement
+    </button>
+  </div>
+
+  <!-- Print Header -->
+  <div class="print-header" style="text-align: center; margin-bottom: 1rem;">
+    <h2 style="margin: 0; font-size: 1.3rem;">My Ledger Statement — {{ master.name }} ({{ master.department }})</h2>
+    <p style="margin: 4px 0 0; font-size: 0.9rem; color: #555;">
+      {% if start_date and end_date %}Period: {{ start_date }} to {{ end_date }}{% elif start_date %}From: {{ start_date }}{% elif end_date %}Up to: {{ end_date }}{% else %}All Time{% endif %}
+      &nbsp;|&nbsp; Printed on: <span id="print-date"></span>
+    </p>
+  </div>
+  <script>document.getElementById('print-date') && (document.getElementById('print-date').textContent = new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}));</script>
+
+  <!-- Filter -->
+  <div class="section-card no-print" style="padding: 1.25rem;">
+    <form method="get" style="display: flex; gap: 1.25rem; align-items: flex-end; flex-wrap: wrap;">
+      {% if linked_masters|length > 1 %}
+      <div class="form-group" style="margin: 0; min-width: 220px;">
+        <label class="form-label" style="font-size: 0.85rem; margin-bottom: 5px; color: #fbbf24; font-weight: 600;">Select Account Profile</label>
+        <select name="master_id" class="form-control" style="height: 38px; background: #1f2937; color: #fff; border: 1px solid #fbbf24; cursor: pointer;" onchange="this.form.submit()">
+          {% for lm in linked_masters %}
+          <option value="{{ lm.id }}" {% if lm.id == master.id %}selected{% endif %}>{{ lm.name }} ({{ lm.department }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="form-group" style="margin: 0; min-width: 150px;">
+        <label class="form-label" style="font-size: 0.85rem; margin-bottom: 5px;">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control" style="height: 38px;">
+      </div>
+      <div class="form-group" style="margin: 0; min-width: 150px;">
+        <label class="form-label" style="font-size: 0.85rem; margin-bottom: 5px;">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control" style="height: 38px;">
+      </div>
+      <div class="form-group" style="margin: 0; min-width: 180px;">
+        <label class="form-label" style="font-size: 0.85rem; margin-bottom: 5px;">Item Name</label>
+        <input type="text" name="item_name" value="{{ item_name_filter }}" class="form-control" placeholder="e.g. Fabric, Shirt…" style="height: 38px;">
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 1.25rem;">🔍 Filter</button>
+        {% if start_date or end_date or item_name_filter %}
+          <a href="{% url 'my_statement' %}" class="btn btn-secondary" style="height: 38px; padding: 0 1.25rem;">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Info + Balance Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+    <div class="stat-card" style="border-left: 4px solid var(--primary-color); display: flex; flex-direction: column; gap: 8px;">
+      <div class="stat-label" style="margin: 0; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);">MY DETAILS</div>
+      <div class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #fff;">{{ master.name }}</div>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
+        Department: <strong style="color: #fff;">{{ master.department }}</strong><br>
+        UPI ID: <strong style="color: #fff;">{{ master.upi_id|default:"Not set" }}</strong>
+      </p>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #3b82f6; display: flex; flex-direction: column; gap: 8px;">
+      <div class="stat-label" style="margin: 0; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);">TOTAL EARNINGS</div>
+      <div class="stat-value" style="font-size: 1.8rem; font-weight: 800; color: #60a5fa;">₹{{ total_earnings|floatformat:2 }}</div>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Sum of all completed report items</p>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #10b981; display: flex; flex-direction: column; gap: 8px;">
+      <div class="stat-label" style="margin: 0; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);">TOTAL PAID</div>
+      <div class="stat-value" style="font-size: 1.8rem; font-weight: 800; color: #34d399;">₹{{ total_paid|floatformat:2 }}</div>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total registered payment transactions</p>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid #f59e0b; display: flex; flex-direction: column; gap: 8px;">
+      <div class="stat-label" style="margin: 0; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);">OUTSTANDING BALANCE</div>
+      <div class="stat-value" style="font-size: 1.8rem; font-weight: 800; color: #fbbf24;">₹{{ current_balance|floatformat:2 }}</div>
+      <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Amount currently owed to you</p>
+    </div>
+  </div>
+
+  <!-- Transaction Table -->
+  <div class="section-card">
+    <h2 class="section-title" style="margin-bottom: 1.5rem;">Chronological Account Statement</h2>
+    {% if events %}
+      <div class="table-wrapper" style="overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Item Name</th>
+              <th>Description / Reference</th>
+              <th style="text-align: right; color: #60a5fa;">Earnings (+)</th>
+              <th style="text-align: right; color: #34d399;">Payments (-)</th>
+              <th style="text-align: right;">Running Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in events %}
+            <tr style="{% if event.type == 'payment' %}background: rgba(16,185,129,0.03);{% endif %}">
+              <td style="white-space: nowrap; font-weight: 500;">{{ event.date|date:"d M Y" }}</td>
+              <td style="font-size: 0.85rem;">
+                {% if event.item_name %}
+                  <span style="background: rgba(99,102,241,.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,.25); border-radius: 5px; padding: .15rem .5rem; font-size: .78rem; white-space: nowrap;">{{ event.item_name }}</span>
+                {% else %}
+                  <span style="color: var(--text-muted);">—</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 0.95rem;">{{ event.description }}</td>
+              <td style="text-align: right; font-weight: 600; color: #60a5fa;">
+                {% if event.type == 'earning' %}+₹{{ event.amount|floatformat:2 }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align: right; font-weight: 600; color: #34d399;">
+                {% if event.type == 'payment' %}-₹{{ event.amount|floatformat:2 }}{% else %}—{% endif %}
+              </td>
+              <td style="text-align: right; font-weight: 700; color: #fff;">₹{{ event.balance|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <p>No transactions recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

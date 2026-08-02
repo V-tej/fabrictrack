@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}My Statement — Not Linked{% endblock %}
+{% block page_title %}💰 My Statement{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="display: flex; flex-direction: column; gap: 2rem; align-items: center; justify-content: center; min-height: 50vh;">
+  <div class="section-card" style="text-align: center; max-width: 520px; padding: 3rem 2.5rem;">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔗</div>
+    <h2 style="color: #f59e0b; margin-bottom: 0.75rem;">Account Not Linked Yet</h2>
+    <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem;">
+      Your account has not been linked to a worker profile yet.<br>
+      Please contact your <strong style="color: #fff;">administrator</strong> to link your account so you can view your ledger statement.
+    </p>
+    <a href="{% url 'dashboard' %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+      ⬅️ Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

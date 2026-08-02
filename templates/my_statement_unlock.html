@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Unlock Statement{% endblock %}
+{% block page_title %}🔒 Unlock Statement{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="display: flex; flex-direction: column; gap: 2rem; align-items: center; justify-content: center; min-height: 50vh;">
+  <div class="section-card" style="text-align: center; max-width: 440px; width: 100%; padding: 3rem 2rem; border-top: 4px solid #f59e0b;">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔐</div>
+    <h2 style="color: #fff; margin-bottom: 0.5rem; font-weight: 700;">Statement Locked</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 2rem;">
+      Please enter your statement password to view your account earnings and transactions.
+    </p>
+
+    {% if error %}
+    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1.5rem; text-align: left;">
+      ⚠️ {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="password" name="password" required placeholder="Enter statement password" class="form-control" id="statement-password-input" style="height: 48px; width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding-right: 3rem; font-size: 1rem; border-radius: 8px;">
+        <button type="button" onclick="toggleStatementPw()" style="position: absolute; right: 0.75rem; background: none; border: none; font-size: 1.25rem; color: rgba(255,255,255,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 100%; user-select: none;">👁</button>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="height: 48px; font-size: 1rem; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border: none; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);">
+        🔓 Unlock Statement
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function toggleStatementPw() {
+    const input = document.getElementById('statement-password-input');
+    const btn = event.currentTarget;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁';
+    }
+    input.focus();
+  }
+</script>
+{% endblock %}

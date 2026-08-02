@@ -177,6 +177,13 @@
         <span class="nav-icon">💾</span> Backup ZIP (Excel + Photos)
       </a>
       {% endif %}
+      {% if not user.is_superuser and user.profile.person_type != 'ADMIN' %}
+      <a href="{% url 'my_statement' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'my_statement' %}active{% endif %}"
+        id="nav-my-statement">
+        <span class="nav-icon">💰</span> My Statement
+      </a>
+      {% endif %}
 
       {% if user.is_superuser %}
       <a href="{% url 'manage_masters' %}"

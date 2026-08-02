@@ -24,6 +24,18 @@ PERSON_CHOICES = [
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     person_type = models.CharField(max_length=10, choices=PERSON_CHOICES, default='P1')
+    linked_masters = models.ManyToManyField(
+        'MasterName',
+        blank=True,
+        related_name='linked_users',
+        help_text='Link this user to multiple MasterName profiles they can view statements for.',
+    )
+    statement_password = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text='Password required for this user to view their ledger statement.'
+    )
 
     def __str__(self):
         return f"{self.user.username} ({self.get_person_type_display()})"

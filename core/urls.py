@@ -35,8 +35,11 @@ urlpatterns = [
     path('ledger/<int:pk>/', views.master_ledger_detail_view, name='master_ledger_detail'),
     path('ledger/payment/new/', views.record_payment_view, name='record_payment'),
     path('ledger/payment/<int:pk>/new/', views.record_payment_view, name='record_payment_for_master'),
-    path('ledger/payment/<int:pk>/delete/', views.delete_payment_view, name='delete_payment'),
+    path('ledger/payment/delete/<int:pk>/', views.delete_payment_view, name='delete_payment'),
     path('api/master-outstanding/', views.get_master_outstanding_api, name='master_outstanding_api'),
+    path('my-statement/', views.my_statement_view, name='my_statement'),
+    path('my-statement/unlock/', views.my_statement_unlock_view, name='my_statement_unlock'),
+    path('my-statement/lock/', views.my_statement_lock_view, name='my_statement_lock'),
 
     # Edit Routes
     path('master-entry/<int:pk>/edit/', views.edit_master_entry, name='edit_master_entry'),

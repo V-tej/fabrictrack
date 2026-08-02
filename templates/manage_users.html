@@ -233,6 +233,7 @@
         <tr>
           <th>User</th>
           <th>Role / Type</th>
+          <th>Linked Master</th>
           <th>Access Level</th>
           <th>Joined</th>
           <th>Actions</th>
@@ -258,6 +259,16 @@
             {% endif %}
           </td>
           <td>
+            {% if u.profile.linked_masters.all %}
+              {% for lm in u.profile.linked_masters.all %}
+                <span style="color: #60a5fa; font-weight: 600;">{{ lm.name }}</span>
+                <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">({{ lm.department }})</span>{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            {% else %}
+              <span style="color: rgba(255,255,255,0.3); font-style: italic;">None</span>
+            {% endif %}
+          </td>
+          <td>
             {% if u.is_superuser %}
               <span class="badge badge-superuser">⭐ Superuser</span>
             {% else %}
@@ -272,7 +283,7 @@
                 🔑 Password
               </button>
               <!-- Edit Role -->
-              <button class="btn-sm btn-role" onclick="openRoleModal({{ u.id }}, '{{ u.username }}', '{% if u.profile %}{{ u.profile.person_type }}{% else %}P1{% endif %}', {{ u.is_superuser|yesno:'true,false' }})">
+              <button class="btn-sm btn-role" onclick="openRoleModal({{ u.id }}, '{{ u.username }}', '{% if u.profile %}{{ u.profile.person_type }}{% else %}P1{% endif %}', {{ u.is_superuser|yesno:'true,false' }}, '{% for lm in u.profile.linked_masters.all %}{{ lm.id }}{% if not forloop.last %},{% endif %}{% endfor %}', '{% if u.profile.statement_password %}{{ u.profile.statement_password }}{% endif %}')">
                 ✏️ Role
               </button>
               <!-- Delete -->
@@ -286,7 +297,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" style="text-align: center; color: rgba(255,255,255,0.3); padding: 2rem;">No users found.</td>
+          <td colspan="6" style="text-align: center; color: rgba(255,255,255,0.3); padding: 2rem;">No users found.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -320,6 +331,21 @@
           {% endfor %}
         </select>
       </div>
+      <div class="modal-form-group">
+        <label class="modal-label">Linked Master / Profile (Hold Ctrl/Cmd to select multiple)</label>
+        <select name="linked_masters" class="modal-select" id="add-linked-masters" multiple style="height: auto; max-height: 140px; padding: 6px;">
+          {% for m in masters %}
+          <option value="{{ m.id }}" data-dept="{{ m.department }}">{{ m.name }} ({{ m.department }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label">Statement Password</label>
+        <div class="pw-wrapper">
+          <input type="password" name="statement_password" class="modal-input" required placeholder="Set a password for statement access" id="add-statement-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('add-statement-password', this)" title="Show/Hide password">👁</button>
+        </div>
+      </div>
       <div class="modal-checkbox-row">
         <input type="checkbox" name="is_superuser" id="add-is-superuser">
         <label for="add-is-superuser">Grant Superuser / Admin access</label>
@@ -330,6 +356,7 @@
       </div>
     </form>
   </div>
+
 </div>
 
 <!-- ─── RESET PASSWORD MODAL ─── -->
@@ -369,11 +396,26 @@
       {% csrf_token %}
       <div class="modal-form-group">
         <label class="modal-label">Person Type / Role</label>
-        <select name="person_type" class="modal-select" id="role-person-type">
+        <select name="person_type" class="modal-select" id="role-person-type" onchange="updateMastersFilter('role-person-type', 'role-linked-masters')">
           {% for value, label in person_choices %}
           <option value="{{ value }}">{{ label }}</option>
           {% endfor %}
         </select>
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label">Linked Master / Profile (Hold Ctrl/Cmd to select multiple)</label>
+        <select name="linked_masters" class="modal-select" id="role-linked-masters" multiple style="height: auto; max-height: 140px; padding: 6px;">
+          {% for m in masters %}
+          <option value="{{ m.id }}" data-dept="{{ m.department }}">{{ m.name }} ({{ m.department }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-label">Statement Password</label>
+        <div class="pw-wrapper">
+          <input type="password" name="statement_password" class="modal-input" required placeholder="Set a password for statement access" id="role-statement-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('role-statement-password', this)" title="Show/Hide password">👁</button>
+        </div>
       </div>
       <div class="modal-checkbox-row">
         <input type="checkbox" name="is_superuser" id="role-is-superuser">
@@ -407,9 +449,78 @@
 </div>
 
 <script>
+  const roleDeptMap = {
+    'P1': 'Cutting',
+    'P2': 'Cutting',
+    'P3': 'Cutting',
+    'P4': 'Stitching',
+    'P5': 'Job Work',
+    'P6': 'Finishing',
+    'P7': 'Embroidery',
+    'P8': 'Printing',
+    'P9': 'Singleneedle',
+    'P10': 'Sewing',
+    'P11': 'Job Work 1',
+    'P12': 'Sewing 1'
+  };
+
+  function updateMastersFilter(roleSelectId, mastersSelectId, selectedIds = []) {
+    const roleSelect = document.getElementById(roleSelectId);
+    const mastersSelect = document.getElementById(mastersSelectId);
+    if (!roleSelect || !mastersSelect) return;
+
+    const selectedRole = roleSelect.value;
+    const targetDept = roleDeptMap[selectedRole];
+
+    // If we haven't stored original options, do it now
+    if (!mastersSelect.dataset.originalOptions) {
+      const original = [];
+      for (let opt of mastersSelect.options) {
+        original.push({
+          value: opt.value,
+          text: opt.text,
+          dept: opt.getAttribute('data-dept') || ''
+        });
+      }
+      mastersSelect.dataset.originalOptions = JSON.stringify(original);
+    }
+
+    const originalOptions = JSON.parse(mastersSelect.dataset.originalOptions);
+    mastersSelect.innerHTML = '';
+
+    originalOptions.forEach(opt => {
+      if (selectedRole === 'ADMIN' || !opt.dept || opt.dept === targetDept) {
+        const newOpt = document.createElement('option');
+        newOpt.value = opt.value;
+        newOpt.text = opt.text;
+        newOpt.setAttribute('data-dept', opt.dept);
+        if (selectedIds.includes(opt.value)) {
+          newOpt.selected = true;
+        }
+        mastersSelect.appendChild(newOpt);
+      }
+    });
+  }
+
   function openModal(id) {
     document.getElementById(id).classList.add('open');
+    if (id === 'addUserModal') {
+      // Trigger dynamic filter for the default chosen role in Add User modal
+      updateMastersFilter('add-person-type', 'add-linked-masters');
+      document.getElementById('add-statement-password').value = '';
+    }
   }
+
+  // Hook up event listener for the add user role change
+  document.addEventListener('DOMContentLoaded', () => {
+    const addRoleSel = document.getElementById('add-person-type');
+    if (addRoleSel) {
+      addRoleSel.addEventListener('change', () => {
+        updateMastersFilter('add-person-type', 'add-linked-masters');
+      });
+    }
+  });
+
   function closeModal(id) {
     document.getElementById(id).classList.remove('open');
   }
@@ -434,13 +545,20 @@
     openModal('deleteUserModal');
   }
 
-  function openRoleModal(userId, username, currentType, isSuperuser) {
+  function openRoleModal(userId, username, currentType, isSuperuser, linkedMasterIds, statementPassword) {
     document.getElementById('role-username-label').textContent = username;
     document.getElementById('updateRoleForm').action = '/manage-users/' + userId + '/update-role/';
+    
     const sel = document.getElementById('role-person-type');
     for (let opt of sel.options) {
       opt.selected = (opt.value === currentType);
     }
+    
+    const ids = (linkedMasterIds || '').split(',').filter(Boolean);
+    updateMastersFilter('role-person-type', 'role-linked-masters', ids);
+    
+    document.getElementById('role-statement-password').value = statementPassword || '';
+    
     document.getElementById('role-is-superuser').checked = isSuperuser;
     openModal('updateRoleModal');
   }

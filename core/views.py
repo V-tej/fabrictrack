@@ -433,9 +433,12 @@ def manage_users(request):
         return redirect('dashboard')
 
     from django.contrib.auth.models import User
+    from .models import MasterName
     users = User.objects.select_related('profile').order_by('username')
+    masters = MasterName.objects.all().order_by('department', 'name')
     context = {
         'users': users,
+        'masters': masters,
         'person_choices': UserProfile.PERSON_CHOICES if hasattr(UserProfile, 'PERSON_CHOICES') else [],
     }
     # Load PERSON_CHOICES from models
@@ -452,14 +455,16 @@ def add_user(request):
 
     if request.method == 'POST':
         from django.contrib.auth.models import User
-        from .models import PERSON_CHOICES
+        from .models import PERSON_CHOICES, MasterName
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '').strip()
         person_type = request.POST.get('person_type', 'P1')
         is_superuser = request.POST.get('is_superuser') == 'on'
+        linked_master_ids = request.POST.getlist('linked_masters')
+        statement_password = request.POST.get('statement_password', '').strip()
 
-        if not username or not password:
-            messages.error(request, 'Username and password are required.')
+        if not username or not password or not statement_password:
+            messages.error(request, 'Username, password and statement password are required.')
             return redirect('manage_users')
 
         if User.objects.filter(username=username).exists():
@@ -471,7 +476,15 @@ def add_user(request):
         user.is_staff = is_superuser
         user.save()
 
-        UserProfile.objects.get_or_create(user=user, defaults={'person_type': person_type})
+        profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'person_type': person_type})
+        profile.statement_password = statement_password if statement_password else None
+        if linked_master_ids:
+            masters = MasterName.objects.filter(pk__in=linked_master_ids)
+            profile.linked_masters.set(masters)
+        else:
+            profile.linked_masters.clear()
+        profile.save()
+
         messages.success(request, f'User "{username}" created successfully!')
     return redirect('manage_users')
 
@@ -520,13 +533,28 @@ def update_user_role(request, user_id):
         return redirect('dashboard')
 
     from django.contrib.auth.models import User
+    from .models import MasterName
     if request.method == 'POST':
         target_user = get_object_or_404(User, pk=user_id)
         person_type = request.POST.get('person_type', 'P1')
         is_superuser = request.POST.get('is_superuser') == 'on'
+        linked_master_ids = request.POST.getlist('linked_masters')
+        statement_password = request.POST.get('statement_password', '').strip()
+
+        if not statement_password:
+            messages.error(request, 'Statement password is required.')
+            return redirect('manage_users')
+
         profile, _ = UserProfile.objects.get_or_create(user=target_user)
         profile.person_type = person_type
+        profile.statement_password = statement_password if statement_password else None
+        if linked_master_ids:
+            masters = MasterName.objects.filter(pk__in=linked_master_ids)
+            profile.linked_masters.set(masters)
+        else:
+            profile.linked_masters.clear()
         profile.save()
+
         target_user.is_superuser = is_superuser
         target_user.is_staff = is_superuser
         target_user.save()
@@ -4022,6 +4050,225 @@ def master_ledger_detail_view(request, pk):
         'item_name_filter': item_name_filter,
         'is_admin': is_admin,
     })
+
+
+@login_required
+def my_statement_unlock_view(request):
+    """Password prompt for viewing a user's statement."""
+    profile = getattr(request.user, 'profile', None)
+    statement_password = getattr(profile, 'statement_password', '') if profile else ''
+
+    if not statement_password:
+        return redirect('my_statement')
+
+    session_key = f"mystatement_unlocked_{request.user.id}"
+    if request.session.get(session_key) is True:
+        return redirect('my_statement')
+
+    error = None
+    if request.method == 'POST':
+        entered = request.POST.get('password', '')
+        if entered == statement_password:
+            request.session[session_key] = True
+            next_url = request.POST.get('next') or request.GET.get('next') or ''
+            return redirect(next_url if next_url else 'my_statement')
+        else:
+            error = 'Incorrect statement password. Please try again.'
+
+    return render(request, 'my_statement_unlock.html', {
+        'error': error,
+        'next': request.GET.get('next', ''),
+    })
+
+
+@login_required
+def my_statement_lock_view(request):
+    """Locks the statement page for this user."""
+    session_key = f"mystatement_unlocked_{request.user.id}"
+    request.session.pop(session_key, None)
+    messages.success(request, 'Your statement view has been locked.')
+    return redirect('my_statement')
+
+
+@login_required
+def my_statement_view(request):
+    """
+    Allows any logged-in user to view their own ledger statement.
+    No password required if admin hasn't set one. Otherwise, prompts for password.
+    """
+    is_admin = request.user.is_superuser or (
+        hasattr(request.user, 'profile') and request.user.profile.person_type == 'ADMIN'
+    )
+    if is_admin:
+        return redirect('master_ledger_list')
+
+    profile = getattr(request.user, 'profile', None)
+    statement_password = getattr(profile, 'statement_password', '') if profile else ''
+
+    if statement_password:
+        session_key = f"mystatement_unlocked_{request.user.id}"
+        if request.session.get(session_key) is not True:
+            return redirect(f'/my-statement/unlock/?next={request.path}')
+
+    linked_masters = list(profile.linked_masters.all()) if profile else []
+
+    if not linked_masters:
+        return render(request, 'my_statement_no_link.html', {})
+
+    # Select which master to show
+    selected_master_id = request.GET.get('master_id', '').strip()
+    master = None
+    if selected_master_id:
+        for lm in linked_masters:
+            if str(lm.id) == selected_master_id:
+                master = lm
+                break
+
+    if not master:
+        master = linked_masters[0]
+
+    from django.utils.dateparse import parse_date
+    from .models import (
+        CuttingReport, StitchingReport, JobWorkReport, EmbroideryReport,
+        PrintingReport, SingleneedleReport, SewingReport, FinishingReport,
+        MasterPayment,
+    )
+
+    start_date_str   = request.GET.get('start_date', '').strip()
+    end_date_str     = request.GET.get('end_date', '').strip()
+    item_name_filter = request.GET.get('item_name', '').strip()
+    start_date_obj   = parse_date(start_date_str) if start_date_str else None
+    end_date_obj     = parse_date(end_date_str)   if end_date_str   else None
+
+    events = []
+
+    # 1. Cutting Report
+    for r in CuttingReport.objects.filter(master_name=master.name).select_related('master_entry'):
+        rate = float(r.cutting_rate or 0.0)
+        pcs = int(r.total_pcs or 0)
+        amount = rate * pcs
+        if amount > 0:
+            item_label = f" [{r.item_name}]" if getattr(r, 'item_name', '') else ''
+            events.append({
+                'date': r.master_entry.date,
+                'created_at': r.created_at,
+                'type': 'earning',
+                'item_name': getattr(r, 'item_name', '') or '',
+                'description': f"Cutting{item_label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card: {r.job_card_no})",
+                'amount': amount
+            })
+
+    # Helper for standard reports
+    def add_reports(qs, label, date_field, rate_field='total_rate', jc_field='job_card_no'):
+        for r in qs:
+            rate = float(getattr(r, rate_field) or 0.0)
+            pcs = int(r.total_pcs or 0)
+            amount = rate * pcs
+            if amount > 0:
+                d = getattr(r, date_field) or r.created_at.date()
+                jc = getattr(r, jc_field, '')
+                item_label = f" [{r.item_name}]" if getattr(r, 'item_name', '') else ''
+                events.append({
+                    'date': d,
+                    'created_at': r.created_at,
+                    'type': 'earning',
+                    'item_name': getattr(r, 'item_name', '') or '',
+                    'description': f"{label}{item_label}: {pcs} Pcs @ ₹{rate:.2f} (Job Card/Lot: {jc})",
+                    'amount': amount
+                })
+
+    add_reports(StitchingReport.objects.filter(master_name=master.name), "Stitching", "line_in_date")
+    add_reports(JobWorkReport.objects.filter(master_name=master.name), "Job Work", "jobwork_in")
+    add_reports(EmbroideryReport.objects.filter(master_name=master.name), "Embroidery", "embroidery_in")
+    add_reports(PrintingReport.objects.filter(master_name=master.name), "Printing", "printing_in")
+    add_reports(SingleneedleReport.objects.filter(master_name=master.name), "Singleneedle", "line_in_date")
+    add_reports(SewingReport.objects.filter(master_name=master.name), "Sewing", "line_in_date")
+    add_reports(FinishingReport.objects.filter(master_name=master.name), "Finishing", "date", jc_field='lot_no')
+
+    # Payments
+    for p in MasterPayment.objects.filter(master=master):
+        period_str = f" (Period: {p.start_date.strftime('%d %b %Y')} to {p.end_date.strftime('%d %b %Y')})" if p.start_date and p.end_date else ""
+        events.append({
+            'date': p.date,
+            'created_at': p.created_at,
+            'type': 'payment',
+            'item_name': '',
+            'description': f"Paid via {p.get_payment_mode_display()}{period_str}" + (f" (Ref: {p.reference_no})" if p.reference_no else "") + (f" - {p.remarks}" if p.remarks else ""),
+            'amount': float(p.amount),
+            'payment_id': p.id
+        })
+
+    # Sort chronologically
+    events = sorted(events, key=lambda x: (x['date'], x['created_at']))
+
+    # Split into pre-range and active range
+    pre_events = []
+    active_events = []
+    
+    for e in events:
+        if start_date_obj and e['date'] < start_date_obj:
+            pre_events.append(e)
+        elif end_date_obj and e['date'] > end_date_obj:
+            pass
+        else:
+            active_events.append(e)
+
+    # Compute opening balance
+    opening_balance = 0.0
+    for e in pre_events:
+        if e['type'] == 'earning':
+            opening_balance += e['amount']
+        else:
+            opening_balance -= e['amount']
+
+    # Calculate running balance starting from the very beginning (all-time)
+    running = 0.0
+    for e in events:
+        if e['type'] == 'earning':
+            running += e['amount']
+        else:
+            running -= e['amount']
+        e['balance'] = running
+
+    # Overall totals
+    from .views import calculate_master_earnings
+    from django.db.models import Sum
+    total_earnings_all = calculate_master_earnings(master.name)
+    total_paid_all = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
+    current_balance_all = total_earnings_all - total_paid_all
+
+    # Filtered range totals
+    range_earnings = sum(e['amount'] for e in active_events if e['type'] == 'earning')
+    range_paid = sum(e['amount'] for e in active_events if e['type'] == 'payment')
+    range_balance_change = range_earnings - range_paid
+
+    # Apply item_name filter to active events (earnings only, payments always shown)
+    if item_name_filter:
+        active_events = [
+            e for e in active_events
+            if e['type'] == 'payment' or item_name_filter.lower() in e['item_name'].lower()
+        ]
+
+    return render(request, 'my_statement.html', {
+        'master': master,
+        'linked_masters': linked_masters,
+        'events': reversed(active_events),  # Show newest first in table
+        'total_earnings': range_earnings if (start_date_obj or end_date_obj) else total_earnings_all,
+        'total_paid': range_paid if (start_date_obj or end_date_obj) else total_paid_all,
+        'current_balance': (opening_balance + range_balance_change) if (start_date_obj or end_date_obj) else current_balance_all,
+
+        'total_earnings_all': total_earnings_all,
+        'total_paid_all': total_paid_all,
+        'current_balance_all': current_balance_all,
+        'opening_balance': opening_balance,
+
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'item_name_filter': item_name_filter,
+        'is_admin': False,
+    })
+
+
 
 
 @login_required
