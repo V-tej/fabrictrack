@@ -12,7 +12,7 @@
       <div style="position:relative; display:inline-flex; align-items:center;">
         <span style="position:absolute;left:10px;color:#94a3b8;font-size:15px;pointer-events:none;">🔍</span>
         <input type="text" name="jc" id="globalJcInput" value="{{ jc_search }}" placeholder="Search Job Card No. across all departments..." title="Press Enter to search all departments"
-          style="padding:0.45rem 2.5rem 0.45rem 2.2rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.9rem;outline:none;height:38px;width:320px;max-width:100%;">
+          class="mobile-full" style="padding:0.45rem 2.5rem 0.45rem 2.2rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.9rem;outline:none;height:38px;width:320px;max-width:100%;box-sizing:border-box;">
         {% if jc_search %}
         <a href="{% url 'submission_list' %}" style="position:absolute;right:10px;color:#94a3b8;font-size:14px;text-decoration:none;line-height:1;" title="Clear search">✕</a>
         {% endif %}

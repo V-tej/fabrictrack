@@ -18,15 +18,31 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── Sidebar Toggle (mobile) ───────────────────────────────────────
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
+  const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+  function setSidebarOpen(open) {
+    if (!sidebar) return;
+    sidebar.classList.toggle('open', open);
+    document.body.classList.toggle('sidebar-open', open);
+    if (sidebarBackdrop) sidebarBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
   if (sidebarToggle && sidebar) {
-    sidebarToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
+    sidebarToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setSidebarOpen(!sidebar.classList.contains('open'));
     });
-    // Close on outside click
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', () => setSidebarOpen(false));
+    }
     document.addEventListener('click', (e) => {
       if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-        sidebar.classList.remove('open');
+        setSidebarOpen(false);
       }
+    });
+    sidebar.querySelectorAll('a.nav-item, a.btn-logout').forEach((link) => {
+      link.addEventListener('click', () => setSidebarOpen(false));
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) setSidebarOpen(false);
     });
   }
 

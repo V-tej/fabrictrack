@@ -142,6 +142,9 @@
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     }
+    @media (max-width: 480px) {
+      .data-grid { grid-template-columns: 1fr; }
+    }
     .data-item { display: flex; flex-direction: column; gap: 4px; }
     .data-label {
       font-size: 0.7rem;

@@ -44,7 +44,7 @@
     <!-- Key Fields Table/Grid -->
     <div style="margin-bottom: 2.5rem;">
       <h3 style="color: var(--accent); margin-bottom: 1rem; font-size: 1.1rem; border-left: 4px solid var(--accent); padding-left: 8px;">Report Details</h3>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px; background: rgba(255,255,255,0.01);">
+      <div class="print-detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px; background: rgba(255,255,255,0.01);">
         {% for field in fields_list %}
           <div style="display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 8px;">
             <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">{{ field.label }}</span>

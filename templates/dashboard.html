@@ -120,7 +120,7 @@
         ⏳ Pending Tasks <span class="badge" style="background: #f59e0b; color: #fff;">{{ pending_tasks.count }}</span>
       </h2>
       <div style="display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;">
-        <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="width: 220px; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
+        <input type="text" id="pendingSearch" placeholder="🔍 Search Job Card No..." class="form-control mobile-full" style="width: 220px; max-width: 100%; background: rgba(255,255,255,0.05); border: 1px solid #f59e0b;">
         <button onclick="printPendingTasks()" style="display: inline-flex; align-items: center; gap: 5px; padding: 0.45rem 1rem; border-radius: 8px; border: none; background: #6366f1; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'" title="Print visible pending tasks">
           🖨️ Print
         </button>
@@ -456,7 +456,7 @@
       <h2 class="section-title" style="color: #22c55e; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
         ✅ Completed Job Cards <span class="badge" style="background: #22c55e; color: #fff;">{{ completed_tasks|length }}</span>
       </h2>
-      <input type="text" id="completedSearch" placeholder="🔍 Search Job Card No..." class="form-control" style="max-width: 250px; background: rgba(255,255,255,0.05); border: 1px solid #22c55e;">
+      <input type="text" id="completedSearch" placeholder="🔍 Search Job Card No..." class="form-control mobile-full" style="max-width: 250px; width: 100%; background: rgba(255,255,255,0.05); border: 1px solid #22c55e;">
     </div>
     <div class="table-wrapper">
       <table class="data-table" id="completedTable">
