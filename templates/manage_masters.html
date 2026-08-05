@@ -178,7 +178,7 @@
   <div>
     <div class="section-card" style="margin-bottom: 2rem;">
       <h2 class="section-title" id="vendorFormCardTitle">Add New Vendor & Article</h2>
-      <form method="post" style="display: flex; flex-direction: column; gap: 1rem;" id="vendorForm">
+      <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1rem;" id="vendorForm">
         {% csrf_token %}
         <input type="hidden" name="master_id" id="editVendorId" value="">
         <!-- Automatically set department to 'Vendor' -->
@@ -191,6 +191,25 @@
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Article Name</label>
           <input type="text" name="article" id="vendorArticleInput" class="form-control" required placeholder="Enter article name...">
+        </div>
+
+        <!-- Photo Upload -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Article Photo <span style="color:#9ca3af;font-weight:400;font-size:0.8rem;">(optional — shown in Accessories)</span></label>
+          <!-- Preview of current photo when editing -->
+          <div id="vendorCurrentPhotoWrap" style="display:none; margin-bottom:0.5rem; align-items:center; gap:0.75rem;">
+            <img id="vendorCurrentPhotoImg" src="" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:2px solid #fbbf24;" alt="Current Photo">
+            <span style="color:#9ca3af;font-size:0.8rem;">Current photo — upload a new one to replace</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;padding:0.6rem 0.75rem;border:1px dashed #374151;border-radius:8px;background:rgba(255,255,255,0.02);transition:border-color 0.2s;" id="vendorPhotoLabel" onmouseenter="this.style.borderColor='#fbbf24'" onmouseleave="this.style.borderColor='#374151'">
+            <img id="vendorPhotoPreviewImg" src="" alt="" style="display:none;width:40px;height:40px;object-fit:cover;border-radius:6px;border:2px solid #fbbf24;">
+            <span id="vendorPhotoCamIcon" style="font-size:1.4rem;">📷</span>
+            <div>
+              <div id="vendorPhotoLabelText" style="color:#94a3b8;font-size:0.85rem;">Click to upload photo...</div>
+              <div style="color:#64748b;font-size:0.75rem;">JPG, PNG, WEBP • Max 5MB</div>
+            </div>
+            <input type="file" name="vendor_photo" id="vendorPhotoInput" accept="image/*" style="display:none;" onchange="onVendorPhotoChange(this)">
+          </label>
         </div>
         
         <div class="form-group" style="margin-bottom: 0; margin-top: 0.5rem; display: flex; gap: 10px;">
@@ -209,6 +228,7 @@
               <tr>
                 <th>Vendor</th>
                 <th>Article</th>
+                <th>Photo</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -217,8 +237,23 @@
               <tr>
                 <td style="font-weight: 700; color: #fbbf24;">{{ vendor.name }}</td>
                 <td style="font-size: 0.9rem;">{{ vendor.article }}</td>
+                <td style="text-align:center;">
+                  {% if vendor.photo %}
+                    <a href="{% url 'serve_vendor_photo' vendor.id %}?t={% now 'U' %}" target="_blank" title="View photo">
+                      <img src="{% url 'serve_vendor_photo' vendor.id %}?t={% now 'U' %}" alt="{{ vendor.name }} photo"
+                        style="width:42px;height:42px;object-fit:cover;border-radius:6px;border:2px solid #fbbf24;cursor:pointer;" />
+                    </a>
+                  {% else %}
+                    <span style="color:#475569;font-size:0.8rem;">—</span>
+                  {% endif %}
+                </td>
                 <td>
-                  <button type="button" class="btn btn-sm btn-edit-vendor" data-id="{{ vendor.id }}" data-name="{{ vendor.name }}" data-article="{{ vendor.article }}" style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
+                  <button type="button" class="btn btn-sm btn-edit-vendor"
+                    data-id="{{ vendor.id }}"
+                    data-name="{{ vendor.name }}"
+                    data-article="{{ vendor.article }}"
+                    data-photo-url="{% if vendor.photo %}{% url 'serve_vendor_photo' vendor.id %}?t={% now 'U' %}{% endif %}"
+                    style="padding: 0.25rem 0.5rem; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 5px;">
                     Edit
                   </button>
                   <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ vendor.name }} - {{ vendor.article }}?');">
@@ -297,16 +332,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const vendorArticleInput = document.querySelector('#vendorArticleInput');
     const btnSaveVendor = document.querySelector('#btnSaveVendor');
     const btnCancelEditVendor = document.querySelector('#btnCancelEditVendor');
+    const vendorCurrentPhotoWrap = document.querySelector('#vendorCurrentPhotoWrap');
+    const vendorCurrentPhotoImg = document.querySelector('#vendorCurrentPhotoImg');
 
     btnEditVendors.forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const name = this.getAttribute('data-name');
             const article = this.getAttribute('data-article');
+            const photoUrl = this.getAttribute('data-photo-url');
 
             editVendorIdInput.value = id;
             vendorNameInput.value = name;
             vendorArticleInput.value = article;
+
+            // Show current photo if exists
+            if (photoUrl) {
+                vendorCurrentPhotoImg.src = photoUrl;
+                vendorCurrentPhotoWrap.style.display = 'flex';
+            } else {
+                vendorCurrentPhotoWrap.style.display = 'none';
+                vendorCurrentPhotoImg.src = '';
+            }
 
             vendorFormTitle.textContent = 'Edit Vendor & Article';
             btnSaveVendor.textContent = 'Save Vendor & Article';
@@ -321,6 +368,16 @@ document.addEventListener('DOMContentLoaded', function() {
         editVendorIdInput.value = '';
         vendorNameInput.value = '';
         vendorArticleInput.value = '';
+        vendorCurrentPhotoWrap.style.display = 'none';
+        vendorCurrentPhotoImg.src = '';
+        document.getElementById('vendorPhotoLabelText').textContent = 'Click to upload photo...';
+        document.getElementById('vendorPhotoLabelText').style.color = '#94a3b8';
+        document.getElementById('vendorPhotoInput').value = '';
+        // Reset preview
+        const prev = document.getElementById('vendorPhotoPreviewImg');
+        const cam = document.getElementById('vendorPhotoCamIcon');
+        if (prev) { prev.src = ''; prev.style.display = 'none'; }
+        if (cam) cam.style.display = '';
 
         vendorFormTitle.textContent = 'Add New Vendor & Article';
         btnSaveVendor.textContent = 'Add Vendor & Article';
@@ -369,5 +426,30 @@ document.addEventListener('DOMContentLoaded', function() {
         btnCancelEditRate.style.display = 'none';
     });
 });
+
+function onVendorPhotoChange(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const labelText = document.getElementById('vendorPhotoLabelText');
+    const previewImg = document.getElementById('vendorPhotoPreviewImg');
+    const camIcon = document.getElementById('vendorPhotoCamIcon');
+    const name = file.name;
+
+    // Show filename in label
+    labelText.textContent = '✅ ' + (name.length > 25 ? name.substring(0, 22) + '...' : name);
+    labelText.style.color = '#34d399';
+
+    // Show live thumbnail preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      if (previewImg) {
+        previewImg.src = e.target.result;
+        previewImg.style.display = 'block';
+      }
+      if (camIcon) camIcon.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+}
 </script>
 {% endblock %}

@@ -234,7 +234,8 @@
                         <th style="width: 60px; text-align: center;">Col</th>
                         <th style="width: 90px; text-align: center;">Qty</th>
                         <th style="width: 90px; text-align: center;">Total Pcs</th>
-                        <th style="width: 90px; text-align: center;">Status</th>
+                        <th style="width: 110px; text-align: center;">Status</th>
+                        <th style="width: 110px; text-align: center;">Date</th>
                         <th style="width: 80px; text-align: center;">Photo</th>
                         <th class="btn-no-print" style="width: 70px; text-align: center;">Action</th>
                       </tr>
@@ -254,19 +255,31 @@
                           <td style="text-align: center; font-weight: 700; color: #fbbf24;">{{ job.total|default:"0" }}</td>
                           <td style="text-align: center;">
                             {% if job.status == 'green' %}
-                              <span style="color:#22c55e; font-weight:600;">🟢 Green</span>
+                              <span style="color:#22c55e; font-weight:600; font-size:0.8rem;">🟢 Green</span>
                             {% elif job.status == 'red' %}
-                              <span style="color:#ef4444; font-weight:600;">🔴 Red</span>
+                              <span style="color:#ef4444; font-weight:600; font-size:0.8rem;">🔴 Red</span>
                             {% elif job.status == 'yellow' %}
-                              <span style="color:#fbbf24; font-weight:600;">🟡 Yellow</span>
+                              <span style="color:#fbbf24; font-weight:600; font-size:0.8rem;">🟡 Yellow</span>
                             {% else %}
-                              <span style="color:#9ca3af;">—</span>
+                              <span style="color:#9ca3af; font-size:0.8rem;">—</span>
+                            {% endif %}
+                          </td>
+                          <td style="text-align: center; font-size: 0.8rem;">
+                            {% if job.updated_at %}
+                              <span style="color:#94a3b8;">{{ job.updated_at|date:"d M Y" }}</span><br>
+                              <span style="color:#64748b; font-size:0.72rem;">{{ job.updated_at|date:"H:i" }}</span>
+                            {% else %}
+                              <span style="color:#64748b;">—</span>
                             {% endif %}
                           </td>
                           <td style="text-align: center;">
                             {% if job.has_photo %}
-                              <a href="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" target="_blank" title="Click to view photo">
-                                <img src="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" alt="Photo" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fbbf24; vertical-align: middle;">
+                              <a href="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" target="_blank" title="Cell Photo">
+                                <img src="{% url 'serve_accessories_cell_photo' job.entry_id job.col %}" alt="Photo" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid #22c55e; vertical-align: middle;" title="Cell photo">
+                              </a>
+                            {% elif job.vendor_photo_url %}
+                              <a href="{{ job.vendor_photo_url }}" target="_blank" title="Vendor Master Photo">
+                                <img src="{{ job.vendor_photo_url }}" alt="Vendor Photo" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fbbf24; vertical-align: middle;" title="Vendor master photo">
                               </a>
                             {% else %}
                               <span style="color: #64748b; font-size: 0.75rem;">None</span>

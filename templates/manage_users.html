@@ -200,6 +200,100 @@
   .user-info { display: flex; align-items: center; gap: 0.75rem; }
   .user-name { font-weight: 600; color: #fff; }
   .user-date { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 0.1rem; }
+
+  /* Responsive Media Queries */
+  @media (max-width: 768px) {
+    .users-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .users-header h2 { font-size: 1.2rem; }
+    .btn-add-user {
+      width: 100%;
+      justify-content: center;
+      padding: 0.75rem;
+    }
+    .users-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .users-table { min-width: 650px; }
+  }
+
+  @media (max-width: 576px) {
+    .users-table-wrapper {
+      overflow-x: visible;
+      border: none;
+      background: transparent;
+    }
+    .users-table, .users-table thead, .users-table tbody, .users-table th, .users-table td, .users-table tr {
+      display: block;
+    }
+    .users-table { min-width: 0; }
+    .users-table thead { display: none; }
+    .users-table tbody tr {
+      margin-bottom: 0.85rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+    }
+    .users-table td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem;
+      text-align: right;
+    }
+    .users-table td:last-child {
+      border-bottom: none;
+      padding-top: 0.75rem;
+      justify-content: flex-start;
+    }
+    .users-table td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      text-align: left;
+      margin-right: 0.75rem;
+    }
+    .users-table td[data-label="User"]::before { display: none; }
+    .users-table td[data-label="User"] {
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .user-info { width: 100%; }
+    .action-btns { width: 100%; justify-content: flex-start; gap: 0.4rem; }
+
+    /* Modal Mobile Adjustments */
+    .modal-overlay {
+      padding: 0.75rem;
+      align-items: flex-end;
+    }
+    .modal-box {
+      padding: 1.25rem;
+      max-width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .modal-box h3 { font-size: 1.1rem; margin-bottom: 1rem; }
+    .modal-footer {
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+    }
+    .btn-modal-submit, .btn-modal-cancel {
+      width: 100%;
+      padding: 0.75rem;
+    }
+  }
 </style>
 
 <div class="fade-in">
@@ -242,7 +336,7 @@
       <tbody>
         {% for u in users %}
         <tr>
-          <td>
+          <td data-label="User">
             <div class="user-info">
               <div class="avatar-circle">{{ u.username|slice:":1"|upper }}</div>
               <div>
@@ -251,14 +345,14 @@
               </div>
             </div>
           </td>
-          <td>
+          <td data-label="Role / Type">
             {% if u.profile %}
               <span class="badge badge-admin">{{ u.profile.get_person_type_display }}</span>
             {% else %}
               <span class="badge badge-user">No Profile</span>
             {% endif %}
           </td>
-          <td>
+          <td data-label="Linked Master">
             {% if u.profile.linked_masters.all %}
               {% for lm in u.profile.linked_masters.all %}
                 <span style="color: #60a5fa; font-weight: 600;">{{ lm.name }}</span>
@@ -268,15 +362,15 @@
               <span style="color: rgba(255,255,255,0.3); font-style: italic;">None</span>
             {% endif %}
           </td>
-          <td>
+          <td data-label="Access Level">
             {% if u.is_superuser %}
               <span class="badge badge-superuser">⭐ Superuser</span>
             {% else %}
               <span class="badge badge-user">Regular</span>
             {% endif %}
           </td>
-          <td style="color: rgba(255,255,255,0.5); font-size: 0.82rem;">{{ u.date_joined|date:"d M Y, H:i" }}</td>
-          <td>
+          <td data-label="Joined" style="color: rgba(255,255,255,0.5); font-size: 0.82rem;">{{ u.date_joined|date:"d M Y, H:i" }}</td>
+          <td data-label="Actions">
             <div class="action-btns">
               <!-- Reset Password -->
               <button class="btn-sm btn-reset" onclick="openResetModal({{ u.id }}, '{{ u.username }}', '{% if u.profile.plain_password %}{{ u.profile.plain_password }}{% endif %}')">

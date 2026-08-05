@@ -78,6 +78,7 @@ urlpatterns = [
     path('accessories/<str:job_card_no>/', views.accessories_detail_view, name='accessories_detail'),
     path('accessories/<str:job_card_no>/print/', views.accessories_print_view, name='accessories_print'),
     path('accessories-cell-photo/<int:entry_id>/<str:col>/', views.serve_accessories_cell_photo, name='serve_accessories_cell_photo'),
+    path('vendor-photo/<int:vendor_id>/', views.serve_vendor_photo, name='serve_vendor_photo'),
     path('vendor-report/', views.vendor_report_view, name='vendor_report'),
 
 
@@ -107,4 +108,24 @@ urlpatterns = [
 
     # Print Report Route
     path('report/<str:report_type>/<int:pk>/print/', views.print_report_view, name='print_report'),
+
+    # Team Chat (SlackTask-style)
+    path('chat/', views.chat_view, name='chat'),
+    path('api/chat/bootstrap/', views.chat_bootstrap_api, name='chat_bootstrap_api'),
+    path('api/chat/<int:channel_id>/messages/', views.chat_messages_api, name='chat_messages_api'),
+    path('api/chat/<int:channel_id>/send/', views.chat_send_api, name='chat_send_api'),
+    path('api/chat/message/<int:message_id>/to-task/', views.chat_message_to_task_api, name='chat_message_to_task'),
+    path('api/chat/message/<int:message_id>/react/', views.chat_react_api, name='chat_react'),
+    path('api/chat/message/<int:message_id>/bookmark/', views.chat_bookmark_api, name='chat_bookmark'),
+    path('api/chat/message/<int:message_id>/pin/', views.chat_pin_api, name='chat_pin'),
+    path('api/chat/message/<int:message_id>/edit/', views.chat_edit_api, name='chat_edit'),
+    path('api/chat/message/<int:message_id>/delete/', views.chat_message_delete_api, name='chat_message_delete'),
+    path('api/chat/message/<int:message_id>/image/', views.chat_message_image_api, name='chat_message_image'),
+    path('api/chat/tasks/', views.chat_tasks_api, name='chat_tasks_api'),
+    path('api/chat/tasks/<int:task_id>/toggle/', views.chat_task_toggle_api, name='chat_task_toggle'),
+    path('api/chat/tasks/<int:task_id>/delete/', views.chat_task_delete_api, name='chat_task_delete'),
+    path('api/chat/tasks/<int:task_id>/labels/', views.chat_task_labels_api, name='chat_task_labels'),
+    path('api/chat/labels/', views.chat_labels_api, name='chat_labels'),
+    path('api/chat/dm/open/', views.chat_open_dm_api, name='chat_open_dm'),
+    path('api/chat/saved/', views.chat_saved_api, name='chat_saved_api'),
 ]

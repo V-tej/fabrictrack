@@ -6,9 +6,9 @@ from .models import (
     StitchingReport, StitchingReportPhoto, JobWorkReport, JobWorkReportPhoto,
     FinishingReport, FinishingReportPhoto, EmbroideryReport,
     EmbroideryReportPhoto, PrintingReport, PrintingReportPhoto,
-    SingleneedleReport, SingleneedleReportPhoto, SewingReport,
-    SewingReportPhoto, MasterName, JobCardRequirement, RateDefinition,
-    JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto
+    SingleneedleReport, SingleneedleReportPhoto, SewingReport, SewingReportPhoto, MasterName, JobCardRequirement, RateDefinition,
+    JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto,
+    ChatChannel, ChatMessage, ChatTask, ChatReaction, ChatBookmark, ChatChannelRead
 )
 
 
@@ -302,4 +302,35 @@ class RateDefinitionAdmin(admin.ModelAdmin):
     list_display = ['name', 'description', 'total_rate']
     search_fields = ['name', 'description']
 
+
+@admin.register(ChatChannel)
+class ChatChannelAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'is_dm', 'is_private', 'is_default', 'created_at']
+    list_filter = ['is_dm', 'is_private']
+    search_fields = ['name', 'slug']
+    filter_horizontal = ['members']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(ChatMessage)
+class ChatMessageAdmin(admin.ModelAdmin):
+    list_display = ['channel', 'sender', 'message_type', 'content_short', 'created_at']
+    list_filter = ['channel', 'message_type', 'created_at']
+    search_fields = ['content', 'sender__username']
+
+    def content_short(self, obj):
+        return (obj.content[:60] + '…') if len(obj.content) > 60 else obj.content
+    content_short.short_description = 'Message'
+
+
+@admin.register(ChatTask)
+class ChatTaskAdmin(admin.ModelAdmin):
+    list_display = ['task_key', 'title', 'priority', 'due_date', 'completed', 'channel']
+    list_filter = ['completed', 'priority']
+    search_fields = ['title', 'task_key']
+
+
+admin.site.register(ChatReaction)
+admin.site.register(ChatBookmark)
+admin.site.register(ChatChannelRead)
 

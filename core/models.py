@@ -95,6 +95,8 @@ class MasterName(models.Model):
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
     upi_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="UPI ID / VPA")
     article = models.CharField(max_length=150, blank=True, null=True)
+    photo = models.BinaryField(blank=True, null=True)
+    photo_mime = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         ordering = ['department', 'name']
@@ -1276,4 +1278,132 @@ class ActivityLog(models.Model):
     def __str__(self):
         username = self.user.username if self.user else 'Unknown'
         return f"{self.get_action_display()} by {username} — {self.department} — {self.job_card_no} @ {self.timestamp.strftime('%d-%b-%Y %H:%M')}"
+
+
+# ── Team Chat (SlackTask-style) ──────────────────────────────────────────────
+
+class ChatChannel(models.Model):
+    """Public channel or 1:1 DM room."""
+    name = models.CharField(max_length=80)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    is_default = models.BooleanField(default=False)
+    is_private = models.BooleanField(default=False)
+    is_dm = models.BooleanField(default=False)
+    members = models.ManyToManyField(User, blank=True, related_name='chat_channels')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['is_dm', 'name']
+
+    def __str__(self):
+        return f"@{self.name}" if self.is_dm else f"#{self.name}"
+
+
+class ChatChannelRead(models.Model):
+    """Tracks last-read position per user for unread badges."""
+    channel = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_reads')
+    last_read_id = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('channel', 'user')
+
+
+class ChatTaskLabel(models.Model):
+    """Color-coded labels for chat tasks."""
+    name = models.CharField(max_length=50)
+    color = models.CharField(max_length=7, default='#a855f7')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, related_name='chat_task_labels')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ChatTask(models.Model):
+    """Todoist-style task linked to chat / channels."""
+    PRIORITY_CHOICES = [
+        ('p1', 'P1 — Urgent'),
+        ('p2', 'P2 — High'),
+        ('p3', 'P3 — Normal'),
+        ('p4', 'P4 — Low'),
+    ]
+    title = models.CharField(max_length=300)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_chat_tasks')
+    assignee = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_chat_tasks')
+    channel = models.ForeignKey(ChatChannel, on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
+    due_date = models.DateField(null=True, blank=True)
+    priority = models.CharField(max_length=2, choices=PRIORITY_CHOICES, default='p3')
+    completed = models.BooleanField(default=False)
+    task_key = models.CharField(max_length=20, blank=True)
+    labels = models.ManyToManyField(ChatTaskLabel, blank=True, related_name='tasks')
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['completed', 'due_date', '-created_at']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.task_key:
+            self.task_key = f'tsk_{self.pk}'
+            ChatTask.objects.filter(pk=self.pk).update(task_key=self.task_key)
+
+    def __str__(self):
+        return f"{self.task_key or self.pk}: {self.title[:40]}"
+
+
+class ChatMessage(models.Model):
+    """Channel / DM message; may embed a task card or image."""
+    TYPE_TEXT = 'text'
+    TYPE_TASK = 'task'
+    TYPE_CHOICES = [
+        (TYPE_TEXT, 'Text'),
+        (TYPE_TASK, 'Task card'),
+    ]
+    channel = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='chat_messages')
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='replies')
+    content = models.TextField(max_length=4000, blank=True)
+    message_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_TEXT)
+    task = models.ForeignKey(ChatTask, on_delete=models.SET_NULL, null=True, blank=True, related_name='messages')
+    image_data = models.BinaryField(null=True, blank=True)
+    image_name = models.CharField(max_length=255, blank=True)
+    image_content_type = models.CharField(max_length=100, blank=True)
+    image_size = models.PositiveIntegerField(default=0)
+    is_pinned = models.BooleanField(default=False)
+    edited_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['channel', 'id']),
+            models.Index(fields=['channel', 'created_at']),
+        ]
+
+    def __str__(self):
+        who = self.sender.username if self.sender else 'Unknown'
+        return f"{who} in {self.channel}: {self.content[:40]}"
+
+
+class ChatReaction(models.Model):
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_reactions')
+    emoji = models.CharField(max_length=16)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user', 'emoji')
+
+
+class ChatBookmark(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_bookmarks')
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name='bookmarks')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'message')
 

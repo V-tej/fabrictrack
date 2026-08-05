@@ -1,0 +1,1411 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Team Chat{% endblock %}
+{% block page_title %}💬 Team Chat{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/chat.css' %}?v=4" />
+<script id="stUsersData" type="application/json">{{ mention_users_json|safe }}</script>
+
+<div class="st-app" id="stApp"
+  data-user-id="{{ request.user.id }}"
+  data-username="{{ request.user.username }}"
+  data-channel-id="{% if active_channel %}{{ active_channel.id }}{% endif %}"
+  data-channel-name="{% if active_channel %}{{ active_channel.name }}{% endif %}"
+  data-channel-slug="{% if active_channel %}{{ active_channel.slug }}{% endif %}"
+  data-is-dm="{% if active_channel and active_channel.is_dm %}1{% else %}0{% endif %}">
+
+  <!-- LEFT RAIL -->
+  <aside class="st-rail">
+    <div class="st-workspace">
+      <div class="st-ws-icon">F</div>
+      <div class="st-ws-meta">
+        <div class="st-ws-name">{{ workspace_name|default:"FabricTrack" }}</div>
+        <div class="st-ws-sub">Team workspace</div>
+      </div>
+    </div>
+
+    <div class="st-me">
+      <div class="st-avatar">{{ request.user.username|slice:":1"|upper }}</div>
+      <div class="st-me-meta">
+        <div class="st-me-name">{{ request.user.username }}</div>
+        <div class="st-me-status"><span class="st-online"></span> Online</div>
+      </div>
+      <a href="{% url 'dashboard' %}" class="st-back" title="Back to Dashboard">↩</a>
+    </div>
+
+    <!-- TASKS -->
+    <div class="st-section">
+      <div class="st-section-h">
+        <span>Tasks</span>
+        <span class="st-badge-soft">LIVE</span>
+      </div>
+      <button type="button" class="st-nav" data-view="tasks" data-scope="today">
+        <span>📅 Today</span>
+        <span class="st-count" id="cntToday">{{ task_counts.today }}</span>
+      </button>
+      <button type="button" class="st-nav" data-view="tasks" data-scope="upcoming">
+        <span>⏰ Upcoming</span>
+        <span class="st-count" id="cntUpcoming">{{ task_counts.upcoming }}</span>
+      </button>
+      <button type="button" class="st-nav" data-view="tasks" data-scope="inbox">
+        <span>📥 Inbox / All Tasks</span>
+        <span class="st-count dim" id="cntInbox">{{ task_counts.inbox }}</span>
+      </button>
+      <button type="button" class="st-nav" data-view="tasks" data-scope="done">
+        <span>🗂 Completed</span>
+      </button>
+    </div>
+
+    <!-- CHANNELS -->
+    <div class="st-section">
+      <div class="st-section-h">
+        <span>Channels</span>
+        <span class="st-count dim" id="cntChannels">{{ channels|length }}</span>
+      </div>
+      <div id="stChannelList">
+        {% for ch in channels %}
+        <button type="button" class="st-nav ch {% if active_channel and ch.id == active_channel.id and not active_channel.is_dm %}active{% endif %}"
+          data-view="chat" data-id="{{ ch.id }}" data-name="{{ ch.name }}" data-slug="{{ ch.slug }}" data-dm="0">
+          <span>{% if ch.is_private %}🔒{% else %}#{% endif %} {{ ch.name }}</span>
+          <span class="st-unread" data-unread-for="{{ ch.id }}" hidden>0</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- DMS -->
+    <div class="st-section">
+      <div class="st-section-h"><span>Direct Messages</span></div>
+      <div id="stDmList">
+        {% for ch in dm_channels %}
+        <button type="button" class="st-nav dm {% if active_channel and ch.id == active_channel.id and active_channel.is_dm %}active{% endif %}"
+          data-view="chat" data-id="{{ ch.id }}" data-name="{{ ch.name }}" data-slug="{{ ch.slug }}" data-dm="1">
+          <span class="st-dm-av">{{ ch.name|slice:":1"|upper }}</span>
+          <span class="st-dm-name">DM · {{ ch.name }}</span>
+        </button>
+        {% endfor %}
+        {% for u in dm_users %}
+        <button type="button" class="st-nav dm" data-open-dm="{{ u.id }}" data-name="{{ u.username }}">
+          <span class="st-dm-av">{{ u.username|slice:":1"|upper }}</span>
+          <span class="st-dm-name">DM · {{ u.username }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- PINS & BOOKMARKS -->
+    <div class="st-section">
+      <div class="st-section-h"><span>📌 Pins &amp; Bookmarks</span></div>
+      <button type="button" class="st-nav" data-view="saved" data-kind="pinned">
+        <span>📌 Pinned</span>
+      </button>
+      <button type="button" class="st-nav" data-view="saved" data-kind="bookmarks">
+        <span>🔖 Bookmarked</span>
+      </button>
+    </div>
+
+    <!-- LABELS SECTION -->
+    <div class="st-section" id="stLabelsSection">
+      <div class="st-section-h">
+        <span>🏷 Labels</span>
+        <button type="button" class="st-section-add" id="stAddNewLabel" title="Add Label">+</button>
+      </div>
+      <div id="stSidebarLabels"></div>
+      <div class="st-label-create-inline" id="stLabelCreateInline" hidden>
+        <input type="text" id="stInlineLabelName" placeholder="Label name" />
+        <input type="color" id="stInlineLabelColor" value="#a855f7" />
+        <button type="button" class="st-btn primary" id="stSaveInlineLabel">Add</button>
+        <button type="button" class="st-btn ghost" id="stCancelInlineLabel">✕</button>
+      </div>
+    </div>
+
+    <div class="st-rail-foot">
+          Quick: <code>/task @cuttingmaster title tomorrow !p1</code>
+    </div>
+  </aside>
+
+  <!-- MOBILE SIDEBAR OVERLAY BACKDROP -->
+  <div class="st-sidebar-overlay" id="stSidebarOverlay" hidden></div>
+
+  <!-- MAIN -->
+  <section class="st-main">
+    <header class="st-top">
+      <div class="st-top-left">
+        <button type="button" class="st-menu-btn" id="stMenuToggle" title="Open Channels & Navigation">☰</button>
+        <h1 id="stTitle">#{% if active_channel %}{{ active_channel.name }}{% else %}general{% endif %}</h1>
+        <div class="st-tabs">
+          <button type="button" class="st-tab active" data-tab="chat">💬 Chat</button>
+          <button type="button" class="st-tab" data-tab="channel-tasks">✅ Channel Tasks</button>
+        </div>
+      </div>
+      <div class="st-top-right">
+        <div class="st-search-wrap">
+          <input type="search" id="stSearch" class="st-search" placeholder="Search messages…" />
+        </div>
+        <button type="button" class="st-btn ghost" id="stAddTaskBtn">⚡ Add Task</button>
+      </div>
+    </header>
+
+    <!-- CHAT PANE -->
+    <div class="st-pane" id="paneChat">
+      <div class="st-feed" id="stFeed" aria-live="polite">
+        <div class="st-loading">Loading messages…</div>
+      </div>
+
+      <div class="st-composer">
+        <div class="st-composer-box">
+          <div class="st-mention-menu" id="stMentionMenu" hidden role="listbox"></div>
+          <div class="st-attach-preview" id="stAttachPreview" hidden></div>
+          <textarea id="stInput" rows="1" placeholder="Message #channel — type @ for users, /task @user title…" autocomplete="off"></textarea>
+          <div class="st-composer-bar">
+            <div class="st-composer-tools">
+              <label class="st-tool" title="Attach image">
+                📎
+                <input type="file" id="stFile" accept="image/*" hidden />
+              </label>
+              <button type="button" class="st-tool" id="stTaskModeBtn" title="Create as task">⚡ /task</button>
+            </div>
+            <div class="st-composer-right">
+              <span class="st-status" id="stStatus">Connecting…</span>
+              <button type="button" class="st-btn primary" id="stSendBtn">Send ➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS PANE -->
+    <div class="st-pane" id="paneTasks" hidden>
+      <div class="st-task-head">
+        <h2 id="stTaskTitle">Inbox</h2>
+        <form id="stQuickTask" class="st-quick-task">
+          <input type="text" id="stTaskInput" placeholder='Add task e.g. "Cut lot 42 tomorrow !p1"' />
+          <button type="submit" class="st-btn primary">Add</button>
+        </form>
+        <div class="st-selected-labels-bar" id="stSelectedLabelsBar">
+          <div class="st-label-chips" id="stSelectedLabels"></div>
+        </div>
+      </div>
+      <div class="st-task-list" id="stTaskList"></div>
+    </div>
+
+    <!-- SAVED PANE -->
+    <div class="st-pane" id="paneSaved" hidden>
+      <div class="st-task-head"><h2 id="stSavedTitle">Bookmarked</h2></div>
+      <div class="st-feed" id="stSavedFeed"></div>
+    </div>
+  </section>
+
+  <!-- LABEL DROPDOWN POPOVER -->
+  <div class="st-label-dropdown" id="stLabelDropdown" hidden>
+    <div class="st-label-dropdown-header">
+      <span>🏷 Task Labels</span>
+      <button type="button" class="st-label-dropdown-close" id="stCloseLabelDropdown">✕</button>
+    </div>
+    <input type="text" class="st-label-search" id="stLabelSearch" placeholder="Search labels…" />
+    <div class="st-label-list" id="stLabelList"></div>
+    <div class="st-label-create">
+      <input type="text" id="stDropdownLabelName" placeholder="New label name" />
+      <input type="color" id="stDropdownLabelColor" value="#a855f7" />
+      <button type="button" class="st-btn primary" id="stCreateDropdownLabel">Add</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const app = document.getElementById('stApp');
+  if (!app) return;
+
+  const me = {
+    id: parseInt(app.dataset.userId, 10),
+    username: app.dataset.username || 'You',
+  };
+  let state = {
+    channelId: parseInt(app.dataset.channelId, 10) || null,
+    channelName: app.dataset.channelName || 'general',
+    channelSlug: app.dataset.channelSlug || 'general',
+    isDm: app.dataset.isDm === '1',
+    lastId: 0,
+    tab: 'chat',
+    view: 'chat',
+    taskScope: 'inbox',
+    taskMode: false,
+    file: null,
+    pollAbort: null,
+    polling: false,
+    messages: [],
+    users: [],
+    mention: { open: false, start: -1, index: 0, list: [] },
+  };
+
+  try {
+    const raw = document.getElementById('stUsersData');
+    if (raw && raw.textContent) state.users = JSON.parse(raw.textContent.trim() || '[]');
+  } catch (_) { state.users = []; }
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  function csrf() {
+    const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function setStatus(t, ok) {
+    const el = $('#stStatus');
+    if (!el) return;
+    el.textContent = t;
+    el.classList.toggle('ok', ok === true);
+    el.classList.toggle('err', ok === false);
+  }
+  function fmtSize(n) {
+    if (!n) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+    return (n/1048576).toFixed(1) + ' MB';
+  }
+
+  /* ---------- Render message ---------- */
+  function renderMsg(msg, animate) {
+    const replyQuote = msg.reply_to ? (
+      '<div class="st-reply-quote" data-scroll-to="' + msg.reply_to.id + '">' +
+        '<span class="st-rq-sender">↩ @' + esc(msg.reply_to.sender) + '</span>' +
+        '<span class="st-rq-text">' + esc(msg.reply_to.content) + '</span>' +
+      '</div>'
+    ) : '';
+
+    if (msg.message_type === 'task' && msg.task) {
+      const t = msg.task;
+      const pr = (t.priority || 'p3').toUpperCase();
+      return (
+        '<div class="st-msg st-task-card' + (animate ? ' pop' : '') + '" data-id="' + msg.id + '">' +
+          '<div class="st-task-card-inner p-' + esc(t.priority || 'p3') + '">' +
+            replyQuote +
+            '<div class="st-task-card-top">' +
+              '<span class="st-task-tag">● TASK</span>' +
+              '<span class="st-task-key">#' + esc(t.task_key) + '</span>' +
+              (t.due_label ? '<span class="st-task-due">' + esc(t.due_label) + '</span>' : '') +
+              '<span class="st-task-pr">' + esc(pr) + '</span>' +
+              (t.labels && t.labels.length ? '<button type="button" class="st-task-labels-btn" data-task-labels="' + t.id + '" title="Edit Labels">🏷 ' + t.labels.length + '</button>' : '<button type="button" class="st-task-labels-btn" data-task-labels="' + t.id + '" title="Add Labels">🏷</button>') +
+            '</div>' +
+            '<div class="st-task-card-title' + (t.completed ? ' done' : '') + '">' + esc(t.title) + '</div>' +
+            (t.labels && t.labels.length ? '<div class="st-task-card-labels">' + t.labels.map(function(l){return '<span class="st-label-pill" style="background:'+l.color+';color:#fff">'+esc(l.name)+'</span>';}).join('') + '</div>' : '') +
+            '<div class="st-task-card-foot">' +
+              '<button type="button" class="st-mini" data-toggle-task="' + t.id + '">' +
+                (t.completed ? '↩ Reopen' : '✓ Complete') +
+              '</button>' +
+              '<button type="button" class="st-mini" data-reply-msg="' + msg.id + '" data-reply-user="' + esc(t.created_by || 'Task') + '" data-reply-text="' + esc(t.title) + '" title="Reply to Task">↩ Reply</button>' +
+              '<button type="button" class="st-mini danger" data-delete-task="' + t.id + '" title="Delete Task">🗑 Delete</button>' +
+              (t.assignee ? '<span class="st-muted">→ @' + esc(t.assignee) + '</span>' : '') +
+              (t.channel_name ? '<span class="st-muted">#' + esc(t.channel_name) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          reactionsHtml(msg) +
+        '</div>'
+      );
+    }
+
+    const mine = msg.sender_id === me.id;
+    return (
+      '<div class="st-msg' + (mine ? ' mine' : '') + (animate ? ' pop' : '') + '" data-id="' + msg.id + '">' +
+        '<div class="st-avatar">' + esc(msg.sender_initial || '?') + '</div>' +
+        '<div class="st-bubble">' +
+          '<div class="st-msg-head">' +
+            '<strong>' + esc(msg.sender) + '</strong>' +
+            '<span class="st-time">' + esc(msg.created_at) + (msg.edited_at ? ' <span class="st-edited">✏️ edited</span>' : '') + '</span>' +
+            (msg.is_pinned ? '<span class="st-pin-badge">📌</span>' : '') +
+            '<div class="st-hover-actions">' +
+              '<button type="button" class="st-ha" data-reply-msg="' + msg.id + '" data-reply-user="' + esc(msg.sender) + '" data-reply-text="' + esc(msg.content || 'Attachment') + '" title="Reply">↩ Reply</button>' +
+              (mine ? '<button type="button" class="st-ha" data-edit="' + msg.id + '" title="Edit">✏️ Edit</button>' : '') +
+              (mine ? '<button type="button" class="st-ha danger" data-delete-msg="' + msg.id + '" title="Delete Message">🗑 Delete</button>' : '') +
+              '<button type="button" class="st-ha" data-to-task="' + msg.id + '" title="Convert to Task">⚡ To Task</button>' +
+              '<button type="button" class="st-ha" data-react="' + msg.id + '" data-emoji="👍" title="React">👍</button>' +
+              '<button type="button" class="st-ha" data-react="' + msg.id + '" data-emoji="🔥" title="React">🔥</button>' +
+              '<button type="button" class="st-ha' + (msg.is_pinned ? ' active' : '') + '" data-pin="' + msg.id + '" title="' + (msg.is_pinned ? 'Unpin' : 'Pin') + '">' + (msg.is_pinned ? '📌' : '📍') + '</button>' +
+              '<button type="button" class="st-ha' + (msg.bookmarked ? ' active' : '') + '" data-bookmark="' + msg.id + '" title="Bookmark">' + (msg.bookmarked ? '🔖' : '📑') + '</button>' +
+            '</div>' +
+          '</div>' +
+          replyQuote +
+          (msg.content ? '<div class="st-msg-body" data-body="' + msg.id + '">' + esc(msg.content) + '</div>' : '') +
+          (msg.has_image ? (
+            '<a class="st-img-wrap" href="' + esc(msg.image_url) + '" target="_blank" rel="noopener">' +
+              '<img src="' + esc(msg.image_url) + '" alt="' + esc(msg.image_name) + '" />' +
+              '<span class="st-img-meta">' + esc(msg.image_name) + ' · ' + fmtSize(msg.image_size) + '</span>' +
+            '</a>'
+          ) : '') +
+          reactionsHtml(msg) +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function reactionsHtml(msg) {
+    if (!msg.reactions || !msg.reactions.length) return '';
+    return '<div class="st-reactions">' + msg.reactions.map(function (r) {
+      return '<button type="button" class="st-rx' + (r.mine ? ' mine' : '') + '" data-react="' + msg.id + '" data-emoji="' + esc(r.emoji) + '">' +
+        esc(r.emoji) + ' ' + r.count + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function appendMessages(list, animate) {
+    const feed = $('#stFeed');
+    if (!list || !list.length) return;
+    const empty = feed.querySelector('.st-empty, .st-loading');
+    if (empty) empty.remove();
+    list.forEach(function (msg) {
+      if (feed.querySelector('[data-id="' + msg.id + '"]')) {
+        // update existing
+        const old = feed.querySelector('[data-id="' + msg.id + '"]');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderMsg(msg, false);
+        old.replaceWith(tmp.firstChild);
+      } else {
+        feed.insertAdjacentHTML('beforeend', renderMsg(msg, animate));
+        if (msg.id > state.lastId) state.lastId = msg.id;
+        state.messages.push(msg);
+      }
+    });
+    feed.scrollTop = feed.scrollHeight;
+    applySearchFilter();
+  }
+
+  function applySearchFilter() {
+    const q = ($('#stSearch').value || '').trim().toLowerCase();
+    $$('#stFeed .st-msg').forEach(function (el) {
+      if (!q) { el.hidden = false; return; }
+      const text = el.textContent.toLowerCase();
+      el.hidden = text.indexOf(q) === -1;
+    });
+  }
+
+  /* ---------- API ---------- */
+  async function loadMessages() {
+    if (!state.channelId) return;
+    setStatus('Loading…');
+    try {
+      const res = await fetch('/api/chat/' + state.channelId + '/messages/', { credentials: 'same-origin' });
+      const data = await res.json();
+      state.messages = [];
+      state.lastId = 0;
+      const feed = $('#stFeed');
+      feed.innerHTML = '';
+      if (!data.messages || !data.messages.length) {
+        feed.innerHTML = '<div class="st-empty">No messages yet. Start the conversation 👋</div>';
+      } else {
+        appendMessages(data.messages, false);
+      }
+      setStatus('Live', true);
+      updateTitle();
+    } catch (e) {
+      setStatus('Offline', false);
+    }
+  }
+
+  function stopPoll() {
+    state.polling = false;
+    if (state.pollAbort) {
+      try { state.pollAbort.abort(); } catch (_) {}
+      state.pollAbort = null;
+    }
+  }
+
+  async function pollLoop() {
+    if (state.polling || !state.channelId || state.view !== 'chat' || state.tab !== 'chat') return;
+    state.polling = true;
+    while (state.polling && state.channelId && state.view === 'chat' && state.tab === 'chat') {
+      try {
+        const c = new AbortController();
+        state.pollAbort = c;
+        const res = await fetch(
+          '/api/chat/' + state.channelId + '/messages/?after_id=' + state.lastId + '&wait=1',
+          { credentials: 'same-origin', signal: c.signal }
+        );
+        if (!res.ok) throw new Error('poll');
+        const data = await res.json();
+        if (data.messages && data.messages.length) appendMessages(data.messages, true);
+        setStatus('Live', true);
+      } catch (e) {
+        if (e.name === 'AbortError') break;
+        setStatus('Reconnecting…', false);
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+    state.polling = false;
+  }
+
+  function updateTitle() {
+    const prefix = state.isDm ? '' : '#';
+    $('#stTitle').textContent = prefix + state.channelName;
+    const input = $('#stInput');
+    if (input) input.placeholder = 'Message ' + prefix + state.channelName + ' (or type /task title tomorrow !p1)…';
+  }
+
+  async function switchChannel(id, name, slug, isDm) {
+    state.channelId = id;
+    state.channelName = name;
+    state.channelSlug = slug || name;
+    state.isDm = !!isDm;
+    state.view = 'chat';
+    state.tab = 'chat';
+    stopPoll();
+    showPane('chat');
+    $$('.st-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'chat'));
+    $$('.st-nav').forEach(n => n.classList.remove('active'));
+    const btn = document.querySelector('.st-nav[data-id="' + id + '"]');
+    if (btn) btn.classList.add('active');
+    try {
+      history.replaceState(null, '', '/chat/?channel=' + encodeURIComponent(state.channelSlug));
+    } catch (_) {}
+    await loadMessages();
+    pollLoop();
+  }
+
+  async function openDm(userId, name) {
+    const res = await fetch('/api/chat/dm/open/', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Could not open DM');
+    // ensure nav button exists
+    let btn = document.querySelector('.st-nav[data-id="' + data.channel.id + '"]');
+    if (!btn) {
+      const list = $('#stDmList');
+      list.insertAdjacentHTML('afterbegin',
+        '<button type="button" class="st-nav dm" data-view="chat" data-id="' + data.channel.id +
+        '" data-name="' + esc(data.channel.name) + '" data-slug="' + esc(data.channel.slug) + '" data-dm="1">' +
+        '<span class="st-dm-av">' + esc((data.channel.name || '?')[0].toUpperCase()) + '</span>' +
+        '<span class="st-dm-name">' + esc(data.channel.name) + '</span></button>'
+      );
+    }
+    // remove open-dm stub for this user
+    const stub = document.querySelector('[data-open-dm="' + userId + '"]');
+    if (stub) stub.remove();
+    switchChannel(data.channel.id, data.channel.name, data.channel.slug, true);
+  }
+
+  state.replyTo = null;
+
+  function setReply(msgId, sender, text) {
+    state.replyTo = { id: msgId, sender: sender, text: text };
+    const input = $('#stInput');
+    if (input) input.focus();
+  }
+
+  function clearReply() {
+    state.replyTo = null;
+  }
+
+  async function sendMessage() {
+    if (!state.channelId) return;
+    const input = $('#stInput');
+    let text = (input.value || '').trim();
+    const asTask = state.taskMode || /^\/task\b/i.test(text);
+    if (!text && !state.file) return;
+
+    const btn = $('#stSendBtn');
+    btn.disabled = true;
+    try {
+      let res, data;
+      if (state.file) {
+        const fd = new FormData();
+        fd.append('content', text);
+        fd.append('image', state.file);
+        if (asTask) fd.append('as_task', '1');
+        if (state.replyTo) fd.append('reply_to_id', state.replyTo.id);
+        res = await fetch('/api/chat/' + state.channelId + '/send/', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-CSRFToken': csrf() },
+          body: fd,
+        });
+      } else {
+        const payload = { content: text, as_task: asTask };
+        if (state.replyTo) payload.reply_to_id = state.replyTo.id;
+        res = await fetch('/api/chat/' + state.channelId + '/send/', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          body: JSON.stringify(payload),
+        });
+      }
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+      input.value = '';
+      clearAttach();
+      clearReply();
+      state.taskMode = false;
+      $('#stTaskModeBtn').classList.remove('on');
+      appendMessages([data.message], true);
+      // refresh task counts lightly
+      refreshBootstrap();
+    } catch (e) {
+      setStatus(e.message || 'Send failed', false);
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function clearAttach() {
+    state.file = null;
+    $('#stFile').value = '';
+    const p = $('#stAttachPreview');
+    p.hidden = true;
+    p.innerHTML = '';
+  }
+
+  async function refreshBootstrap() {
+    try {
+      const res = await fetch('/api/chat/bootstrap/', { credentials: 'same-origin' });
+      const data = await res.json();
+      if (data.users && data.users.length) state.users = data.users;
+      if (data.task_counts) {
+        $('#cntToday').textContent = data.task_counts.today;
+        $('#cntUpcoming').textContent = data.task_counts.upcoming;
+        $('#cntInbox').textContent = data.task_counts.inbox;
+      }
+      (data.channels || []).forEach(function (c) {
+        const badge = document.querySelector('[data-unread-for="' + c.id + '"]');
+        if (!badge) return;
+        if (c.unread > 0 && c.id !== state.channelId) {
+          badge.hidden = false;
+          badge.textContent = c.unread;
+        } else {
+          badge.hidden = true;
+        }
+      });
+    } catch (_) {}
+  }
+
+  /* ---------- @mention autocomplete ---------- */
+  function hideMention() {
+    state.mention = { open: false, start: -1, index: 0, list: [] };
+    const menu = $('#stMentionMenu');
+    if (menu) { menu.hidden = true; menu.innerHTML = ''; }
+  }
+
+  function renderMentionMenu() {
+    const menu = $('#stMentionMenu');
+    if (!menu) return;
+    const list = state.mention.list;
+    if (!state.mention.open || !list.length) {
+      menu.hidden = true;
+      menu.innerHTML = '';
+      return;
+    }
+    menu.hidden = false;
+    menu.innerHTML = list.map(function (u, i) {
+      return '<button type="button" class="st-mention-item' + (i === state.mention.index ? ' active' : '') + '" data-mention-user="' + esc(u.username) + '">' +
+        '<span class="st-dm-av">' + esc(u.initial) + '</span>' +
+        '<span>@' + esc(u.username) + '</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  function getMentionQuery(input) {
+    const pos = typeof input.selectionStart === 'number' ? input.selectionStart : (input.value || '').length;
+    const text = input.value || '';
+    const before = text.slice(0, pos);
+    // Match @query at end (space, start, or after /task)
+    const m = before.match(/(?:^|[\s\/])@([A-Za-z0-9_.-]*)$/);
+    if (!m) return null;
+    const atIndex = before.lastIndexOf('@');
+    return { start: atIndex, query: (m[1] || '').toLowerCase() };
+  }
+
+  function updateMentionFromInput() {
+    const input = $('#stInput');
+    if (!input) return;
+    const info = getMentionQuery(input);
+    if (!info) { hideMention(); return; }
+    let users = state.users || [];
+    if (!users.length) {
+      // fallback: scrape DM list names
+      users = $$('#stDmList .st-dm-name').map(function (el) {
+        const name = (el.textContent || '').replace(/^DM\s*·\s*/i, '').trim();
+        return name ? { username: name, initial: name.charAt(0).toUpperCase() } : null;
+      }).filter(Boolean);
+    }
+    const q = info.query;
+    const list = users.filter(function (u) {
+      const name = (u.username || '').toLowerCase();
+      return !q || name.indexOf(q) !== -1;
+    }).slice(0, 10);
+    if (!list.length) {
+      // still show empty hint
+      const menu = $('#stMentionMenu');
+      if (menu) {
+        menu.hidden = false;
+        menu.innerHTML = '<div class="st-mention-item" style="cursor:default;opacity:.7">No users match</div>';
+      }
+      state.mention = { open: false, start: info.start, index: 0, list: [] };
+      return;
+    }
+    state.mention = { open: true, start: info.start, index: 0, list: list };
+    renderMentionMenu();
+  }
+
+  function applyMention(username) {
+    const input = $('#stInput');
+    const text = input.value || '';
+    const pos = input.selectionStart || 0;
+    const start = state.mention.start;
+    if (start < 0) return;
+    const before = text.slice(0, start);
+    const after = text.slice(pos);
+    const insert = '@' + username + ' ';
+    input.value = before + insert + after;
+    const caret = before.length + insert.length;
+    input.setSelectionRange(caret, caret);
+    hideMention();
+    input.focus();
+  }
+
+  /* ---------- Tasks ---------- */
+  function renderTaskRow(t) {
+    const labelsHtml = t.labels && t.labels.length ? t.labels.map(function (l) {
+      return '<span class="st-pill st-label-pill" style="background:' + esc(l.color) + ';color:#fff">' + esc(l.name) + '</span>';
+    }).join('') : '';
+    return (
+      '<div class="st-task-row' + (t.completed ? ' done' : '') + '" data-task-id="' + t.id + '">' +
+        '<button type="button" class="st-check" data-toggle-task="' + t.id + '">' + (t.completed ? '✓' : '○') + '</button>' +
+        '<div class="st-task-main">' +
+          '<div class="st-task-name">' + esc(t.title) + '</div>' +
+          '<div class="st-task-meta">' +
+            (labelsHtml) +
+            '<span class="st-pill p-' + esc(t.priority) + '">' + esc((t.priority || 'p3').toUpperCase()) + '</span>' +
+            (t.due_label ? '<span class="st-pill due">' + esc(t.due_label) + '</span>' : '') +
+            (t.assignee ? '<span class="st-pill">@' + esc(t.assignee) + '</span>' : '') +
+            (t.channel_name ? '<span class="st-pill">#' + esc(t.channel_name) + '</span>' : '') +
+            '<span class="st-muted">#' + esc(t.task_key) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="st-mini" data-reply-task="' + t.id + '" data-task-title="' + esc(t.title) + '" title="Reply to Task" style="margin-left:auto;">↩ Reply</button>' +
+        '<button type="button" class="st-mini danger" data-delete-task="' + t.id + '" title="Delete Task">🗑 Delete</button>' +
+      '</div>'
+    );
+  }
+
+  async function loadTasks(scope, channelOnly) {
+    const titleMap = { today: 'Today', upcoming: 'Upcoming', inbox: 'Inbox / All Tasks', done: 'Completed', channel: 'Channel Tasks' };
+    $('#stTaskTitle').textContent = titleMap[scope] || 'Tasks';
+    let url = '/api/chat/tasks/?scope=' + encodeURIComponent(scope);
+    if (channelOnly && state.channelId) url += '&channel_id=' + state.channelId;
+    const res = await fetch(url, { credentials: 'same-origin' });
+    const data = await res.json();
+    const list = $('#stTaskList');
+    if (!data.tasks || !data.tasks.length) {
+      list.innerHTML = '<div class="st-empty">No tasks here yet.</div>';
+      return;
+    }
+    list.innerHTML = data.tasks.map(renderTaskRow).join('');
+  }
+
+  async function loadSaved(kind) {
+    $('#stSavedTitle').textContent = kind === 'pinned' ? 'Pinned Messages' : 'Bookmarked Messages';
+    const res = await fetch('/api/chat/saved/?kind=' + encodeURIComponent(kind), { credentials: 'same-origin' });
+    const data = await res.json();
+    const feed = $('#stSavedFeed');
+    if (!data.messages || !data.messages.length) {
+      feed.innerHTML = '<div class="st-empty">Nothing saved yet.</div>';
+      return;
+    }
+    feed.innerHTML = data.messages.map(m => renderMsg(m, false)).join('');
+  }
+
+  function showPane(name) {
+    $('#paneChat').hidden = name !== 'chat';
+    $('#paneTasks').hidden = name !== 'tasks';
+    $('#paneSaved').hidden = name !== 'saved';
+  }
+
+  /* ---------- Mobile Sidebar Drawer ---------- */
+  function closeMobileSidebar() {
+    const rail = $('.st-rail');
+    const overlay = $('#stSidebarOverlay');
+    if (rail) rail.classList.remove('open');
+    if (overlay) overlay.hidden = true;
+  }
+  function toggleMobileSidebar() {
+    const rail = $('.st-rail');
+    const overlay = $('#stSidebarOverlay');
+    if (!rail) return;
+    const isOpen = rail.classList.contains('open');
+    rail.classList.toggle('open', !isOpen);
+    if (overlay) overlay.hidden = isOpen;
+  }
+
+  /* ---------- Events ---------- */
+  document.addEventListener('click', async function (e) {
+    const nav = e.target.closest('.st-nav');
+    if (nav) {
+      closeMobileSidebar();
+      if (nav.dataset.openDm) {
+        openDm(parseInt(nav.dataset.openDm, 10), nav.dataset.name);
+        return;
+      }
+      const view = nav.dataset.view;
+      $$('.st-nav').forEach(n => n.classList.remove('active'));
+      nav.classList.add('active');
+      if (view === 'chat') {
+        state.view = 'chat';
+        switchChannel(parseInt(nav.dataset.id, 10), nav.dataset.name, nav.dataset.slug, nav.dataset.dm === '1');
+      } else if (view === 'tasks') {
+        stopPoll();
+        state.view = 'tasks';
+        state.taskScope = nav.dataset.scope || 'inbox';
+        showPane('tasks');
+        loadTasks(state.taskScope, false);
+      } else if (view === 'saved') {
+        stopPoll();
+        state.view = 'saved';
+        showPane('saved');
+        loadSaved(nav.dataset.kind || 'bookmarks');
+      }
+      return;
+    }
+
+    const tab = e.target.closest('.st-tab');
+    if (tab) {
+      $$('.st-tab').forEach(t => t.classList.toggle('active', t === tab));
+      state.tab = tab.dataset.tab;
+      if (state.tab === 'chat') {
+        state.view = 'chat';
+        showPane('chat');
+        pollLoop();
+      } else if (state.tab === 'channel-tasks') {
+        stopPoll();
+        state.view = 'tasks';
+        showPane('tasks');
+        loadTasks('channel', true);
+      }
+      return;
+    }
+
+    const toTask = e.target.closest('[data-to-task]');
+    if (toTask) {
+      const id = toTask.dataset.toTask;
+      const res = await fetch('/api/chat/message/' + id + '/to-task/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrf() },
+      });
+      const data = await res.json();
+      if (res.ok && data.message) appendMessages([data.message], true);
+      refreshBootstrap();
+      return;
+    }
+
+    const react = e.target.closest('[data-react]');
+    if (react && react.dataset.emoji) {
+      const res = await fetch('/api/chat/message/' + react.dataset.react + '/react/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ emoji: react.dataset.emoji }),
+      });
+      const data = await res.json();
+      if (res.ok && data.message) appendMessages([data.message], false);
+      return;
+    }
+
+    const bm = e.target.closest('[data-bookmark]');
+    if (bm) {
+      await fetch('/api/chat/message/' + bm.dataset.bookmark + '/bookmark/', {
+        method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() },
+      });
+      bm.textContent = bm.textContent.indexOf('🔖') >= 0 ? '📑' : '🔖';
+      return;
+    }
+
+    const pin = e.target.closest('[data-pin]');
+    if (pin) {
+      const isPinned = pin.classList.contains('active');
+      await fetch('/api/chat/message/' + pin.dataset.pin + '/pin/', {
+        method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() },
+      });
+      pin.classList.toggle('active');
+      pin.title = isPinned ? 'Pin' : 'Unpin';
+      pin.textContent = isPinned ? '📍' : '📌';
+      const msgEl = document.querySelector('.st-msg[data-id="' + pin.dataset.pin + '"]');
+      if (msgEl) {
+        const badge = msgEl.querySelector('.st-pin-badge');
+        if (isPinned && badge) badge.remove();
+        else if (!isPinned && !badge) {
+          const head = msgEl.querySelector('.st-msg-head');
+          if (head) head.insertAdjacentHTML('beforeend', '<span class="st-pin-badge">📌</span>');
+        }
+      }
+      return;
+    }
+
+    const editBtn = e.target.closest('[data-edit]');
+    if (editBtn) {
+      const msgId = editBtn.dataset.edit;
+      const msgEl = document.querySelector('.st-msg[data-id="' + msgId + '"]');
+      if (!msgEl) return;
+      const bodyEl = msgEl.querySelector('.st-msg-body[data-body="' + msgId + '"]');
+      if (!bodyEl || bodyEl.querySelector('.st-edit-wrap')) return;
+      const originalContent = bodyEl.textContent;
+      bodyEl.innerHTML = '<div class="st-edit-wrap">' +
+        '<textarea class="st-edit-textarea" id="stEdit_' + msgId + '">' + originalContent + '</textarea>' +
+        '<div class="st-edit-actions">' +
+          '<button type="button" class="st-btn primary" data-save-edit="' + msgId + '">Save</button>' +
+          '<button type="button" class="st-btn ghost" data-cancel-edit="' + msgId + '">Cancel</button>' +
+        '</div>' +
+      '</div>';
+      const textarea = bodyEl.querySelector('.st-edit-textarea');
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      return;
+    }
+
+    const saveEdit = e.target.closest('[data-save-edit]');
+    if (saveEdit) {
+      const msgId = saveEdit.dataset.saveEdit;
+      const textarea = document.getElementById('stEdit_' + msgId);
+      if (!textarea) return;
+      const newContent = textarea.value.trim();
+      if (!newContent) return;
+      const res = await fetch('/api/chat/message/' + msgId + '/edit/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ content: newContent }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const msgEl = document.querySelector('.st-msg[data-id="' + msgId + '"]');
+        if (msgEl) {
+          const bodyEl = msgEl.querySelector('.st-msg-body[data-body="' + msgId + '"]');
+          if (bodyEl) bodyEl.textContent = newContent;
+          const timeEl = msgEl.querySelector('.st-time');
+          if (timeEl && data.edited_at && !timeEl.querySelector('.st-edited')) {
+            timeEl.insertAdjacentHTML('beforeend', ' <span class="st-edited">✏️ edited</span>');
+          }
+        }
+      }
+      return;
+    }
+
+    const cancelEdit = e.target.closest('[data-cancel-edit]');
+    if (cancelEdit) {
+      const msgId = cancelEdit.dataset.cancelEdit;
+      const msgEl = document.querySelector('.st-msg[data-id="' + msgId + '"]');
+      if (!msgEl) return;
+      const bodyEl = msgEl.querySelector('.st-msg-body[data-body="' + msgId + '"]');
+      if (!bodyEl) return;
+      const stateMsg = state.messages.find(m => m.id == msgId);
+      bodyEl.textContent = stateMsg ? stateMsg.content : '';
+      return;
+    }
+
+    const replyMsg = e.target.closest('[data-reply-msg]');
+    if (replyMsg) {
+      e.stopPropagation();
+      const msgId = parseInt(replyMsg.dataset.replyMsg, 10);
+      const user = replyMsg.dataset.replyUser || 'user';
+      const text = replyMsg.dataset.replyText || 'message';
+      if (state.view !== 'chat') {
+        state.view = 'chat';
+        state.tab = 'chat';
+        showPane('chat');
+        $$('.st-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'chat'));
+      }
+      setReply(msgId, user, text);
+      return;
+    }
+
+    const replyTask = e.target.closest('[data-reply-task]');
+    if (replyTask) {
+      e.stopPropagation();
+      const taskId = replyTask.dataset.replyTask;
+      const title = replyTask.dataset.taskTitle || 'Task';
+      if (state.view !== 'chat') {
+        state.view = 'chat';
+        state.tab = 'chat';
+        showPane('chat');
+        $$('.st-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'chat'));
+      }
+      const msgEl = document.querySelector('.st-msg.st-task-card [data-toggle-task="' + taskId + '"]');
+      if (msgEl) {
+        const cardMsg = msgEl.closest('.st-msg');
+        if (cardMsg) {
+          setReply(parseInt(cardMsg.dataset.id, 10), 'Task', title);
+          return;
+        }
+      }
+      setReply(0, 'Task', title);
+      return;
+    }
+
+    const cancelReply = e.target.closest('#stCancelReply');
+    if (cancelReply) {
+      clearReply();
+      return;
+    }
+
+    const scrollToMsg = e.target.closest('[data-scroll-to]');
+    if (scrollToMsg) {
+      const targetId = scrollToMsg.dataset.scrollTo;
+      const targetEl = document.querySelector('.st-msg[data-id="' + targetId + '"]');
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetEl.classList.add('pop');
+        setTimeout(() => targetEl.classList.remove('pop'), 1500);
+      }
+      return;
+    }
+
+    const delMsg = e.target.closest('[data-delete-msg]');
+    if (delMsg) {
+      const msgId = delMsg.dataset.deleteMsg;
+      if (!confirm('Are you sure you want to delete this message?')) return;
+      const res = await fetch('/api/chat/message/' + msgId + '/delete/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const msgEl = document.querySelector('.st-msg[data-id="' + msgId + '"]');
+        if (msgEl) msgEl.remove();
+        state.messages = state.messages.filter(m => m.id != msgId);
+        refreshBootstrap();
+      } else {
+        alert(data.error || 'Failed to delete message');
+      }
+      return;
+    }
+
+    const delTask = e.target.closest('[data-delete-task]');
+    if (delTask) {
+      e.stopPropagation();
+      const taskId = delTask.dataset.deleteTask;
+      if (!confirm('Are you sure you want to delete this task?')) return;
+      const res = await fetch('/api/chat/tasks/' + taskId + '/delete/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (state.view === 'tasks') {
+          loadTasks(state.taskScope === 'channel' ? 'channel' : state.taskScope, state.tab === 'channel-tasks');
+        } else {
+          loadMessages();
+        }
+        refreshBootstrap();
+      } else {
+        alert(data.error || 'Failed to delete task');
+      }
+      return;
+    }
+
+    const tg = e.target.closest('[data-toggle-task]');
+    if (tg) {
+      const res = await fetch('/api/chat/tasks/' + tg.dataset.toggleTask + '/toggle/', {
+        method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrf() },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (state.view === 'tasks') loadTasks(state.taskScope === 'channel' ? 'channel' : state.taskScope, state.tab === 'channel-tasks');
+        else loadMessages();
+        refreshBootstrap();
+      }
+      return;
+    }
+
+    const taskRow = e.target.closest('.st-task-row');
+    if (taskRow && !e.target.closest('.st-check')) {
+      const taskId = taskRow.dataset.taskId;
+      const res = await fetch('/api/chat/tasks/' + taskId + '/labels/', { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        state.selectedLabels = data.labels || [];
+        renderSelectedLabels();
+        loadLabels();
+        $('#stLabelModal').hidden = false;
+        state.editingTaskLabels = parseInt(taskId, 10);
+      }
+      return;
+    }
+  });
+
+  $('#stSendBtn').addEventListener('click', sendMessage);
+  $('#stInput').addEventListener('input', updateMentionFromInput);
+  $('#stInput').addEventListener('click', updateMentionFromInput);
+  $('#stInput').addEventListener('keydown', function (e) {
+    if (state.mention.open && state.mention.list.length) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        state.mention.index = (state.mention.index + 1) % state.mention.list.length;
+        renderMentionMenu();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        state.mention.index = (state.mention.index - 1 + state.mention.list.length) % state.mention.list.length;
+        renderMentionMenu();
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        applyMention(state.mention.list[state.mention.index].username);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideMention();
+        return;
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    const item = e.target.closest('[data-mention-user]');
+    if (item) {
+      e.preventDefault();
+      applyMention(item.dataset.mentionUser);
+      return;
+    }
+    if (!e.target.closest('#stMentionMenu') && !e.target.closest('#stInput')) hideMention();
+  });
+  $('#stTaskModeBtn').addEventListener('click', function () {
+    state.taskMode = !state.taskMode;
+    this.classList.toggle('on', state.taskMode);
+    const input = $('#stInput');
+    if (state.taskMode && !/^\/task/i.test(input.value)) {
+      input.value = '/task ' + input.value;
+      input.focus();
+    }
+  });
+  $('#stFile').addEventListener('change', function () {
+    const f = this.files && this.files[0];
+    if (!f) return;
+    state.file = f;
+    const p = $('#stAttachPreview');
+    p.hidden = false;
+    p.innerHTML = '<span>📎 ' + esc(f.name) + ' (' + fmtSize(f.size) + ')</span><button type="button" id="stClearFile">✕</button>';
+    $('#stClearFile').onclick = clearAttach;
+  });
+  $('#stSearch').addEventListener('input', applySearchFilter);
+  $('#stAddTaskBtn').addEventListener('click', function () {
+    state.view = 'tasks';
+    state.taskScope = 'inbox';
+    stopPoll();
+    showPane('tasks');
+    loadTasks('inbox', false);
+    $('#stTaskInput').focus();
+  });
+  $('#stQuickTask').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const title = $('#stTaskInput').value.trim();
+    if (!title) return;
+    const res = await fetch('/api/chat/tasks/', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({
+        title: title,
+        channel_id: state.channelId,
+        post_to_channel: true,
+        label_ids: state.selectedLabels.map(function (l) { return l.id; }),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Failed');
+    $('#stTaskInput').value = '';
+    state.selectedLabels = [];
+    renderSelectedLabels();
+    loadTasks(state.tab === 'channel-tasks' ? 'channel' : state.taskScope, state.tab === 'channel-tasks');
+    refreshBootstrap();
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopPoll();
+    else if (state.view === 'chat' && state.tab === 'chat') {
+      loadMessages().then(pollLoop);
+    }
+  });
+  window.addEventListener('beforeunload', stopPoll);
+
+  // Labels
+  state.selectedLabels = [];
+  state.taskLabels = [];
+  state.editingTaskLabels = null;
+  state.labels = [];
+
+  async function loadLabels() {
+    const res = await fetch('/api/chat/labels/', { credentials: 'same-origin' });
+    if (res.ok) {
+      const data = await res.json();
+      state.labels = data.labels || [];
+      renderSidebarLabels();
+      renderDropdownLabels();
+    }
+  }
+
+  function renderSelectedLabels() {
+    const container = $('#stSelectedLabels');
+    if (!container) return;
+    container.innerHTML = state.selectedLabels.map(function (l) {
+      return '<span class="st-label-chip" style="background:' + l.color + '">' + esc(l.name) + ' <button type="button" class="st-label-chip-remove" data-remove-label="' + l.id + '">✕</button></span>';
+    }).join('');
+  }
+
+  function renderSidebarLabels() {
+    const container = $('#stSidebarLabels');
+    if (!container) return;
+    if (!state.labels.length) {
+      container.innerHTML = '<div style="color:#7c6b99;font-size:11px;padding:4px 10px">No labels yet</div>';
+      return;
+    }
+    container.innerHTML = state.labels.map(function (l) {
+      const selected = state.selectedLabels.some(function (sl) { return sl.id === l.id; });
+      return '<div class="st-sidebar-label' + (selected ? ' selected' : '') + '" data-label-id="' + l.id + '">' +
+        '<span class="st-sidebar-label-color" style="background:' + l.color + '"></span>' +
+        '<span class="st-sidebar-label-name">' + esc(l.name) + '</span>' +
+        (selected ? '<span class="st-sidebar-label-check">✓</span>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function renderDropdownLabels() {
+    const listEl = $('#stLabelList');
+    if (!listEl) return;
+    const filterText = ($('#stLabelSearch') ? $('#stLabelSearch').value : '').toLowerCase().trim();
+    const filtered = state.labels.filter(function (l) {
+      return !filterText || (l.name || '').toLowerCase().indexOf(filterText) !== -1;
+    });
+
+    if (!filtered.length) {
+      listEl.innerHTML = '<div style="color:#7c6b99;font-size:11px;padding:6px">No matching labels</div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(function (l) {
+      const isChecked = state.taskLabels.some(function (tl) { return tl.id === l.id; });
+      return '<div class="st-label-item' + (isChecked ? ' selected' : '') + '" data-toggle-label="' + l.id + '">' +
+        '<span class="st-label-item-color" style="background:' + esc(l.color) + '"></span>' +
+        '<span class="st-label-item-name">' + esc(l.name) + '</span>' +
+        (isChecked ? '<span style="color:#a855f7;font-weight:bold;font-size:12px">✓</span>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  async function openLabelDropdown(taskId, targetBtn) {
+    state.editingTaskLabels = taskId;
+    const dropdown = $('#stLabelDropdown');
+    if (!dropdown) return;
+
+    if (targetBtn) {
+      const rect = targetBtn.getBoundingClientRect();
+      const popoverWidth = 260;
+      const left = Math.max(10, Math.min(rect.left, window.innerWidth - popoverWidth - 20));
+      const top = Math.min(rect.bottom + 6, window.innerHeight - 300);
+      dropdown.style.left = left + 'px';
+      dropdown.style.top = top + 'px';
+      dropdown.style.position = 'fixed';
+    }
+    dropdown.hidden = false;
+
+    try {
+      const res = await fetch('/api/chat/tasks/' + taskId + '/labels/', { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        state.taskLabels = data.labels || [];
+      }
+    } catch (_) {
+      state.taskLabels = [];
+    }
+    renderDropdownLabels();
+  }
+
+  function closeLabelDropdown() {
+    const dropdown = $('#stLabelDropdown');
+    if (dropdown) dropdown.hidden = true;
+    state.editingTaskLabels = null;
+    state.taskLabels = [];
+  }
+
+  async function toggleTaskLabel(labelId) {
+    if (!state.editingTaskLabels) return;
+    const taskId = state.editingTaskLabels;
+    let newIds = state.taskLabels.map(l => l.id);
+    if (newIds.includes(labelId)) {
+      newIds = newIds.filter(id => id !== labelId);
+    } else {
+      newIds.push(labelId);
+    }
+
+    try {
+      const res = await fetch('/api/chat/tasks/' + taskId + '/labels/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ label_ids: newIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        state.taskLabels = data.labels || [];
+        renderDropdownLabels();
+
+        // Refresh UI so task card shows updated labels immediately
+        if (state.view === 'chat') {
+          loadMessages();
+        } else if (state.view === 'tasks') {
+          loadTasks(state.taskScope, state.tab === 'channel-tasks');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update task labels', e);
+    }
+  }
+
+  $('#stAddNewLabel').addEventListener('click', function () {
+    const createDiv = $('#stLabelCreateInline');
+    createDiv.hidden = false;
+    $('#stInlineLabelName').focus();
+  });
+
+  $('#stCancelInlineLabel').addEventListener('click', function () {
+    $('#stLabelCreateInline').hidden = true;
+    $('#stInlineLabelName').value = '';
+  });
+
+  $('#stSaveInlineLabel').addEventListener('click', async function () {
+    const name = $('#stInlineLabelName').value.trim();
+    const color = $('#stInlineLabelColor').value;
+    if (!name) return;
+    const res = await fetch('/api/chat/labels/', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ name: name, color: color }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      state.labels.push(data);
+      $('#stInlineLabelName').value = '';
+      $('#stLabelCreateInline').hidden = true;
+      renderSidebarLabels();
+      renderDropdownLabels();
+    }
+  });
+
+  // Dropdown controls
+  const closeBtn = $('#stCloseLabelDropdown');
+  if (closeBtn) closeBtn.addEventListener('click', closeLabelDropdown);
+
+  const searchInput = $('#stLabelSearch');
+  if (searchInput) searchInput.addEventListener('input', renderDropdownLabels);
+
+  const createDropdownBtn = $('#stCreateDropdownLabel');
+  if (createDropdownBtn) {
+    createDropdownBtn.addEventListener('click', async function () {
+      const nameInput = $('#stDropdownLabelName');
+      const colorInput = $('#stDropdownLabelColor');
+      const name = (nameInput.value || '').trim();
+      const color = colorInput ? colorInput.value : '#a855f7';
+      if (!name) return;
+      const res = await fetch('/api/chat/labels/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ name: name, color: color }),
+      });
+      if (res.ok) {
+        const newLabel = await res.json();
+        state.labels.push(newLabel);
+        nameInput.value = '';
+        renderSidebarLabels();
+        if (state.editingTaskLabels) {
+          toggleTaskLabel(newLabel.id);
+        } else {
+          renderDropdownLabels();
+        }
+      }
+    });
+  }
+
+  document.addEventListener('click', async function (e) {
+    const chipRemove = e.target.closest('.st-label-chip-remove');
+    if (chipRemove) {
+      const labelId = parseInt(chipRemove.dataset.removeLabel, 10);
+      state.selectedLabels = state.selectedLabels.filter(function (l) { return l.id !== labelId; });
+      renderSelectedLabels();
+      renderSidebarLabels();
+      return;
+    }
+
+    const taskLabelsBtn = e.target.closest('.st-task-labels-btn');
+    if (taskLabelsBtn) {
+      e.stopPropagation();
+      const taskId = parseInt(taskLabelsBtn.dataset.taskLabels, 10);
+      openLabelDropdown(taskId, taskLabelsBtn);
+      return;
+    }
+
+    const toggleLabelItem = e.target.closest('[data-toggle-label]');
+    if (toggleLabelItem) {
+      e.stopPropagation();
+      const labelId = parseInt(toggleLabelItem.dataset.toggleLabel, 10);
+      toggleTaskLabel(labelId);
+      return;
+    }
+
+    const dropdown = $('#stLabelDropdown');
+    if (dropdown && !dropdown.hidden && !e.target.closest('#stLabelDropdown')) {
+      closeLabelDropdown();
+    }
+
+    const sidebarLabel = e.target.closest('.st-sidebar-label');
+    if (sidebarLabel) {
+      const labelId = parseInt(sidebarLabel.dataset.labelId, 10);
+      const label = state.labels.find(function (l) { return l.id === labelId; });
+      if (label) {
+        const idx = state.selectedLabels.findIndex(function (sl) { return sl.id === labelId; });
+        if (idx >= 0) {
+          state.selectedLabels.splice(idx, 1);
+        } else {
+          state.selectedLabels.push(label);
+        }
+        renderSelectedLabels();
+        renderSidebarLabels();
+      }
+      return;
+    }
+  });
+
+  // Boot
+  const menuToggle = $('#stMenuToggle');
+  if (menuToggle) menuToggle.addEventListener('click', toggleMobileSidebar);
+  const sidebarOverlay = $('#stSidebarOverlay');
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeMobileSidebar);
+
+  loadLabels();
+  if (state.channelId) {
+    loadMessages().then(pollLoop);
+  } else {
+    setStatus('Pick a channel', false);
+    $('#stFeed').innerHTML = '<div class="st-empty">Select a channel to start chatting.</div>';
+  }
+  refreshBootstrap().then(function () {
+    // keep users from page JSON if bootstrap empty
+  });
+  setInterval(refreshBootstrap, 30000);
+
+  // debug helper in console
+  window.__stMentionDebug = function () {
+    return { users: state.users.length, mention: state.mention };
+  };
+})();
+</script>
+{% endblock %}

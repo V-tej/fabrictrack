@@ -161,6 +161,12 @@
       </a>
       {% endif %}
 
+      <a href="{% url 'chat' %}"
+        class="nav-item {% if request.resolver_match.url_name == 'chat' %}active{% endif %}"
+        id="nav-chat">
+        <span class="nav-icon">💬</span> Team Chat
+      </a>
+
       <a href="{% url 'submission_list' %}"
         class="nav-item {% if request.resolver_match.url_name == 'submission_list' %}active{% endif %}"
         id="nav-submissions">

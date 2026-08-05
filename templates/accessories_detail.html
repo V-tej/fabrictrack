@@ -31,15 +31,28 @@
       </div>
     </div>
 
-    <!-- Dropdown Item Name Filter -->
-    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; max-width: 420px; box-sizing: border-box;">
-      <label for="detailItemFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500;">Filter by Item Name:</label>
-      <select id="detailItemFilter" style="flex: 1; padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
-        <option value="">-- All Items --</option>
-        {% for entry in entries %}
-          <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
-        {% endfor %}
-      </select>
+    <!-- Filters Row -->
+    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <!-- Item Name Filter -->
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <label for="detailItemFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Item:</label>
+        <select id="detailItemFilter" style="padding: 0.5rem 1.5rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
+          <option value="">-- All Items --</option>
+          {% for entry in entries %}
+            <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Status Color Filter -->
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <label for="detailStatusFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Status:</label>
+        <select id="detailStatusFilter" style="padding: 0.5rem 1rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; font-weight: 600; color: #f1f5f9;">
+          <option value="" style="color:#f1f5f9;">-- All --</option>
+          <option value="yellow" style="color:#fbbf24;">🟡 Yellow</option>
+          <option value="red" style="color:#ef4444;">🔴 Red</option>
+          <option value="green" style="color:#22c55e;">🟢 Green</option>
+        </select>
+      </div>
     </div>
 
     <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
@@ -87,14 +100,14 @@
                     {% if entry.total_a is not None %}{{ entry.total_a }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}" data-col="a"
-                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_a == 'green' %}color:#22c55e;{% elif entry.status_a == 'red' %}color:#ef4444;{% elif entry.status_a == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_a %}selected{% endif %}>—</option>
-                    <option value="green" {% if entry.status_a == 'green' %}selected{% endif %}>🟢 G</option>
-                    <option value="red" {% if entry.status_a == 'red' %}selected{% endif %}>🔴 R</option>
-                    <option value="yellow" {% if entry.status_a == 'yellow' %}selected{% endif %}>🟡 Y</option>
+                    <option value="" {% if not entry.status_a %}selected{% endif %} style="color:#9ca3af;">—</option>
+                    <option value="yellow" {% if entry.status_a == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
+                    <option value="red" {% if entry.status_a == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
+                    <option value="green" {% if entry.status_a == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
                   </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_a" style="margin-top:0.4rem; display:{% if entry.status_a == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:75px;">
+                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_a" style="margin-top:0.4rem; display:{% if entry.status_a == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
                     <select name="item_{{ entry.sr_no }}_vendor_a" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="a" data-selected="{{ entry.vendor_a|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Vendor...</option>
                     </select>
@@ -134,14 +147,14 @@
                     {% if entry.total_b is not None %}{{ entry.total_b }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}" data-col="b"
-                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_b == 'green' %}color:#22c55e;{% elif entry.status_b == 'red' %}color:#ef4444;{% elif entry.status_b == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_b %}selected{% endif %}>—</option>
-                    <option value="green" {% if entry.status_b == 'green' %}selected{% endif %}>🟢 G</option>
-                    <option value="red" {% if entry.status_b == 'red' %}selected{% endif %}>🔴 R</option>
-                    <option value="yellow" {% if entry.status_b == 'yellow' %}selected{% endif %}>🟡 Y</option>
+                    <option value="" {% if not entry.status_b %}selected{% endif %} style="color:#9ca3af;">—</option>
+                    <option value="yellow" {% if entry.status_b == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
+                    <option value="red" {% if entry.status_b == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
+                    <option value="green" {% if entry.status_b == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
                   </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_b" style="margin-top:0.4rem; display:{% if entry.status_b == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:75px;">
+                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_b" style="margin-top:0.4rem; display:{% if entry.status_b == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
                     <select name="item_{{ entry.sr_no }}_vendor_b" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="b" data-selected="{{ entry.vendor_b|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Vendor...</option>
                     </select>
@@ -181,14 +194,14 @@
                     {% if entry.total_c is not None %}{{ entry.total_c }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}" data-col="c"
-                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_c == 'green' %}color:#22c55e;{% elif entry.status_c == 'red' %}color:#ef4444;{% elif entry.status_c == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_c %}selected{% endif %}>—</option>
-                    <option value="green" {% if entry.status_c == 'green' %}selected{% endif %}>🟢 G</option>
-                    <option value="red" {% if entry.status_c == 'red' %}selected{% endif %}>🔴 R</option>
-                    <option value="yellow" {% if entry.status_c == 'yellow' %}selected{% endif %}>🟡 Y</option>
+                    <option value="" {% if not entry.status_c %}selected{% endif %} style="color:#9ca3af;">—</option>
+                    <option value="yellow" {% if entry.status_c == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
+                    <option value="red" {% if entry.status_c == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
+                    <option value="green" {% if entry.status_c == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
                   </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_c" style="margin-top:0.4rem; display:{% if entry.status_c == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:75px;">
+                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_c" style="margin-top:0.4rem; display:{% if entry.status_c == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
                     <select name="item_{{ entry.sr_no }}_vendor_c" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="c" data-selected="{{ entry.vendor_c|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Vendor...</option>
                     </select>
@@ -228,14 +241,14 @@
                     {% if entry.total_d is not None %}{{ entry.total_d }}{% else %}0{% endif %}
                   </span>
                   <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}" data-col="d"
-                    style="padding:0.2rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.8rem;cursor:pointer;width:75px;
+                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_d == 'green' %}color:#22c55e;{% elif entry.status_d == 'red' %}color:#ef4444;{% elif entry.status_d == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_d %}selected{% endif %}>—</option>
-                    <option value="green" {% if entry.status_d == 'green' %}selected{% endif %}>🟢 G</option>
-                    <option value="red" {% if entry.status_d == 'red' %}selected{% endif %}>🔴 R</option>
-                    <option value="yellow" {% if entry.status_d == 'yellow' %}selected{% endif %}>🟡 Y</option>
+                    <option value="" {% if not entry.status_d %}selected{% endif %} style="color:#9ca3af;">—</option>
+                    <option value="yellow" {% if entry.status_d == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
+                    <option value="red" {% if entry.status_d == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
+                    <option value="green" {% if entry.status_d == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
                   </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_d" style="margin-top:0.4rem; display:{% if entry.status_d == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:75px;">
+                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_d" style="margin-top:0.4rem; display:{% if entry.status_d == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
                     <select name="item_{{ entry.sr_no }}_vendor_d" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="d" data-selected="{{ entry.vendor_d|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                       <option value="">Select Vendor...</option>
                     </select>
@@ -376,23 +389,40 @@
 (function () {
   const totalPcs = {{ record.total_pcs }};
 
-  // Setup detail dropdown filter
+  // Setup detail dropdown filters (item name + status color)
   const detailItemFilter = document.getElementById('detailItemFilter');
-  if (detailItemFilter) {
-    detailItemFilter.addEventListener('change', function () {
-      const selectedVal = detailItemFilter.value.toLowerCase().trim();
-      const tableRows = document.querySelectorAll('#accTable tbody tr');
-      tableRows.forEach(row => {
-        const nameCell = row.cells[1];
-        if (nameCell) {
-          const itemName = nameCell.textContent.toLowerCase().trim();
-          if (!selectedVal || itemName === selectedVal) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
-        }
-      });
+  const detailStatusFilter = document.getElementById('detailStatusFilter');
+
+  function filterDetailTable() {
+    const selectedItem = detailItemFilter ? detailItemFilter.value.toLowerCase().trim() : '';
+    const selectedStatus = detailStatusFilter ? detailStatusFilter.value : '';
+
+    const tableRows = document.querySelectorAll('#accTable tbody tr');
+    tableRows.forEach(row => {
+      const nameCell = row.cells[1];
+      if (!nameCell) return;
+      const itemName = nameCell.textContent.toLowerCase().trim();
+
+      const matchesItem = !selectedItem || itemName === selectedItem;
+
+      let matchesStatus = true;
+      if (selectedStatus) {
+        // Check if any of columns A,B,C,D has the selected status
+        const statusSelects = row.querySelectorAll('.status-select');
+        matchesStatus = Array.from(statusSelects).some(sel => sel.value === selectedStatus);
+      }
+
+      row.style.display = (matchesItem && matchesStatus) ? '' : 'none';
+    });
+  }
+
+  if (detailItemFilter) detailItemFilter.addEventListener('change', filterDetailTable);
+  if (detailStatusFilter) {
+    detailStatusFilter.addEventListener('change', function() {
+      // Color the dropdown text to match selection
+      const colors = { 'yellow': '#fbbf24', 'red': '#ef4444', 'green': '#22c55e', '': '#f1f5f9' };
+      this.style.color = colors[this.value] || '#f1f5f9';
+      filterDetailTable();
     });
   }
 
@@ -506,6 +536,33 @@
 
   // Dependent dropdowns for Vendor and Article
   const vendorGroups = JSON.parse('{{ vendor_groups_json|escapejs }}');
+  const vendorPhotoMap = JSON.parse('{{ vendor_photo_map_json|escapejs }}');
+  
+  function updateVendorPhoto(sr, col, vendor, article) {
+    const yellowDiv = document.getElementById('yellow_details_' + sr + '_' + col);
+    if (!yellowDiv) return;
+    // Remove existing auto-photo if any
+    const existing = yellowDiv.querySelector('.vendor-auto-photo');
+    if (existing) existing.remove();
+    
+    if (vendor && article && vendorPhotoMap[vendor] && vendorPhotoMap[vendor][article]) {
+      const photoUrl = vendorPhotoMap[vendor][article];
+      const photoWrap = document.createElement('div');
+      photoWrap.className = 'vendor-auto-photo';
+      photoWrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:2px;';
+      photoWrap.innerHTML = `<a href="${photoUrl}" target="_blank" title="View Vendor Photo"
+        style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;color:#22c55e;text-decoration:none;">
+        <img src="${photoUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid #fbbf24;">
+        <span>Photo</span></a>`;
+      // Insert before the file upload label (last child)
+      const uploadLabel = yellowDiv.querySelector('label');
+      if (uploadLabel) {
+        yellowDiv.insertBefore(photoWrap, uploadLabel);
+      } else {
+        yellowDiv.appendChild(photoWrap);
+      }
+    }
+  }
   
   function populateArticles(vendorSelect) {
     const sr = vendorSelect.dataset.sr;
@@ -531,6 +588,9 @@
       // Clear standard selected attribute after restoring
       articleSelect.removeAttribute('data-selected');
     }
+    
+    // Update vendor photo
+    updateVendorPhoto(sr, col, selectedVendor, articleSelect.value);
   }
 
   // Populate all vendor selects on page load
@@ -556,6 +616,15 @@
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('vendor-select')) {
       populateArticles(e.target);
+    }
+    // Also update photo on article change
+    if (e.target.classList.contains('article-select')) {
+      const sr = e.target.dataset.sr;
+      const col = e.target.dataset.col;
+      const vendorSelect = document.querySelector(`.vendor-select[data-sr="${sr}"][data-col="${col}"]`);
+      if (vendorSelect) {
+        updateVendorPhoto(sr, col, vendorSelect.value, e.target.value);
+      }
     }
   });
 })();

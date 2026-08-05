@@ -1,14 +1,19 @@
 import os
-from datetime import datetime, date
+import re
+import json
+import time
+from datetime import datetime, date, timedelta
 from django.db.models import Q, Prefetch, Case, When, Value, IntegerField
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
-from django.http import FileResponse, Http404, HttpResponse
-from django.views.decorators.http import require_POST
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST, require_http_methods
 from django.core.paginator import Paginator
-import json
+from django.utils.text import slugify
+from django.utils import timezone
 
 from .models import (
     MasterEntry, CuttingReport, CuttingReportPhoto, CuttingReportColorDetail,
@@ -19,7 +24,7 @@ from .models import (
     SewingReportPhoto, RateDefinition, AccessoriesRecord, AccessoriesItemEntry,
     ACCESSORIES_ITEMS, AccessoryCustomName, AccessoriesPhoto, MiscellaneousReport,
     MiscellaneousReportFile, JobWork1Report, JobWork1ReportPhoto, Sewing1Report, Sewing1ReportPhoto,
-    ActivityLog
+    ActivityLog, ChatChannel, ChatMessage, ChatTask, ChatTaskLabel, ChatReaction, ChatBookmark, ChatChannelRead
 )
 from .forms import (
     MasterEntryForm, CuttingReportForm, StitchingReportForm, JobWorkReportForm,
@@ -333,33 +338,54 @@ def manage_masters(request):
 
     if request.method == 'POST':
         if 'add_master' in request.POST:
-            name = request.POST.get('name')
-            department = request.POST.get('department')
+            name = request.POST.get('name', '').strip()
+            department = request.POST.get('department', '').strip()
             upi_id = request.POST.get('upi_id', '').strip() or None
             article = request.POST.get('article', '').strip() or None
-            master_id = request.POST.get('master_id')
+            master_id = request.POST.get('master_id', '').strip()
+
+            # Read photo ONCE right here
+            photo_bytes = None
+            photo_mime = None
+            if department == 'Vendor' and 'vendor_photo' in request.FILES:
+                pf = request.FILES['vendor_photo']
+                raw = pf.read()
+                if raw:  # only if actual bytes were uploaded
+                    photo_bytes = raw
+                    photo_mime = pf.content_type or 'image/jpeg'
+
             if name and department:
                 from .models import MasterName
                 if master_id:
+                    # --- EDIT existing record ---
                     master = MasterName.objects.filter(id=master_id).first()
                     if master:
-                        master.name = name.strip()
+                        master.name = name
                         master.department = department
                         master.upi_id = upi_id
                         master.article = article if department == 'Vendor' else None
+                        if photo_bytes is not None:
+                            master.photo = photo_bytes
+                            master.photo_mime = photo_mime
                         master.save()
                         messages.success(request, f'Successfully updated master {name}!')
                 else:
+                    # --- CREATE or UPDATE existing ---
                     master_article = article if department == 'Vendor' else None
                     master, created = MasterName.objects.get_or_create(
-                        name=name.strip(),
+                        name=name,
                         department=department,
                         article=master_article,
                         defaults={'upi_id': upi_id}
                     )
-                    if not created:
-                        master.upi_id = upi_id
-                        master.save()
+                    # Update fields whether created or not
+                    update_kwargs = {'upi_id': upi_id}
+                    if photo_bytes is not None:
+                        update_kwargs['photo'] = photo_bytes
+                        update_kwargs['photo_mime'] = photo_mime
+                    for k, v in update_kwargs.items():
+                        setattr(master, k, v)
+                    master.save()
                     messages.success(request, f'Successfully added {name} to {department}!')
             return redirect('manage_masters')
             
@@ -3782,6 +3808,22 @@ def serve_accessories_cell_photo(request, entry_id, col):
 
 
 @login_required
+def serve_vendor_photo(request, vendor_id):
+    """Serve vendor photo stored as binary in MasterName model."""
+    from .models import MasterName
+    vendor = get_object_or_404(MasterName, pk=vendor_id, department='Vendor')
+    if not vendor.photo:
+        raise Http404("Photo not found")
+    content_type = vendor.photo_mime or 'image/jpeg'
+    response = HttpResponse(bytes(vendor.photo), content_type=content_type)
+    response['Content-Disposition'] = f'inline; filename="vendor_{vendor_id}.jpg"'
+    # No caching — always serve the latest photo from DB
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    return response
+
+
+@login_required
 def reset_database_view(request):
     if not request.user.is_superuser:
         raise PermissionDenied("Only superusers can reset the database.")
@@ -4439,6 +4481,10 @@ def accessories_view(request):
     cutting_reports = {cr.job_card_no: cr for cr in CuttingReport.objects.prefetch_related('photos').all()}
 
     job_cards = []
+    yellow_jc_count = 0
+    red_jc_count = 0
+    green_jc_count = 0
+
     for jc in jc_data:
         rec = existing.get(jc['job_card_no'])
         cr = cutting_reports.get(jc['job_card_no'])
@@ -4446,6 +4492,13 @@ def accessories_view(request):
             status = 'complete' if rec.is_complete else 'pending'
         else:
             status = 'new'
+
+        if status == 'complete':
+            green_jc_count += 1
+        elif status == 'pending':
+            yellow_jc_count += 1
+        else:
+            red_jc_count += 1
             
         # Collect photos from both cutting report and accessories record
         job_card_photos = []
@@ -4470,9 +4523,44 @@ def accessories_view(request):
     custom_names = sorted(list(db_item_names - set(ACCESSORIES_ITEMS)))
     all_accessories_list = list(ACCESSORIES_ITEMS) + custom_names
 
+    # Count cell-level statuses across all A, B, C, D columns of all entries
+    cell_yellow_count = 0
+    cell_red_count = 0
+    cell_green_count = 0
+    total_cells_count = 0
+
+    for entry in AccessoriesItemEntry.objects.all():
+        for col in ['a', 'b', 'c', 'd']:
+            st = getattr(entry, f'status_{col}', '')
+            qty = getattr(entry, f'qty_{col}', None)
+            if st == 'yellow':
+                cell_yellow_count += 1
+                total_cells_count += 1
+            elif st == 'green':
+                cell_green_count += 1
+                total_cells_count += 1
+            elif st == 'red':
+                cell_red_count += 1
+                total_cells_count += 1
+            elif qty is not None and qty > 0:
+                cell_red_count += 1
+                total_cells_count += 1
+
+    kpi_summary = {
+        'total_jc': len(job_cards),
+        'yellow_jc': yellow_jc_count,
+        'red_jc': red_jc_count,
+        'green_jc': green_jc_count,
+        'cell_yellow': cell_yellow_count,
+        'cell_red': cell_red_count,
+        'cell_green': cell_green_count,
+        'total_cells': total_cells_count,
+    }
+
     return render(request, 'accessories.html', {
         'job_cards': job_cards,
         'all_accessories_list': all_accessories_list,
+        'kpi_summary': kpi_summary,
         'is_admin': is_admin
     })
 
@@ -4618,17 +4706,26 @@ def accessories_detail_view(request, job_card_no):
     from collections import defaultdict
     from .models import MasterName
     vendor_groups = defaultdict(list)
+    # Build vendor photo map: {vendor_name: {article: photo_url}}
+    vendor_photo_map = defaultdict(dict)
     for m in MasterName.objects.filter(department='Vendor').order_by('name', 'article'):
         if m.article and m.article not in vendor_groups[m.name]:
             vendor_groups[m.name].append(m.article)
+        if m.article and m.photo:
+            from django.urls import reverse as url_reverse
+            import time as _time
+            photo_url = url_reverse('serve_vendor_photo', args=[m.id])
+            vendor_photo_map[m.name][m.article] = f'{photo_url}?t={int(_time.time())}'
             
     import json
     vendor_groups_json = json.dumps(dict(vendor_groups))
+    vendor_photo_map_json = json.dumps({k: dict(v) for k, v in vendor_photo_map.items()})
 
     return render(request, 'accessories_detail.html', {
         'record': record, 'entries': entries, 'is_admin': is_admin,
         'custom_names_obj': custom_names_obj,
         'vendor_groups_json': vendor_groups_json,
+        'vendor_photo_map_json': vendor_photo_map_json,
     })
 
 
@@ -4939,6 +5036,15 @@ def vendor_report_view(request):
                 registered_vendor_articles[vm.name].append(vm.article)
             all_articles_set.add(vm.article)
 
+    # Build a lookup for vendor master photos: {(vendor_name, article_name): photo_url}
+    from django.urls import reverse as url_reverse
+    vendor_master_photos = {}
+    for vm in vendor_masters:
+        if vm.article and vm.photo:
+            key = (vm.name, vm.article)
+            if key not in vendor_master_photos:
+                vendor_master_photos[key] = url_reverse('serve_vendor_photo', args=[vm.id])
+
     # Collect entries from AccessoriesItemEntry across columns A, B, C, D
     cols = ['a', 'b', 'c', 'd']
     entries = AccessoriesItemEntry.objects.select_related('record').all()
@@ -4988,6 +5094,8 @@ def vendor_report_view(request):
                     'total': tot,
                     'status': status,
                     'has_photo': has_photo,
+                    'updated_at': entry.record.updated_at,
+                    'vendor_photo_url': vendor_master_photos.get((v_name, art_key), ''),
                 }
 
                 vendor_tree[v_name][art_key].append(item_dict)
@@ -5097,3 +5205,748 @@ def progress_tracker_view(request):
         'departments': departments,
         'total_pending': total_pending,
     })
+
+
+# ── Team Chat (SlackTask-style) ──────────────────────────────────────────────
+
+DEFAULT_CHAT_CHANNELS = [
+    ('production', 'Production updates & job cards', False),
+    ('cutting', 'Cutting department', False),
+    ('stitching', 'Stitching department', False),
+    ('finishing', 'Finishing department', False),
+    ('general', 'General team discussion', False),
+    ('admin-sync', 'Private admin sync', True),
+]
+
+
+def ensure_default_chat_channels():
+    for name, desc, private in DEFAULT_CHAT_CHANNELS:
+        ChatChannel.objects.get_or_create(
+            slug=slugify(name),
+            defaults={
+                'name': name,
+                'description': desc,
+                'is_default': name == 'general',
+                'is_private': private,
+                'is_dm': False,
+            },
+        )
+
+
+def user_can_access_channel(user, channel):
+    if channel.is_dm:
+        return channel.members.filter(pk=user.pk).exists()
+    if channel.is_private:
+        return user.is_superuser or (
+            hasattr(user, 'profile') and user.profile.person_type == 'ADMIN'
+        ) or channel.members.filter(pk=user.pk).exists()
+    return True
+
+
+def parse_task_natural_language(text):
+    """Simple NLP: strip today/tomorrow/next week, !p1 priority, @username assignee."""
+    original = text.strip()
+    priority = 'p3'
+    due = None
+    assignee_name = None
+    today = timezone.localdate()
+
+    pr = re.search(r'!(p[1-4])\b', original, re.I)
+    if pr:
+        priority = pr.group(1).lower()
+        original = re.sub(r'!(p[1-4])\b', '', original, flags=re.I)
+
+    am = re.search(r'@([A-Za-z0-9_.-]+)', original)
+    if am:
+        assignee_name = am.group(1)
+        original = re.sub(r'@([A-Za-z0-9_.-]+)', '', original, count=1)
+
+    lower = original.lower()
+    if re.search(r'\btoday\b', lower):
+        due = today
+        original = re.sub(r'\btoday\b', '', original, flags=re.I)
+    elif re.search(r'\btomorrow\b', lower):
+        due = today + timedelta(days=1)
+        original = re.sub(r'\btomorrow\b', '', original, flags=re.I)
+    elif re.search(r'\bnext\s+week\b', lower):
+        due = today + timedelta(days=7)
+        original = re.sub(r'\bnext\s+week\b', '', original, flags=re.I)
+    elif re.search(r'\bfriday\b', lower):
+        days = (4 - today.weekday()) % 7
+        due = today + timedelta(days=days or 7)
+        original = re.sub(r'\bfriday\b', '', original, flags=re.I)
+
+    title = re.sub(r'\s+', ' ', original).strip(' -–|')
+    return title or text.strip(), due, priority, assignee_name
+
+
+def resolve_task_assignee(assignee_name, fallback_user):
+    if assignee_name:
+        u = User.objects.filter(username__iexact=assignee_name, is_active=True).first()
+        if u:
+            return u
+    return fallback_user
+
+
+def serialize_chat_task(task):
+    return {
+        'id': task.id,
+        'task_key': task.task_key or f'tsk_{task.id}',
+        'title': task.title,
+        'due_date': task.due_date.isoformat() if task.due_date else None,
+        'due_label': task.due_date.strftime('%d %b') if task.due_date else None,
+        'priority': task.priority,
+        'completed': task.completed,
+        'channel_id': task.channel_id,
+        'channel_name': task.channel.name if task.channel else None,
+        'assignee': task.assignee.username if task.assignee else None,
+        'created_by': task.created_by.username if task.created_by else None,
+        'labels': [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()],
+    }
+
+
+def serialize_chat_message(msg, user=None):
+    sender_name = msg.sender.username if msg.sender else 'Unknown'
+    initial = (sender_name[:1] or '?').upper()
+    reactions = {}
+    for r in msg.reactions.all():
+        reactions.setdefault(r.emoji, {'emoji': r.emoji, 'count': 0, 'mine': False, 'users': []})
+        reactions[r.emoji]['count'] += 1
+        reactions[r.emoji]['users'].append(r.user.username if r.user else '?')
+        if user and r.user_id == user.id:
+            reactions[r.emoji]['mine'] = True
+
+    bookmarked = False
+    if user is not None:
+        bookmarked = msg.bookmarks.filter(user=user).exists()
+
+    reply_to = None
+    if msg.parent_id and msg.parent:
+        p = msg.parent
+        p_sender = p.sender.username if p.sender else 'Unknown'
+        p_text = p.content if p.content else (p.task.title if p.task else 'Message')
+        if len(p_text) > 80:
+            p_text = p_text[:80] + '…'
+        reply_to = {
+            'id': p.id,
+            'sender': p_sender,
+            'content': p_text,
+            'is_task': p.message_type == 'task',
+            'task_key': p.task.task_key if p.task else None,
+        }
+
+    data = {
+        'id': msg.id,
+        'content': msg.content,
+        'message_type': msg.message_type,
+        'sender': sender_name,
+        'sender_id': msg.sender_id,
+        'sender_initial': initial,
+        'channel_id': msg.channel_id,
+        'created_at': timezone.localtime(msg.created_at).strftime('%I:%M %p').lstrip('0'),
+        'created_full': timezone.localtime(msg.created_at).strftime('%d-%b-%Y %H:%M'),
+        'timestamp_iso': msg.created_at.isoformat(),
+        'is_pinned': msg.is_pinned,
+        'edited_at': timezone.localtime(msg.edited_at).strftime('%I:%M %p').lstrip('0') if msg.edited_at else None,
+        'bookmarked': bookmarked,
+        'reactions': list(reactions.values()),
+        'has_image': bool(msg.image_data),
+        'image_name': msg.image_name or '',
+        'image_size': msg.image_size or 0,
+        'image_url': f'/api/chat/message/{msg.id}/image/' if msg.image_data else None,
+        'task': serialize_chat_task(msg.task) if msg.task_id else None,
+        'reply_to': reply_to,
+    }
+    return data
+
+
+def get_or_create_dm(user_a, user_b):
+    if user_a.id == user_b.id:
+        return None
+    ids = sorted([user_a.id, user_b.id])
+    slug = f'dm-{ids[0]}-{ids[1]}'
+    channel, created = ChatChannel.objects.get_or_create(
+        slug=slug,
+        defaults={
+            'name': f'{user_a.username} · {user_b.username}',
+            'is_dm': True,
+            'is_private': True,
+            'description': 'Direct message',
+        },
+    )
+    if created or channel.members.count() < 2:
+        channel.members.add(user_a, user_b)
+        # Prefer other person's name for each viewer handled in API
+    return channel
+
+
+def channel_unread_count(channel, user):
+    read = ChatChannelRead.objects.filter(channel=channel, user=user).first()
+    last_id = read.last_read_id if read else 0
+    return ChatMessage.objects.filter(channel=channel, id__gt=last_id).exclude(sender=user).count()
+
+
+@login_required
+def chat_view(request):
+    ensure_default_chat_channels()
+    user = request.user
+    public_channels = list(ChatChannel.objects.filter(is_dm=False).order_by('name'))
+    public_channels = [c for c in public_channels if user_can_access_channel(user, c)]
+
+    # Ensure DMs list of other active users
+    other_users = list(
+        User.objects.filter(is_active=True).exclude(pk=user.pk).order_by('username')[:40]
+    )
+
+    dm_channels = list(
+        ChatChannel.objects.filter(is_dm=True, members=user).prefetch_related('members')
+    )
+    for ch in dm_channels:
+        other = next((m for m in ch.members.all() if m.id != user.id), None)
+        if other:
+            ch.name = other.username
+
+    active_slug = request.GET.get('channel') or 'general'
+    active = None
+    for c in public_channels + dm_channels:
+        if c.slug == active_slug:
+            active = c
+            break
+    if not active and public_channels:
+        active = public_channels[0]
+
+    # Task counts
+    my_tasks = ChatTask.objects.filter(
+        Q(created_by=user) | Q(assignee=user)
+    )
+    today = timezone.localdate()
+    task_counts = {
+        'today': my_tasks.filter(completed=False, due_date=today).count(),
+        'upcoming': my_tasks.filter(completed=False, due_date__gt=today).count(),
+        'inbox': my_tasks.filter(completed=False).count(),
+    }
+
+    mention_users = [
+        {'id': u.id, 'username': u.username, 'initial': (u.username[:1] or '?').upper()}
+        for u in User.objects.filter(is_active=True).order_by('username')[:100]
+    ]
+
+    return render(request, 'chat.html', {
+        'channels': public_channels,
+        'dm_users': other_users,
+        'dm_channels': dm_channels,
+        'active_channel': active,
+        'task_counts': task_counts,
+        'workspace_name': 'FabricTrack',
+        'mention_users_json': json.dumps(mention_users),
+    })
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_bootstrap_api(request):
+    """Sidebar data: channels, DMs, task counts."""
+    ensure_default_chat_channels()
+    user = request.user
+    channels = []
+    for c in ChatChannel.objects.filter(is_dm=False).order_by('name'):
+        if not user_can_access_channel(user, c):
+            continue
+        channels.append({
+            'id': c.id,
+            'name': c.name,
+            'slug': c.slug,
+            'description': c.description,
+            'is_private': c.is_private,
+            'is_dm': False,
+            'unread': channel_unread_count(c, user),
+        })
+
+    dms = []
+    for c in ChatChannel.objects.filter(is_dm=True, members=user).prefetch_related('members'):
+        other = next((m for m in c.members.all() if m.id != user.id), None)
+        dms.append({
+            'id': c.id,
+            'name': other.username if other else c.name,
+            'slug': c.slug,
+            'user_id': other.id if other else None,
+            'is_dm': True,
+            'unread': channel_unread_count(c, user),
+            'initial': (other.username[:1] if other else '?').upper(),
+        })
+
+    # Users without existing DM (for sidebar stubs)
+    existing_ids = {d['user_id'] for d in dms if d.get('user_id')}
+    people = []
+    # All active users for @mention autocomplete
+    mention_users = []
+    for u in User.objects.filter(is_active=True).order_by('username')[:100]:
+        mention_users.append({
+            'id': u.id,
+            'username': u.username,
+            'initial': (u.username[:1] or '?').upper(),
+        })
+        if u.id != user.id and u.id not in existing_ids:
+            people.append({
+                'id': u.id,
+                'username': u.username,
+                'initial': (u.username[:1] or '?').upper(),
+            })
+
+    today = timezone.localdate()
+    my_tasks = ChatTask.objects.filter(Q(created_by=user) | Q(assignee=user), completed=False)
+    return JsonResponse({
+        'channels': channels,
+        'dms': dms,
+        'people': people,
+        'users': mention_users,
+        'task_counts': {
+            'today': my_tasks.filter(due_date=today).count(),
+            'upcoming': my_tasks.filter(due_date__gt=today).count(),
+            'inbox': my_tasks.count(),
+        },
+        'me': {
+            'id': user.id,
+            'username': user.username,
+            'initial': user.username[:1].upper(),
+        },
+    })
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_messages_api(request, channel_id):
+    channel = get_object_or_404(ChatChannel, pk=channel_id)
+    if not user_can_access_channel(request.user, channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    after_id = request.GET.get('after_id')
+    qs = (
+        ChatMessage.objects.filter(channel=channel)
+        .select_related('sender', 'task', 'task__channel', 'task__assignee', 'task__created_by', 'parent', 'parent__sender', 'parent__task')
+        .prefetch_related('reactions__user', 'bookmarks')
+    )
+
+    wait = request.GET.get('wait') == '1'
+    if wait and after_id is not None and str(after_id).isdigit():
+        after_id_int = int(after_id)
+        deadline = time.time() + 18
+        while time.time() < deadline:
+            messages_list = list(qs.filter(id__gt=after_id_int).order_by('id')[:80])
+            if messages_list:
+                return JsonResponse({
+                    'messages': [serialize_chat_message(m, request.user) for m in messages_list],
+                    'channel_id': channel.id,
+                })
+            time.sleep(1.1)
+        return JsonResponse({'messages': [], 'channel_id': channel.id})
+
+    if after_id is not None and str(after_id).isdigit():
+        messages_list = list(qs.filter(id__gt=int(after_id)).order_by('id')[:80])
+    else:
+        recent = list(qs.order_by('-id')[:100])
+        messages_list = list(reversed(recent))
+        # mark read
+        if messages_list:
+            ChatChannelRead.objects.update_or_create(
+                channel=channel, user=request.user,
+                defaults={'last_read_id': messages_list[-1].id},
+            )
+
+    return JsonResponse({
+        'messages': [serialize_chat_message(m, request.user) for m in messages_list],
+        'channel_id': channel.id,
+        'channel_name': channel.name,
+        'is_dm': channel.is_dm,
+    })
+
+
+@login_required
+@require_POST
+def chat_send_api(request, channel_id):
+    channel = get_object_or_404(ChatChannel, pk=channel_id)
+    if not user_can_access_channel(request.user, channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    content_type = request.content_type or ''
+    image_file = None
+    if 'multipart/form-data' in content_type:
+        content = (request.POST.get('content') or '').strip()
+        image_file = request.FILES.get('image')
+        as_task = request.POST.get('as_task') == '1'
+        priority = request.POST.get('priority') or 'p3'
+        reply_to_id = request.POST.get('reply_to_id')
+    else:
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            payload = {}
+        content = (payload.get('content') or '').strip()
+        as_task = bool(payload.get('as_task'))
+        priority = payload.get('priority') or 'p3'
+        reply_to_id = payload.get('reply_to_id')
+
+    parent_msg = None
+    if reply_to_id and str(reply_to_id).isdigit():
+        parent_msg = ChatMessage.objects.filter(pk=int(reply_to_id), channel=channel).first()
+
+    # /task command
+    task_cmd = re.match(r'^/task\s+(.+)$', content, re.I | re.S)
+    if task_cmd or as_task:
+        raw = task_cmd.group(1) if task_cmd else content
+        title, due, pr, assignee_name = parse_task_natural_language(raw)
+        if priority in ('p1', 'p2', 'p3', 'p4'):
+            pr = priority
+        if not title:
+            return JsonResponse({'error': 'Task title required.'}, status=400)
+        task = ChatTask.objects.create(
+            title=title,
+            created_by=request.user,
+            assignee=resolve_task_assignee(assignee_name, request.user),
+            channel=channel,
+            due_date=due,
+            priority=pr,
+        )
+        msg = ChatMessage.objects.create(
+            channel=channel,
+            sender=request.user,
+            content=title,
+            message_type=ChatMessage.TYPE_TASK,
+            task=task,
+            parent=parent_msg,
+        )
+        return JsonResponse({'message': serialize_chat_message(msg, request.user)}, status=201)
+
+    if not content and not image_file:
+        return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
+    if len(content) > 4000:
+        return JsonResponse({'error': 'Message too long.'}, status=400)
+
+    msg = ChatMessage(
+        channel=channel,
+        sender=request.user,
+        content=content,
+        message_type=ChatMessage.TYPE_TEXT,
+        parent=parent_msg,
+    )
+    if image_file:
+        data = image_file.read()
+        if len(data) > 5 * 1024 * 1024:
+            return JsonResponse({'error': 'Image max 5MB.'}, status=400)
+        msg.image_data = data
+        msg.image_name = image_file.name[:255]
+        msg.image_content_type = getattr(image_file, 'content_type', None) or 'image/jpeg'
+        msg.image_size = len(data)
+    msg.save()
+    return JsonResponse({'message': serialize_chat_message(msg, request.user)}, status=201)
+
+
+@login_required
+@require_POST
+def chat_message_to_task_api(request, message_id):
+    msg = get_object_or_404(ChatMessage.objects.select_related('channel'), pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    if msg.task_id:
+        return JsonResponse({'message': serialize_chat_message(msg, request.user), 'task': serialize_chat_task(msg.task)})
+
+    title, due, pr, assignee_name = parse_task_natural_language(msg.content or 'Task from message')
+    task = ChatTask.objects.create(
+        title=title or 'Task from chat',
+        created_by=request.user,
+        assignee=resolve_task_assignee(assignee_name, request.user),
+        channel=msg.channel,
+        due_date=due,
+        priority=pr,
+    )
+    card = ChatMessage.objects.create(
+        channel=msg.channel,
+        sender=request.user,
+        content=task.title,
+        message_type=ChatMessage.TYPE_TASK,
+        task=task,
+    )
+    return JsonResponse({
+        'task': serialize_chat_task(task),
+        'message': serialize_chat_message(card, request.user),
+    }, status=201)
+
+
+@login_required
+@require_POST
+def chat_react_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+    emoji = (payload.get('emoji') or '👍').strip()[:16]
+    existing = ChatReaction.objects.filter(message=msg, user=request.user, emoji=emoji).first()
+    if existing:
+        existing.delete()
+        toggled = False
+    else:
+        ChatReaction.objects.create(message=msg, user=request.user, emoji=emoji)
+        toggled = True
+    msg = ChatMessage.objects.prefetch_related('reactions__user', 'bookmarks').select_related(
+        'sender', 'task', 'task__channel'
+    ).get(pk=msg.pk)
+    return JsonResponse({'toggled': toggled, 'message': serialize_chat_message(msg, request.user)})
+
+
+@login_required
+@require_POST
+def chat_bookmark_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    bm, created = ChatBookmark.objects.get_or_create(user=request.user, message=msg)
+    if not created:
+        bm.delete()
+        bookmarked = False
+    else:
+        bookmarked = True
+    return JsonResponse({'bookmarked': bookmarked})
+
+
+@login_required
+@require_POST
+def chat_pin_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    msg.is_pinned = not msg.is_pinned
+    msg.save(update_fields=['is_pinned'])
+    return JsonResponse({'is_pinned': msg.is_pinned})
+
+
+@login_required
+@require_POST
+def chat_edit_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    if msg.sender_id != request.user.id and not request.user.is_superuser:
+        return JsonResponse({'error': 'Cannot edit others messages'}, status=403)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+    content = (payload.get('content') or '').strip()
+    if not content:
+        return JsonResponse({'error': 'Content required'}, status=400)
+    msg.content = content
+    msg.edited_at = timezone.now()
+    msg.save(update_fields=['content', 'edited_at'])
+    return JsonResponse({'id': msg.id, 'content': msg.content, 'edited_at': msg.edited_at.isoformat()})
+
+
+@login_required
+@require_POST
+def chat_message_delete_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    if msg.sender_id != request.user.id and not request.user.is_superuser:
+        return JsonResponse({'error': 'Cannot delete message created by another user'}, status=403)
+
+    task_id = msg.task_id
+    msg.delete()
+    if task_id and not ChatMessage.objects.filter(task_id=task_id).exists():
+        ChatTask.objects.filter(pk=task_id).delete()
+
+    return JsonResponse({'success': True, 'message_id': message_id})
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_message_image_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        raise Http404()
+    if not msg.image_data:
+        raise Http404()
+    return HttpResponse(bytes(msg.image_data), content_type=msg.image_content_type or 'image/jpeg')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def chat_tasks_api(request):
+    user = request.user
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            payload = {}
+        raw = (payload.get('title') or '').strip()
+        if not raw:
+            return JsonResponse({'error': 'Title required'}, status=400)
+        title, due, pr, assignee_name = parse_task_natural_language(raw)
+        channel_id = payload.get('channel_id')
+        channel = None
+        if channel_id:
+            channel = ChatChannel.objects.filter(pk=channel_id).first()
+        task = ChatTask.objects.create(
+            title=title,
+            created_by=user,
+            assignee=resolve_task_assignee(assignee_name, user),
+            channel=channel,
+            due_date=due or None,
+            priority=payload.get('priority') or pr,
+        )
+        label_ids = payload.get('label_ids', [])
+        if label_ids:
+            task.labels.set(ChatTaskLabel.objects.filter(id__in=label_ids))
+        if channel and payload.get('post_to_channel'):
+            ChatMessage.objects.create(
+                channel=channel,
+                sender=user,
+                content=task.title,
+                message_type=ChatMessage.TYPE_TASK,
+                task=task,
+            )
+        return JsonResponse({'task': serialize_chat_task(task)}, status=201)
+
+    scope = request.GET.get('scope', 'inbox')
+    channel_id = request.GET.get('channel_id')
+    today = timezone.localdate()
+    qs = ChatTask.objects.select_related('channel', 'assignee', 'created_by').prefetch_related('labels')
+    if channel_id and str(channel_id).isdigit():
+        qs = qs.filter(channel_id=int(channel_id))
+    else:
+        qs = qs.filter(Q(created_by=user) | Q(assignee=user))
+
+    if scope == 'today':
+        qs = qs.filter(completed=False, due_date=today)
+    elif scope == 'upcoming':
+        qs = qs.filter(completed=False, due_date__gt=today)
+    elif scope == 'done':
+        qs = qs.filter(completed=True)
+    elif scope == 'channel':
+        qs = qs.filter(completed=False)
+    else:
+        qs = qs.filter(completed=False)
+
+    tasks = [serialize_chat_task(t) for t in qs.order_by('due_date', '-created_at')[:100]]
+    return JsonResponse({'tasks': tasks})
+
+
+@login_required
+@require_POST
+def chat_task_toggle_api(request, task_id):
+    task = get_object_or_404(ChatTask, pk=task_id)
+    task.completed = not task.completed
+    task.completed_at = timezone.now() if task.completed else None
+    task.save(update_fields=['completed', 'completed_at'])
+    return JsonResponse({'task': serialize_chat_task(task)})
+
+
+@login_required
+@require_POST
+def chat_task_delete_api(request, task_id):
+    task = get_object_or_404(ChatTask, pk=task_id)
+    if task.created_by_id != request.user.id and task.assignee_id != request.user.id and not request.user.is_superuser:
+        return JsonResponse({'error': 'Cannot delete task created by another user'}, status=403)
+
+    ChatMessage.objects.filter(task=task).delete()
+    task.delete()
+    return JsonResponse({'success': True, 'task_id': task_id})
+
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def chat_labels_api(request):
+    user = request.user
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            payload = {}
+        name = (payload.get('name') or '').strip()
+        color = payload.get('color', '#a855f7')
+        if not name:
+            return JsonResponse({'error': 'Name required'}, status=400)
+        label, created = ChatTaskLabel.objects.get_or_create(
+            name__iexact=name,
+            defaults={'name': name, 'color': color, 'created_by': user}
+        )
+        return JsonResponse({'id': label.id, 'name': label.name, 'color': label.color}, status=201)
+
+    labels = ChatTaskLabel.objects.all().order_by('name')
+    return JsonResponse({'labels': [{'id': l.id, 'name': l.name, 'color': l.color} for l in labels]})
+
+
+@login_required
+@require_http_methods(['GET', 'POST', 'DELETE'])
+def chat_task_labels_api(request, task_id):
+    task = get_object_or_404(ChatTask, pk=task_id)
+    if request.method == 'GET':
+        labels = [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()]
+        return JsonResponse({'labels': labels})
+
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            payload = {}
+        label_ids = payload.get('label_ids', [])
+        task.labels.set(ChatTaskLabel.objects.filter(id__in=label_ids))
+        return JsonResponse({'labels': [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()]})
+
+    if request.method == 'DELETE':
+        label_id = request.GET.get('label_id')
+        if label_id:
+            task.labels.remove(label_id)
+        return JsonResponse({'labels': [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()]})
+
+
+@login_required
+@require_POST
+def chat_open_dm_api(request):
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+    uid = payload.get('user_id')
+    other = get_object_or_404(User, pk=uid, is_active=True)
+    channel = get_or_create_dm(request.user, other)
+    if not channel:
+        return JsonResponse({'error': 'Invalid DM'}, status=400)
+    return JsonResponse({
+        'channel': {
+            'id': channel.id,
+            'name': other.username,
+            'slug': channel.slug,
+            'is_dm': True,
+        }
+    })
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_saved_api(request):
+    kind = request.GET.get('kind', 'bookmarks')
+    user = request.user
+    if kind == 'pinned':
+        msgs = (
+            ChatMessage.objects.filter(is_pinned=True)
+            .select_related('sender', 'channel', 'task')
+            .prefetch_related('reactions__user', 'bookmarks')
+            .order_by('-created_at')[:50]
+        )
+        msgs = [m for m in msgs if user_can_access_channel(user, m.channel)]
+    else:
+        bms = (
+            ChatBookmark.objects.filter(user=user)
+            .select_related('message__sender', 'message__channel', 'message__task')
+            .prefetch_related('message__reactions__user', 'message__bookmarks')
+            .order_by('-created_at')[:50]
+        )
+        msgs = [b.message for b in bms]
+    return JsonResponse({
+        'messages': [serialize_chat_message(m, user) for m in msgs]
+    })
+

@@ -41,6 +41,97 @@
 .detail-chip{display:inline-block;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);border-radius:5px;padding:.15rem .5rem;font-size:.78rem;color:#c4c9f5;line-height:1.4;white-space:nowrap;}
 .detail-chip.arrow{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.22);color:#fcd34d;}
 .detail-chip.empty{background:transparent;border:none;color:var(--text-muted);font-style:italic;font-size:.8rem;}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .total-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+  .total-banner #btn-clear-all {
+    margin-left: 0 !important;
+  }
+  .log-filters {
+    padding: 1rem;
+    gap: 0.65rem;
+  }
+  .log-filters .filter-group {
+    flex: 1 1 calc(50% - 0.65rem);
+    min-width: 120px;
+  }
+  .log-filters .filter-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    margin-top: 0.35rem;
+  }
+  .log-filters .filter-actions button,
+  .log-filters .filter-actions a {
+    flex: 1;
+    text-align: center;
+    padding: 0.55rem;
+  }
+  .log-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .log-table { min-width: 680px; }
+  .detail-chip {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 576px) {
+  .log-filters .filter-group {
+    flex: 1 1 100%;
+  }
+  .log-table-wrap {
+    overflow-x: visible;
+    border: none;
+    background: transparent;
+  }
+  .log-table, .log-table thead, .log-table tbody, .log-table th, .log-table td, .log-table tr {
+    display: block;
+  }
+  .log-table { min-width: 0; }
+  .log-table thead { display: none; }
+  .log-table tbody tr {
+    margin-bottom: 0.85rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+  }
+  .log-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+  }
+  .log-table td:last-child {
+    border-bottom: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding-top: 0.65rem;
+    min-width: 0 !important;
+  }
+  .log-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-right: 0.75rem;
+  }
+  .log-table td.ts {
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border);
+  }
+}
 </style>
 
 <div class="fade-in">
@@ -80,12 +171,12 @@
       <tbody>
         {% for log in page_obj %}
         <tr>
-          <td class="ts">{{ log.timestamp|date:"d M Y" }}<br><span style="font-size:.75rem;opacity:.75;">{{ log.timestamp|date:"H:i:s" }}</span></td>
-          <td>{% if log.user %}<span class="user-chip"><span class="avatar-sm">{{ log.user.username|slice:":1"|upper }}</span>{{ log.user.username }}</span>{% else %}<span class="text-muted">Unknown</span>{% endif %}</td>
-          <td>{% if log.action == 'CREATE' %}<span class="action-badge create">Created</span>{% elif log.action == 'EDIT' %}<span class="action-badge edit">Edited</span>{% elif log.action == 'DELETE' %}<span class="action-badge delete">Deleted</span>{% else %}<span class="action-badge">{{ log.action }}</span>{% endif %}</td>
-          <td><span class="dept-pill">{{ log.department }}</span></td>
-          <td>{% if log.job_card_no %}<code class="jc-code">{{ log.job_card_no }}</code>{% else %}<span class="text-muted">-</span>{% endif %}</td>
-          <td style="min-width:260px;">
+          <td data-label="Time" class="ts">{{ log.timestamp|date:"d M Y" }}<br><span style="font-size:.75rem;opacity:.75;">{{ log.timestamp|date:"H:i:s" }}</span></td>
+          <td data-label="User">{% if log.user %}<span class="user-chip"><span class="avatar-sm">{{ log.user.username|slice:":1"|upper }}</span>{{ log.user.username }}</span>{% else %}<span class="text-muted">Unknown</span>{% endif %}</td>
+          <td data-label="Action">{% if log.action == 'CREATE' %}<span class="action-badge create">Created</span>{% elif log.action == 'EDIT' %}<span class="action-badge edit">Edited</span>{% elif log.action == 'DELETE' %}<span class="action-badge delete">Deleted</span>{% else %}<span class="action-badge">{{ log.action }}</span>{% endif %}</td>
+          <td data-label="Department"><span class="dept-pill">{{ log.department }}</span></td>
+          <td data-label="Job Card No">{% if log.job_card_no %}<code class="jc-code">{{ log.job_card_no }}</code>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+          <td data-label="Details" style="min-width:260px;">
             {% if log.details and log.details != "-" %}
               <div class="detail-chips">
                 {% for part in log.details|split:" | " %}

@@ -16,9 +16,51 @@
         <span style="font-size:0.8rem;color:#9ca3af;">* Not Started</span>
       </div>
     </div>
+    <!-- Interactive Status KPI Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <!-- Total Job Cards Card -->
+      <div class="kpi-status-card active" data-status="" onclick="setKpiStatusFilter('')" style="background:#1e293b; border:2px solid #38bdf8; border-radius:12px; padding:1.1rem 1.25rem; cursor:pointer; transition:all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Total Job Cards</span>
+          <span style="font-size:1.4rem;">📦</span>
+        </div>
+        <div style="font-size:2.2rem; font-weight:800; color:#38bdf8; margin-top:0.25rem;">{{ kpi_summary.total_jc|default:0 }}</div>
+        <div style="font-size:0.75rem; color:#64748b; margin-top:0.25rem;">All registered job cards</div>
+      </div>
+
+      <!-- Total Order (Yellow) Card -->
+      <div class="kpi-status-card" data-status="yellow" onclick="setKpiStatusFilter('yellow')" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.1rem 1.25rem; cursor:pointer; transition:all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; color:#fbbf24; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🟡 Total Order</span>
+          <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px;">Yellow</span>
+        </div>
+        <div style="font-size:2.2rem; font-weight:800; color:#fbbf24; margin-top:0.25rem;">{{ kpi_summary.cell_yellow|default:0 }} <span style="font-size:0.85rem; font-weight:600; color:#94a3b8;">Yellow Items</span></div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.25rem;">In-progress items</div>
+      </div>
+
+      <!-- Not Started (Red) Card -->
+      <div class="kpi-status-card" data-status="red" onclick="setKpiStatusFilter('red')" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.1rem 1.25rem; cursor:pointer; transition:all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; color:#f87171; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🔴 Not Started</span>
+          <span style="background:rgba(239,68,68,0.15); color:#f87171; font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px;">Red</span>
+        </div>
+        <div style="font-size:2.2rem; font-weight:800; color:#f87171; margin-top:0.25rem;">{{ kpi_summary.cell_red|default:0 }} <span style="font-size:0.85rem; font-weight:600; color:#94a3b8;">Red Items</span></div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.25rem;">Unstarted/pending items</div>
+      </div>
+
+      <!-- Total Received (Green) Card -->
+      <div class="kpi-status-card" data-status="green" onclick="setKpiStatusFilter('green')" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.1rem 1.25rem; cursor:pointer; transition:all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; color:#34d399; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🟢 Total Received</span>
+          <span style="background:rgba(34,197,94,0.15); color:#34d399; font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:999px;">Green</span>
+        </div>
+        <div style="font-size:2.2rem; font-weight:800; color:#34d399; margin-top:0.25rem;">{{ kpi_summary.cell_green|default:0 }} <span style="font-size:0.85rem; font-weight:600; color:#94a3b8;">Green Items</span></div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.25rem;">Completed green items</div>
+      </div>
+    </div>
 
     <!-- Filters Container -->
-    <div class="filter-grid-3" style="margin-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; align-items: end;">
+    <div class="filter-grid-3" style="margin-bottom: 1.25rem; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; align-items: end;">
       <!-- Search Input -->
       <div>
         <label style="color: #9ca3af; font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em;">Search</label>
@@ -52,6 +94,17 @@
           {% for acc_name in all_accessories_list %}
             <option value="{{ acc_name }}">{{ acc_name }}</option>
           {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter Dropdown -->
+      <div>
+        <label for="statusFilter" style="color: #9ca3af; font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em;">Filter by Status</label>
+        <select id="statusFilter" style="width: 100%; padding: 0.5rem 0.6rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; box-sizing: border-box; font-weight: 600;">
+          <option value="" style="color:#f1f5f9;">-- All Statuses --</option>
+          <option value="yellow" style="color:#fbbf24; background:#0f172a;">🟡 Total Order</option>
+          <option value="red" style="color:#ef4444; background:#0f172a;">🔴 Not Started</option>
+          <option value="green" style="color:#22c55e; background:#0f172a;">🟢 Total Received</option>
         </select>
       </div>
       {% endif %}
@@ -111,9 +164,9 @@
               {% if jc.status == 'complete' %}
                 <span style="background:#dcfce7;color:#16a34a;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Completed</span>
               {% elif jc.status == 'pending' %}
-                <span style="background:#fee2e2;color:#dc2626;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Pending</span>
+                <span style="background:#fef3c7;color:#d97706;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Pending</span>
               {% else %}
-                <span style="background:#f3f4f6;color:#6b7280;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Not Started</span>
+                <span style="background:#fee2e2;color:#dc2626;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Not Started</span>
               {% endif %}
             </td>
             <td style="color:#9ca3af;font-size:0.85rem; vertical-align: middle;">{% if jc.record %}{{ jc.record.updated_at|date:"d-M-Y H:i" }}{% else %}--{% endif %}</td>
@@ -159,20 +212,81 @@
   const searchInput = document.getElementById('accessoriesSearch');
   const itemFilter = document.getElementById('itemFilter');
   const accessoryFilter = document.getElementById('accessoryFilter');
+  const statusFilter = document.getElementById('statusFilter');
+
+  function getRowStatusColor(row) {
+    const overallStatus = row.dataset.overallStatus;
+    // Map overall status:
+    if (overallStatus === 'complete') return 'green';
+    if (overallStatus === 'pending') return 'yellow';
+    return 'red';
+  }
+
+  function rowMatchesStatus(row, selectedStatus) {
+    if (!selectedStatus) return true;
+    
+    // Check if row overall status matches directly
+    const rowColor = getRowStatusColor(row);
+    if (rowColor === selectedStatus) return true;
+
+    // Check individual entry statuses in data-entries attribute
+    let entries = {};
+    try {
+      entries = JSON.parse(row.dataset.entries || '{}');
+    } catch(e) {}
+
+    for (let k in entries) {
+      const e = entries[k];
+      if (e.status_a === selectedStatus || e.status_b === selectedStatus || e.status_c === selectedStatus || e.status_d === selectedStatus) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  window.setKpiStatusFilter = function(statusVal) {
+    if (statusFilter) {
+      statusFilter.value = statusVal;
+      const colors = { 'yellow': '#fbbf24', 'red': '#ef4444', 'green': '#22c55e', '': '#f1f5f9' };
+      statusFilter.style.color = colors[statusVal] || '#f1f5f9';
+    }
+    updateKpiCardStyles(statusVal);
+    filterTable();
+  };
+
+  function updateKpiCardStyles(activeStatus) {
+    document.querySelectorAll('.kpi-status-card').forEach(card => {
+      const cardStatus = card.getAttribute('data-status');
+      if (cardStatus === activeStatus) {
+        card.style.borderWidth = '2px';
+        if (cardStatus === 'yellow') card.style.borderColor = '#fbbf24';
+        else if (cardStatus === 'red') card.style.borderColor = '#ef4444';
+        else if (cardStatus === 'green') card.style.borderColor = '#22c55e';
+        else card.style.borderColor = '#38bdf8';
+        card.style.boxShadow = '0 0 12px rgba(255,255,255,0.08)';
+      } else {
+        card.style.borderWidth = '1px';
+        card.style.borderColor = '#334155';
+        card.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+      }
+    });
+  }
 
   function filterTable() {
     const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedItem = itemFilter ? itemFilter.value.toLowerCase().trim() : '';
+    const selectedStatus = statusFilter ? statusFilter.value : '';
     const rows = document.querySelectorAll('.job-card-row');
 
     rows.forEach(row => {
       const jobCardText = row.dataset.jobCard ? row.dataset.jobCard.toLowerCase().trim() : '';
       const itemNameText = row.dataset.itemName ? row.dataset.itemName.toLowerCase().trim() : '';
+      const matchesStatus = rowMatchesStatus(row, selectedStatus);
 
       const matchesSearch = jobCardText.includes(searchQuery);
       const matchesDropdown = !selectedItem || itemNameText === selectedItem;
 
-      if (matchesSearch && matchesDropdown) {
+      if (matchesSearch && matchesDropdown && matchesStatus) {
         row.setAttribute('data-visible', 'true');
       } else {
         row.removeAttribute('data-visible');
@@ -224,9 +338,9 @@
         if (status === 'complete') {
           badgeHtml = '<span style="background:#dcfce7;color:#16a34a;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Completed</span>';
         } else if (status === 'pending') {
-          badgeHtml = '<span style="background:#fee2e2;color:#dc2626;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Pending</span>';
+          badgeHtml = '<span style="background:#fef3c7;color:#d97706;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Pending</span>';
         } else {
-          badgeHtml = '<span style="background:#f3f4f6;color:#6b7280;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Not Started</span>';
+          badgeHtml = '<span style="background:#fee2e2;color:#dc2626;padding:0.2rem 0.75rem;border-radius:999px;font-size:0.8rem;font-weight:600;">Not Started</span>';
         }
         cell5.innerHTML = badgeHtml;
         cell5.style.textAlign = 'center';
@@ -269,8 +383,8 @@
 
         function renderColCell(qty, total, status) {
           if (qty === undefined || qty === null) return '—';
-          const bg = status === 'green' ? '#15803d' : '#b91c1c';
-          const fg = status === 'green' ? '#f0fdf4' : '#fef2f2';
+          const bg = status === 'green' ? '#15803d' : (status === 'yellow' ? '#d97706' : '#b91c1c');
+          const fg = status === 'green' ? '#f0fdf4' : (status === 'yellow' ? '#fffbeb' : '#fef2f2');
           return `<div style="display:flex;flex-direction:column;align-items:center;gap:0.2rem;font-size:0.8rem;">
             <span style="color:#9ca3af;">Qty: ${qty}</span>
             <span style="background:${bg};color:${fg};padding:0.1rem 0.45rem;border-radius:4px;font-weight:bold;font-size:0.85rem;min-width:45px;text-align:center;">${total}</span>
@@ -293,6 +407,14 @@
   if (searchInput) searchInput.addEventListener('input', filterTable);
   if (itemFilter) itemFilter.addEventListener('change', filterTable);
   if (accessoryFilter) accessoryFilter.addEventListener('change', filterTable);
+  if (statusFilter) {
+    statusFilter.addEventListener('change', function() {
+      const colors = { 'yellow': '#fbbf24', 'red': '#ef4444', 'green': '#22c55e', '': '#f1f5f9' };
+      this.style.color = colors[this.value] || '#f1f5f9';
+      updateKpiCardStyles(this.value);
+      filterTable();
+    });
+  }
 })();
 </script>
 {% endblock %}
