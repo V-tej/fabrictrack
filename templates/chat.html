@@ -419,12 +419,13 @@
   async function pollLoop() {
     if (state.polling || !state.channelId || state.view !== 'chat' || state.tab !== 'chat') return;
     state.polling = true;
+    // Short poll (no server long-wait) — keeps Render workers free
     while (state.polling && state.channelId && state.view === 'chat' && state.tab === 'chat') {
       try {
         const c = new AbortController();
         state.pollAbort = c;
         const res = await fetch(
-          '/api/chat/' + state.channelId + '/messages/?after_id=' + state.lastId + '&wait=1',
+          '/api/chat/' + state.channelId + '/messages/?after_id=' + state.lastId,
           { credentials: 'same-origin', signal: c.signal }
         );
         if (!res.ok) throw new Error('poll');
@@ -434,8 +435,9 @@
       } catch (e) {
         if (e.name === 'AbortError') break;
         setStatus('Reconnecting…', false);
-        await new Promise(r => setTimeout(r, 2000));
       }
+      if (!state.polling) break;
+      await new Promise(r => setTimeout(r, 4000));
     }
     state.polling = false;
   }
@@ -1023,16 +1025,22 @@
     }
 
     const taskRow = e.target.closest('.st-task-row');
-    if (taskRow && !e.target.closest('.st-check')) {
+    if (taskRow && !e.target.closest('.st-check') && !e.target.closest('[data-task-labels]')) {
       const taskId = taskRow.dataset.taskId;
       const res = await fetch('/api/chat/tasks/' + taskId + '/labels/', { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         state.selectedLabels = data.labels || [];
         renderSelectedLabels();
-        loadLabels();
-        $('#stLabelModal').hidden = false;
         state.editingTaskLabels = parseInt(taskId, 10);
+        const dropdown = $('#stLabelDropdown');
+        if (dropdown) {
+          dropdown.style.position = 'fixed';
+          dropdown.style.left = '50%';
+          dropdown.style.top = '30%';
+          dropdown.style.transform = 'translateX(-50%)';
+          dropdown.hidden = false;
+        }
       }
       return;
     }
@@ -1400,7 +1408,7 @@
   refreshBootstrap().then(function () {
     // keep users from page JSON if bootstrap empty
   });
-  setInterval(refreshBootstrap, 30000);
+  setInterval(refreshBootstrap, 60000);
 
   // debug helper in console
   window.__stMentionDebug = function () {

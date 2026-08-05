@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fabrictrack-change-this-in-production-2026')
 
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # Master Ledger section password (set in .env as LEDGER_PASSWORD)
 LEDGER_PASSWORD = os.getenv('LEDGER_PASSWORD', 'ledger@1234')
@@ -69,7 +69,9 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://postgres:123456@localhost:5432/fabrictrack'
+        default='postgresql://postgres:123456@localhost:5432/fabrictrack',
+        conn_max_age=60,
+        ssl_require=False,
     )
 }
 

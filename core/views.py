@@ -3,7 +3,7 @@ import re
 import json
 import time
 from datetime import datetime, date, timedelta
-from django.db.models import Q, Prefetch, Case, When, Value, IntegerField
+from django.db.models import Q, Prefetch, Case, When, Value, IntegerField, Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -5219,7 +5219,14 @@ DEFAULT_CHAT_CHANNELS = [
 ]
 
 
+_DEFAULT_CHANNELS_READY = False
+
+
 def ensure_default_chat_channels():
+    """Run once per process — avoid get_or_create on every chat request."""
+    global _DEFAULT_CHANNELS_READY
+    if _DEFAULT_CHANNELS_READY:
+        return
     for name, desc, private in DEFAULT_CHAT_CHANNELS:
         ChatChannel.objects.get_or_create(
             slug=slugify(name),
@@ -5231,15 +5238,28 @@ def ensure_default_chat_channels():
                 'is_dm': False,
             },
         )
+    _DEFAULT_CHANNELS_READY = True
 
 
 def user_can_access_channel(user, channel):
     if channel.is_dm:
-        return channel.members.filter(pk=user.pk).exists()
+        # Prefer prefetched members to avoid extra queries
+        try:
+            return any(m.pk == user.pk for m in channel.members.all())
+        except Exception:
+            return channel.members.filter(pk=user.pk).exists()
     if channel.is_private:
-        return user.is_superuser or (
-            hasattr(user, 'profile') and user.profile.person_type == 'ADMIN'
-        ) or channel.members.filter(pk=user.pk).exists()
+        if user.is_superuser:
+            return True
+        try:
+            if getattr(user, 'profile', None) and user.profile.person_type == 'ADMIN':
+                return True
+        except Exception:
+            pass
+        try:
+            return any(m.pk == user.pk for m in channel.members.all())
+        except Exception:
+            return channel.members.filter(pk=user.pk).exists()
     return True
 
 
@@ -5289,6 +5309,13 @@ def resolve_task_assignee(assignee_name, fallback_user):
 
 
 def serialize_chat_task(task):
+    labels = []
+    if task is not None:
+        # Prefer prefetched cache; avoid extra queries when available
+        try:
+            labels = [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()]
+        except Exception:
+            labels = []
     return {
         'id': task.id,
         'task_key': task.task_key or f'tsk_{task.id}',
@@ -5301,7 +5328,7 @@ def serialize_chat_task(task):
         'channel_name': task.channel.name if task.channel else None,
         'assignee': task.assignee.username if task.assignee else None,
         'created_by': task.created_by.username if task.created_by else None,
-        'labels': [{'id': l.id, 'name': l.name, 'color': l.color} for l in task.labels.all()],
+        'labels': labels,
     }
 
 
@@ -5316,15 +5343,19 @@ def serialize_chat_message(msg, user=None):
         if user and r.user_id == user.id:
             reactions[r.emoji]['mine'] = True
 
+    # Use prefetched bookmarks when available (no extra query)
     bookmarked = False
     if user is not None:
-        bookmarked = msg.bookmarks.filter(user=user).exists()
+        try:
+            bookmarked = any(b.user_id == user.id for b in msg.bookmarks.all())
+        except Exception:
+            bookmarked = msg.bookmarks.filter(user=user).exists()
 
     reply_to = None
-    if msg.parent_id and msg.parent:
+    if msg.parent_id and getattr(msg, 'parent', None):
         p = msg.parent
         p_sender = p.sender.username if p.sender else 'Unknown'
-        p_text = p.content if p.content else (p.task.title if p.task else 'Message')
+        p_text = p.content if p.content else (p.task.title if getattr(p, 'task', None) else 'Message')
         if len(p_text) > 80:
             p_text = p_text[:80] + '…'
         reply_to = {
@@ -5332,9 +5363,11 @@ def serialize_chat_message(msg, user=None):
             'sender': p_sender,
             'content': p_text,
             'is_task': p.message_type == 'task',
-            'task_key': p.task.task_key if p.task else None,
+            'task_key': p.task.task_key if getattr(p, 'task', None) else None,
         }
 
+    # Never load BinaryField image_data in list serialization — use image_size flag
+    has_image = bool(getattr(msg, 'image_size', 0)) or bool(getattr(msg, 'image_name', ''))
     data = {
         'id': msg.id,
         'content': msg.content,
@@ -5350,10 +5383,10 @@ def serialize_chat_message(msg, user=None):
         'edited_at': timezone.localtime(msg.edited_at).strftime('%I:%M %p').lstrip('0') if msg.edited_at else None,
         'bookmarked': bookmarked,
         'reactions': list(reactions.values()),
-        'has_image': bool(msg.image_data),
+        'has_image': has_image,
         'image_name': msg.image_name or '',
         'image_size': msg.image_size or 0,
-        'image_url': f'/api/chat/message/{msg.id}/image/' if msg.image_data else None,
+        'image_url': f'/api/chat/message/{msg.id}/image/' if has_image else None,
         'task': serialize_chat_task(msg.task) if msg.task_id else None,
         'reply_to': reply_to,
     }
@@ -5380,10 +5413,37 @@ def get_or_create_dm(user_a, user_b):
     return channel
 
 
-def channel_unread_count(channel, user):
-    read = ChatChannelRead.objects.filter(channel=channel, user=user).first()
-    last_id = read.last_read_id if read else 0
+def channel_unread_count(channel, user, read_map=None):
+    if read_map is not None:
+        last_id = read_map.get(channel.id, 0)
+    else:
+        read = ChatChannelRead.objects.filter(channel=channel, user=user).only('last_read_id').first()
+        last_id = read.last_read_id if read else 0
     return ChatMessage.objects.filter(channel=channel, id__gt=last_id).exclude(sender=user).count()
+
+
+def bulk_unread_counts(channel_ids, user):
+    """Batch unread counts: 2 queries total instead of 2N."""
+    if not channel_ids:
+        return {}
+    read_map = {
+        r.channel_id: r.last_read_id
+        for r in ChatChannelRead.objects.filter(user=user, channel_id__in=channel_ids).only('channel_id', 'last_read_id')
+    }
+    q = Q()
+    for cid in channel_ids:
+        q |= Q(channel_id=cid, id__gt=read_map.get(cid, 0))
+    rows = (
+        ChatMessage.objects
+        .filter(q)
+        .exclude(sender=user)
+        .values('channel_id')
+        .annotate(unread=Count('id'))
+    )
+    counts = {cid: 0 for cid in channel_ids}
+    for row in rows:
+        counts[row['channel_id']] = row['unread'] or 0
+    return counts
 
 
 @login_required
@@ -5448,22 +5508,24 @@ def chat_bootstrap_api(request):
     """Sidebar data: channels, DMs, task counts."""
     ensure_default_chat_channels()
     user = request.user
-    channels = []
-    for c in ChatChannel.objects.filter(is_dm=False).order_by('name'):
-        if not user_can_access_channel(user, c):
-            continue
-        channels.append({
-            'id': c.id,
-            'name': c.name,
-            'slug': c.slug,
-            'description': c.description,
-            'is_private': c.is_private,
-            'is_dm': False,
-            'unread': channel_unread_count(c, user),
-        })
+    public_qs = list(ChatChannel.objects.filter(is_dm=False).order_by('name'))
+    public_qs = [c for c in public_qs if user_can_access_channel(user, c)]
+    dm_qs = list(ChatChannel.objects.filter(is_dm=True, members=user).prefetch_related('members'))
+    all_ids = [c.id for c in public_qs] + [c.id for c in dm_qs]
+    unread_map = bulk_unread_counts(all_ids, user)
+
+    channels = [{
+        'id': c.id,
+        'name': c.name,
+        'slug': c.slug,
+        'description': c.description,
+        'is_private': c.is_private,
+        'is_dm': False,
+        'unread': unread_map.get(c.id, 0),
+    } for c in public_qs]
 
     dms = []
-    for c in ChatChannel.objects.filter(is_dm=True, members=user).prefetch_related('members'):
+    for c in dm_qs:
         other = next((m for m in c.members.all() if m.id != user.id), None)
         dms.append({
             'id': c.id,
@@ -5471,16 +5533,14 @@ def chat_bootstrap_api(request):
             'slug': c.slug,
             'user_id': other.id if other else None,
             'is_dm': True,
-            'unread': channel_unread_count(c, user),
+            'unread': unread_map.get(c.id, 0),
             'initial': (other.username[:1] if other else '?').upper(),
         })
 
-    # Users without existing DM (for sidebar stubs)
     existing_ids = {d['user_id'] for d in dms if d.get('user_id')}
     people = []
-    # All active users for @mention autocomplete
     mention_users = []
-    for u in User.objects.filter(is_active=True).order_by('username')[:100]:
+    for u in User.objects.filter(is_active=True).only('id', 'username').order_by('username')[:100]:
         mention_users.append({
             'id': u.id,
             'username': u.username,
@@ -5494,17 +5554,18 @@ def chat_bootstrap_api(request):
             })
 
     today = timezone.localdate()
-    my_tasks = ChatTask.objects.filter(Q(created_by=user) | Q(assignee=user), completed=False)
+    base = ChatTask.objects.filter(Q(created_by=user) | Q(assignee=user), completed=False)
+    task_counts = {
+        'today': base.filter(due_date=today).count(),
+        'upcoming': base.filter(due_date__gt=today).count(),
+        'inbox': base.count(),
+    }
     return JsonResponse({
         'channels': channels,
         'dms': dms,
         'people': people,
         'users': mention_users,
-        'task_counts': {
-            'today': my_tasks.filter(due_date=today).count(),
-            'upcoming': my_tasks.filter(due_date__gt=today).count(),
-            'inbox': my_tasks.count(),
-        },
+        'task_counts': task_counts,
         'me': {
             'id': user.id,
             'username': user.username,
@@ -5521,32 +5582,24 @@ def chat_messages_api(request, channel_id):
         return JsonResponse({'error': 'Forbidden'}, status=403)
 
     after_id = request.GET.get('after_id')
+    # defer binary image blobs — critical for Render memory/CPU
     qs = (
         ChatMessage.objects.filter(channel=channel)
-        .select_related('sender', 'task', 'task__channel', 'task__assignee', 'task__created_by', 'parent', 'parent__sender', 'parent__task')
-        .prefetch_related('reactions__user', 'bookmarks')
+        .select_related(
+            'sender', 'task', 'task__channel', 'task__assignee', 'task__created_by',
+            'parent', 'parent__sender', 'parent__task',
+        )
+        .prefetch_related('reactions__user', 'bookmarks', 'task__labels')
+        .defer('image_data')
     )
 
-    wait = request.GET.get('wait') == '1'
-    if wait and after_id is not None and str(after_id).isdigit():
-        after_id_int = int(after_id)
-        deadline = time.time() + 18
-        while time.time() < deadline:
-            messages_list = list(qs.filter(id__gt=after_id_int).order_by('id')[:80])
-            if messages_list:
-                return JsonResponse({
-                    'messages': [serialize_chat_message(m, request.user) for m in messages_list],
-                    'channel_id': channel.id,
-                })
-            time.sleep(1.1)
-        return JsonResponse({'messages': [], 'channel_id': channel.id})
-
+    # Long-poll removed: it held Gunicorn workers for ~18s and froze the whole app on Render.
+    # Client uses short-interval polling instead.
     if after_id is not None and str(after_id).isdigit():
-        messages_list = list(qs.filter(id__gt=int(after_id)).order_by('id')[:80])
+        messages_list = list(qs.filter(id__gt=int(after_id)).order_by('id')[:50])
     else:
-        recent = list(qs.order_by('-id')[:100])
+        recent = list(qs.order_by('-id')[:60])
         messages_list = list(reversed(recent))
-        # mark read
         if messages_list:
             ChatChannelRead.objects.update_or_create(
                 channel=channel, user=request.user,
