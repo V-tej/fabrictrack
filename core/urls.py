@@ -124,8 +124,11 @@ urlpatterns = [
     path('api/chat/tasks/', views.chat_tasks_api, name='chat_tasks_api'),
     path('api/chat/tasks/<int:task_id>/toggle/', views.chat_task_toggle_api, name='chat_task_toggle'),
     path('api/chat/tasks/<int:task_id>/delete/', views.chat_task_delete_api, name='chat_task_delete'),
+    path('api/chat/tasks/<int:task_id>/edit/', views.chat_task_edit_api, name='chat_task_edit'),
     path('api/chat/tasks/<int:task_id>/labels/', views.chat_task_labels_api, name='chat_task_labels'),
     path('api/chat/labels/', views.chat_labels_api, name='chat_labels'),
     path('api/chat/dm/open/', views.chat_open_dm_api, name='chat_open_dm'),
     path('api/chat/saved/', views.chat_saved_api, name='chat_saved_api'),
+    path('api/chat/labels/<int:label_id>/delete/', views.chat_label_delete_api, name='chat_label_delete'),
+    path('api/chat/jobcard-lookup/', views.chat_jobcard_lookup_api, name='chat_jobcard_lookup'),
 ]

@@ -5908,6 +5908,76 @@ def chat_task_delete_api(request, task_id):
     return JsonResponse({'success': True, 'task_id': task_id})
 
 
+@login_required
+@require_POST
+def chat_task_edit_api(request, task_id):
+    """Edit a chat task's title, due_date, priority, and assignee."""
+    task = get_object_or_404(ChatTask, pk=task_id)
+    if task.created_by_id != request.user.id and not request.user.is_superuser:
+        return JsonResponse({'error': 'Only the creator can edit this task'}, status=403)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+
+    title = (payload.get('title') or '').strip()
+    if not title:
+        return JsonResponse({'error': 'Title required'}, status=400)
+
+    due_raw = (payload.get('due_date') or '').strip()
+    due = None
+    if due_raw:
+        from datetime import date as _date
+        try:
+            due = _date.fromisoformat(due_raw)
+        except ValueError:
+            pass
+
+    priority = payload.get('priority', task.priority)
+    if priority not in ('p1', 'p2', 'p3', 'p4'):
+        priority = task.priority
+
+    assignee_name = (payload.get('assignee') or '').strip().lstrip('@')
+    if assignee_name:
+        assignee = User.objects.filter(username=assignee_name, is_active=True).first()
+        task.assignee = assignee
+    elif 'assignee' in payload and not payload['assignee']:
+        task.assignee = None
+
+    task.title = title
+    task.due_date = due
+    task.priority = priority
+    task.save(update_fields=['title', 'due_date', 'priority', 'assignee'])
+
+    # Update the linked ChatMessage content too
+    ChatMessage.objects.filter(task=task).update(content=title)
+
+    # Build due_label
+    from datetime import date as _date2, timedelta
+    today = _date2.today()
+    due_label = ''
+    if task.due_date:
+        delta = (task.due_date - today).days
+        if delta < 0:
+            due_label = f'Overdue ({abs(delta)}d)'
+        elif delta == 0:
+            due_label = 'Due Today'
+        elif delta == 1:
+            due_label = 'Due Tomorrow'
+        elif delta <= 7:
+            due_label = f'Due in {delta}d'
+        else:
+            due_label = task.due_date.strftime('%d %b')
+
+    return JsonResponse({
+        'id': task.id,
+        'title': task.title,
+        'due_date': task.due_date.isoformat() if task.due_date else '',
+        'due_label': due_label,
+        'priority': task.priority,
+        'assignee': task.assignee.username if task.assignee else '',
+    })
+
 
 @login_required
 @require_http_methods(['GET', 'POST'])
@@ -5976,6 +6046,91 @@ def chat_open_dm_api(request):
             'is_dm': True,
         }
     })
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_jobcard_lookup_api(request):
+    """Look up Line In and Line Out submission dates for a given job card number."""
+    job_card_no = (request.GET.get('job_card_no') or '').strip()
+    if not job_card_no:
+        return JsonResponse({'error': 'job_card_no required'}, status=400)
+
+    results = []
+
+    def add_dept_results(qs, dept_label, in_field='line_in_date', out_field='line_out_date'):
+        for r in qs:
+            in_date = getattr(r, in_field, None)
+            out_date = getattr(r, out_field, None)
+            master = getattr(r, 'master_name', None) or getattr(r, 'stitching_master_name', None) or ''
+            item = getattr(r, 'item_name', '') or ''
+            results.append({
+                'department': dept_label,
+                'master_name': master or '—',
+                'item_name': item or '—',
+                'line_in_date': in_date.strftime('%d-%b-%Y') if in_date else '—',
+                'line_out_date': out_date.strftime('%d-%b-%Y') if out_date else '—',
+            })
+
+    add_dept_results(
+        StitchingReport.objects.filter(job_card_no__iexact=job_card_no),
+        'Stitching'
+    )
+    add_dept_results(
+        SingleneedleReport.objects.filter(job_card_no__iexact=job_card_no),
+        'Singleneedle'
+    )
+    add_dept_results(
+        SewingReport.objects.filter(job_card_no__iexact=job_card_no),
+        'Sewing'
+    )
+
+    # JobWork uses different field names
+    for r in JobWorkReport.objects.filter(job_card_no__iexact=job_card_no):
+        in_date = getattr(r, 'jobwork_in', None)
+        out_date = getattr(r, 'jobwork_out', None)
+        results.append({
+            'department': 'Job Work',
+            'master_name': getattr(r, 'master_name', None) or getattr(r, 'jobworker', '') or '—',
+            'item_name': getattr(r, 'purpose', '') or '—',
+            'line_in_date': in_date.strftime('%d-%b-%Y') if in_date else '—',
+            'line_out_date': out_date.strftime('%d-%b-%Y') if out_date else '—',
+        })
+
+    # Embroidery
+    for r in EmbroideryReport.objects.filter(job_card_no__iexact=job_card_no):
+        in_date = getattr(r, 'embroidery_in', None)
+        out_date = getattr(r, 'embroidery_out', None)
+        results.append({
+            'department': 'Embroidery',
+            'master_name': getattr(r, 'master_name', None) or getattr(r, 'embroidery_worker', '') or '—',
+            'item_name': getattr(r, 'purpose', '') or '—',
+            'line_in_date': in_date.strftime('%d-%b-%Y') if in_date else '—',
+            'line_out_date': out_date.strftime('%d-%b-%Y') if out_date else '—',
+        })
+
+    # Printing
+    for r in PrintingReport.objects.filter(job_card_no__iexact=job_card_no):
+        in_date = getattr(r, 'printing_in', None)
+        out_date = getattr(r, 'printing_out', None)
+        results.append({
+            'department': 'Printing',
+            'master_name': getattr(r, 'master_name', None) or getattr(r, 'printing_worker', '') or '—',
+            'item_name': getattr(r, 'purpose', '') or '—',
+            'line_in_date': in_date.strftime('%d-%b-%Y') if in_date else '—',
+            'line_out_date': out_date.strftime('%d-%b-%Y') if out_date else '—',
+        })
+
+    return JsonResponse({'job_card_no': job_card_no, 'results': results})
+
+
+@login_required
+@require_POST
+def chat_label_delete_api(request, label_id):
+    """Delete a chat task label."""
+    label = get_object_or_404(ChatTaskLabel, pk=label_id)
+    label.delete()
+    return JsonResponse({'success': True, 'label_id': label_id})
 
 
 @login_required

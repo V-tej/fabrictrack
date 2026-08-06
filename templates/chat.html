@@ -4,7 +4,7 @@
 {% block page_title %}💬 Team Chat{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/chat.css' %}?v=4" />
+<link rel="stylesheet" href="{% static 'css/chat.css' %}?v=5" />
 <script id="stUsersData" type="application/json">{{ mention_users_json|safe }}</script>
 
 <div class="st-app" id="stApp"
@@ -120,6 +120,19 @@
       </div>
     </div>
 
+    <!-- JOB CARD LOOKUP PANEL -->
+    <div class="st-section" id="stJobCardSection">
+      <div class="st-section-h"><span>📋 Job Card Lookup</span></div>
+      <div class="st-jobcard-form">
+        <input type="text" id="stJobCardInput" placeholder="Enter job card no…" />
+        <div class="st-jobcard-btns">
+          <button type="button" class="st-btn primary" id="stJobCardLineInBtn">↘ Line In</button>
+          <button type="button" class="st-btn" id="stJobCardLineOutBtn">↗ Line Out</button>
+        </div>
+      </div>
+      <div id="stJobCardResults" class="st-jobcard-results" hidden></div>
+    </div>
+
     <div class="st-rail-foot">
           Quick: <code>/task @cuttingmaster title tomorrow !p1</code>
     </div>
@@ -157,7 +170,7 @@
         <div class="st-composer-box">
           <div class="st-mention-menu" id="stMentionMenu" hidden role="listbox"></div>
           <div class="st-attach-preview" id="stAttachPreview" hidden></div>
-          <textarea id="stInput" rows="1" placeholder="Message #channel — type @ for users, /task @user title…" autocomplete="off"></textarea>
+          <textarea id="stInput" rows="1" placeholder="Message — /task @user title | /jobcard 2003 linein | /jobcard 2003 lineout" autocomplete="off"></textarea>
           <div class="st-composer-bar">
             <div class="st-composer-tools">
               <label class="st-tool" title="Attach image">
@@ -165,6 +178,9 @@
                 <input type="file" id="stFile" accept="image/*" hidden />
               </label>
               <button type="button" class="st-tool" id="stTaskModeBtn" title="Create as task">⚡ /task</button>
+              <button type="button" class="st-tool" id="stJobCardBtn" title="Job Card Lookup">📋 Job Card</button>
+              <button type="button" class="st-tool" id="stLineInBtn" title="Look up Line In dates">↘ Line In</button>
+              <button type="button" class="st-tool" id="stLineOutBtn" title="Look up Line Out dates">↗ Line Out</button>
             </div>
             <div class="st-composer-right">
               <span class="st-status" id="stStatus">Connecting…</span>
@@ -209,6 +225,56 @@
       <input type="text" id="stDropdownLabelName" placeholder="New label name" />
       <input type="color" id="stDropdownLabelColor" value="#a855f7" />
       <button type="button" class="st-btn primary" id="stCreateDropdownLabel">Add</button>
+    </div>
+  </div>
+
+  <!-- TASK EDIT MODAL -->
+  <div class="st-task-edit-modal" id="stTaskEditModal" hidden>
+    <div class="st-task-edit-inner">
+      <div class="st-task-edit-header">
+        <span>✏️ Edit Task</span>
+        <button type="button" id="stTaskEditClose">✕</button>
+      </div>
+      <div class="st-task-edit-body">
+        <label class="st-edit-label">Title</label>
+        <textarea id="stTaskEditTitle" rows="2" placeholder="Task title…"></textarea>
+        <div class="st-task-edit-row">
+          <div>
+            <label class="st-edit-label">Due Date</label>
+            <input type="date" id="stTaskEditDue" />
+          </div>
+          <div>
+            <label class="st-edit-label">Priority</label>
+            <select id="stTaskEditPriority">
+              <option value="p1">P1 — Urgent</option>
+              <option value="p2">P2 — High</option>
+              <option value="p3">P3 — Normal</option>
+              <option value="p4">P4 — Low</option>
+            </select>
+          </div>
+          <div style="position:relative">
+            <label class="st-edit-label">Assignee</label>
+            <input type="text" id="stTaskEditAssignee" placeholder="@username" autocomplete="off" />
+            <div id="stAssigneeDropdown" class="st-assignee-dropdown" hidden></div>
+          </div>
+        </div>
+        <div class="st-task-edit-actions">
+          <button type="button" class="st-btn primary" id="stTaskEditSave">💾 Save</button>
+          <button type="button" class="st-btn ghost" id="stTaskEditCancel">Cancel</button>
+          <span id="stTaskEditError" style="color:#f87171;font-size:12px"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOB CARD RESULTS MODAL -->
+  <div class="st-jobcard-modal" id="stJobCardModal" hidden>
+    <div class="st-jobcard-modal-inner">
+      <div class="st-jobcard-modal-header">
+        <span id="stJobCardModalTitle">📋 Job Card Results</span>
+        <button type="button" id="stJobCardModalClose">✕</button>
+      </div>
+      <div id="stJobCardModalBody"></div>
     </div>
   </div>
 </div>
@@ -301,6 +367,7 @@
               '<button type="button" class="st-mini" data-toggle-task="' + t.id + '">' +
                 (t.completed ? '↩ Reopen' : '✓ Complete') +
               '</button>' +
+              '<button type="button" class="st-mini" data-edit-task="' + t.id + '" data-task-title="' + esc(t.title) + '" data-task-due="' + esc(t.due_date || '') + '" data-task-priority="' + esc(t.priority || 'p3') + '" data-task-assignee="' + esc(t.assignee || '') + '" title="Edit Task">✏️ Edit</button>' +
               '<button type="button" class="st-mini" data-reply-msg="' + msg.id + '" data-reply-user="' + esc(t.created_by || 'Task') + '" data-reply-text="' + esc(t.title) + '" title="Reply to Task">↩ Reply</button>' +
               '<button type="button" class="st-mini danger" data-delete-task="' + t.id + '" title="Delete Task">🗑 Delete</button>' +
               (t.assignee ? '<span class="st-muted">→ @' + esc(t.assignee) + '</span>' : '') +
@@ -512,6 +579,35 @@
     const input = $('#stInput');
     let text = (input.value || '').trim();
     const asTask = state.taskMode || /^\/task\b/i.test(text);
+
+    // ── /jobcard command intercept ───────────────────────────────────────────
+    // Syntax: /jobcard <number> [linein|lineout]   e.g.  /jobcard 2003 linein
+    const jcMatch = text.match(/^\/jobcard\s+(\S+)(?:\s+(linein|lineout))?/i);
+    if (jcMatch) {
+      const jcNo = jcMatch[1];
+      const jcMode = (jcMatch[2] || 'both').toLowerCase();
+      input.value = '';
+      input.focus();
+      await doJobCardLookup(jcMode, jcNo);
+      return;
+    }
+    // ── /linein <number> shorthand ───────────────────────────────────────────
+    const liMatch = text.match(/^\/linein\s+(\S+)/i);
+    if (liMatch) {
+      input.value = '';
+      input.focus();
+      await doJobCardLookup('linein', liMatch[1]);
+      return;
+    }
+    // ── /lineout <number> shorthand ──────────────────────────────────────────
+    const loMatch = text.match(/^\/lineout\s+(\S+)/i);
+    if (loMatch) {
+      input.value = '';
+      input.focus();
+      await doJobCardLookup('lineout', loMatch[1]);
+      return;
+    }
+
     if (!text && !state.file) return;
 
     const btn = $('#stSendBtn');
@@ -1010,6 +1106,31 @@
       return;
     }
 
+    // ── Edit Task ─────────────────────────────────────────────────────────────
+    const editTaskBtn = e.target.closest('[data-edit-task]');
+    if (editTaskBtn) {
+      e.stopPropagation();
+      const taskId = editTaskBtn.dataset.editTask;
+      const title   = editTaskBtn.dataset.taskTitle || '';
+      const due     = editTaskBtn.dataset.taskDue || '';
+      const priority= editTaskBtn.dataset.taskPriority || 'p3';
+      const assignee= editTaskBtn.dataset.taskAssignee || '';
+
+      const modal = document.getElementById('stTaskEditModal');
+      if (!modal) return;
+
+      document.getElementById('stTaskEditTitle').value    = title;
+      document.getElementById('stTaskEditDue').value      = due;
+      document.getElementById('stTaskEditPriority').value = priority;
+      document.getElementById('stTaskEditAssignee').value = assignee ? '@' + assignee : '';
+      document.getElementById('stTaskEditError').textContent = '';
+
+      modal.dataset.editingTaskId = taskId;
+      modal.hidden = false;
+      document.getElementById('stTaskEditTitle').focus();
+      return;
+    }
+
     const tg = e.target.closest('[data-toggle-task]');
     if (tg) {
       const res = await fetch('/api/chat/tasks/' + tg.dataset.toggleTask + '/toggle/', {
@@ -1183,6 +1304,7 @@
         '<span class="st-sidebar-label-color" style="background:' + l.color + '"></span>' +
         '<span class="st-sidebar-label-name">' + esc(l.name) + '</span>' +
         (selected ? '<span class="st-sidebar-label-check">✓</span>' : '') +
+        '<button type="button" class="st-label-delete-btn" data-delete-label="' + l.id + '" title="Delete label">🗑</button>' +
       '</div>';
     }).join('');
   }
@@ -1391,6 +1513,414 @@
       return;
     }
   });
+
+  // Label delete handler
+  document.addEventListener('click', async function (e) {
+    const delLbl = e.target.closest('[data-delete-label]');
+    if (delLbl) {
+      e.stopPropagation();
+      const labelId = parseInt(delLbl.dataset.deleteLabel, 10);
+      const label = state.labels.find(function (l) { return l.id === labelId; });
+      const labelName = label ? label.name : 'this label';
+      if (!confirm('Delete label "' + labelName + '"? This will remove it from all tasks.')) return;
+      const res = await fetch('/api/chat/labels/' + labelId + '/delete/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrf() }
+      });
+      if (res.ok) {
+        state.labels = state.labels.filter(function (l) { return l.id !== labelId; });
+        state.selectedLabels = state.selectedLabels.filter(function (l) { return l.id !== labelId; });
+        renderSidebarLabels();
+        renderSelectedLabels();
+        renderDropdownLabels();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete label');
+      }
+      return;
+    }
+  });
+
+  // Job Card Lookup logic
+  function buildJobCardLookupMode(mode) {
+    // mode: 'linein' | 'lineout' | 'both'
+    return mode;
+  }
+
+  async function doJobCardLookup(mode, jobCardNoArg) {
+    // jobCardNoArg can come from toolbar button or from the sidebar input
+    let jobCardNo = jobCardNoArg;
+    if (!jobCardNo) {
+      const sidebarInput = $('#stJobCardInput');
+      jobCardNo = sidebarInput ? sidebarInput.value.trim() : '';
+    }
+    if (!jobCardNo) { alert('Please enter a Job Card number first.'); return; }
+    const resultsEl = $('#stJobCardResults');
+    if (resultsEl) { resultsEl.hidden = false; resultsEl.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:6px">Loading…</div>'; }
+    try {
+      const res = await fetch('/api/chat/jobcard-lookup/?job_card_no=' + encodeURIComponent(jobCardNo), { credentials: 'same-origin' });
+      const data = await res.json();
+      if (!res.ok) { if (resultsEl) resultsEl.innerHTML = '<div style="color:#f87171;font-size:12px;padding:6px">' + esc(data.error || 'Error') + '</div>'; return; }
+      const rows = data.results || [];
+      if (!rows.length) {
+        if (resultsEl) resultsEl.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:6px">No submissions found for ' + esc(jobCardNo) + '</div>';
+        showJobCardModal(jobCardNo, rows, mode);
+        return;
+      }
+      if (resultsEl) resultsEl.innerHTML = '<div style="color:#a78bfa;font-size:11px;padding:4px 6px">' + rows.length + ' result(s) found</div>';
+      showJobCardModal(jobCardNo, rows, mode);
+    } catch (e) {
+      if (resultsEl) resultsEl.innerHTML = '<div style="color:#f87171;font-size:12px;padding:6px">Network error</div>';
+    }
+  }
+
+  function showJobCardModal(jobCardNo, rows, mode) {
+    const modal = $('#stJobCardModal');
+    const title = $('#stJobCardModalTitle');
+    const body = $('#stJobCardModalBody');
+    if (!modal || !body) return;
+    const modeLabel = mode === 'linein' ? 'Line In' : mode === 'lineout' ? 'Line Out' : 'Line In & Out';
+    if (title) title.textContent = '📋 Job Card ' + jobCardNo + ' — ' + modeLabel;
+    if (!rows.length) {
+      body.innerHTML = '<div style="color:#9ca3af;padding:12px;text-align:center">No submissions found.</div>';
+    } else {
+      const showIn  = (mode !== 'lineout');
+      const showOut = (mode !== 'linein');
+      const cols = ['Department', 'Master', 'Item'];
+      if (showIn)  cols.push('Line In');
+      if (showOut) cols.push('Line Out');
+      cols.push(''); // Send button column
+
+      let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+      html += '<thead><tr>' + cols.map(function(c){
+        return '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid #3d2e5e;color:#a78bfa;user-select:none">' + esc(c) + '</th>';
+      }).join('') + '</tr></thead><tbody>';
+
+      rows.forEach(function(r) {
+        // Build the message text for "send to chat"
+        var parts = ['📋 Job Card ' + jobCardNo,
+          r.department + ' | ' + r.master_name + ' | ' + r.item_name];
+        if (showIn)  parts.push('Line In: ' + r.line_in_date);
+        if (showOut) parts.push('Line Out: ' + r.line_out_date);
+        var chatText = parts.join(' — ');
+        // encode for data attribute
+        var encoded = encodeURIComponent(chatText);
+
+        html += '<tr style="border-bottom:1px solid #2d1f47" class="st-jc-row">';
+        html += '<td style="padding:5px 8px;color:#e2e8f0">' + esc(r.department) + '</td>';
+        html += '<td style="padding:5px 8px;color:#e2e8f0">' + esc(r.master_name) + '</td>';
+        html += '<td style="padding:5px 8px;color:#e2e8f0">' + esc(r.item_name) + '</td>';
+        if (showIn)  html += '<td style="padding:5px 8px;color:#34d399;font-weight:600">' + esc(r.line_in_date) + '</td>';
+        if (showOut) html += '<td style="padding:5px 8px;color:#f59e0b;font-weight:600">' + esc(r.line_out_date) + '</td>';
+        html += '<td style="padding:5px 8px;user-select:none">';
+        html += '<button class="st-jc-send-btn" data-jc-send="' + encoded + '" title="Send to chat">↪ Send</button>';
+        html += '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      html += '<div style="color:#7c6b99;font-size:11px;margin-top:10px;padding:0 2px">💡 Tip: You can also select any text in this table to copy it.</div>';
+      body.innerHTML = html;
+    }
+    modal.hidden = false;
+  }
+
+  // Handle "↪ Send" button clicks in the job card modal
+  document.addEventListener('click', function(e) {
+    const sendBtn = e.target.closest('[data-jc-send]');
+    if (sendBtn) {
+      e.stopPropagation();
+      const text = decodeURIComponent(sendBtn.dataset.jcSend || '');
+      if (!text) return;
+      const input = $('#stInput');
+      if (input) {
+        input.value = text;
+        input.focus();
+        // place cursor at end
+        input.setSelectionRange(text.length, text.length);
+      }
+      // Close modal
+      const modal = $('#stJobCardModal');
+      if (modal) modal.hidden = true;
+      return;
+    }
+  });
+
+  const jobCardLineInBtn = $('#stJobCardLineInBtn');
+  if (jobCardLineInBtn) jobCardLineInBtn.addEventListener('click', function () { doJobCardLookup('linein'); });
+  const jobCardLineOutBtn = $('#stJobCardLineOutBtn');
+  if (jobCardLineOutBtn) jobCardLineOutBtn.addEventListener('click', function () { doJobCardLookup('lineout'); });
+
+  // ── Toolbar: Job Card / Line In / Line Out buttons insert command text ─────
+  // Clicking inserts the command prefix into the main textarea (like /task button)
+  const tbJobCardBtn = document.getElementById('stJobCardBtn');
+  if (tbJobCardBtn) tbJobCardBtn.addEventListener('click', function () {
+    const input = $('#stInput');
+    if (!input) return;
+    if (!/^\/jobcard/i.test(input.value)) {
+      input.value = '/jobcard ' + input.value.replace(/^\/jobcard\s*/i, '');
+    }
+    input.focus();
+    // move caret after "/jobcard "
+    const pos = '/jobcard '.length;
+    input.setSelectionRange(pos, pos);
+  });
+
+  const tbLineInBtn = document.getElementById('stLineInBtn');
+  if (tbLineInBtn) tbLineInBtn.addEventListener('click', function () {
+    const input = $('#stInput');
+    if (!input) return;
+    const val = input.value.trim();
+    // If already has /jobcard <num>, run the lookup immediately
+    const jcMatch = val.match(/^\/jobcard\s+(\S+)/i);
+    if (jcMatch) {
+      input.value = '';
+      input.focus();
+      doJobCardLookup('linein', jcMatch[1]);
+      return;
+    }
+    // Otherwise insert /linein <current_text_if_number>
+    const numMatch = val.match(/^(\d+)$/);
+    if (numMatch) {
+      input.value = '';
+      doJobCardLookup('linein', numMatch[1]);
+      return;
+    }
+    input.value = '/jobcard ';
+    input.focus();
+    const hint = document.getElementById('stStatus');
+    if (hint) { hint.textContent = 'Type job card no then click Line In'; hint.classList.add('err'); setTimeout(function(){ hint.textContent='Live'; hint.classList.remove('err'); }, 2500); }
+  });
+
+  const tbLineOutBtn = document.getElementById('stLineOutBtn');
+  if (tbLineOutBtn) tbLineOutBtn.addEventListener('click', function () {
+    const input = $('#stInput');
+    if (!input) return;
+    const val = input.value.trim();
+    const jcMatch = val.match(/^\/jobcard\s+(\S+)/i);
+    if (jcMatch) {
+      input.value = '';
+      input.focus();
+      doJobCardLookup('lineout', jcMatch[1]);
+      return;
+    }
+    const numMatch = val.match(/^(\d+)$/);
+    if (numMatch) {
+      input.value = '';
+      doJobCardLookup('lineout', numMatch[1]);
+      return;
+    }
+    input.value = '/jobcard ';
+    input.focus();
+    const hint = document.getElementById('stStatus');
+    if (hint) { hint.textContent = 'Type job card no then click Line Out'; hint.classList.add('err'); setTimeout(function(){ hint.textContent='Live'; hint.classList.remove('err'); }, 2500); }
+  });
+
+  // Job Card input (sidebar) — Enter triggers both
+  const jobCardInputEl = $('#stJobCardInput');
+  if (jobCardInputEl) jobCardInputEl.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doJobCardLookup('both'); }
+  });
+
+  // Close modal
+  const jobCardModalClose = $('#stJobCardModalClose');
+  if (jobCardModalClose) jobCardModalClose.addEventListener('click', function() {
+    const modal = $('#stJobCardModal');
+    if (modal) modal.hidden = true;
+  });
+  document.addEventListener('click', function(e) {
+    const modal = $('#stJobCardModal');
+    if (modal && !modal.hidden && e.target === modal) modal.hidden = true;
+  });
+
+  // ── Task Edit Modal: Save / Cancel / Close ────────────────────────────────
+  async function saveTaskEdit() {
+    const modal = document.getElementById('stTaskEditModal');
+    if (!modal) return;
+    const taskId  = modal.dataset.editingTaskId;
+    const title   = (document.getElementById('stTaskEditTitle').value || '').trim();
+    const due     = (document.getElementById('stTaskEditDue').value || '').trim();
+    const priority= document.getElementById('stTaskEditPriority').value;
+    const assigneeRaw = (document.getElementById('stTaskEditAssignee').value || '').trim();
+    const assignee= assigneeRaw.replace(/^@/, '');
+    const errEl   = document.getElementById('stTaskEditError');
+
+    if (!title) { errEl.textContent = 'Title is required.'; return; }
+    errEl.textContent = '';
+
+    const saveBtn = document.getElementById('stTaskEditSave');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      const res = await fetch('/api/chat/tasks/' + taskId + '/edit/', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ title, due_date: due, priority, assignee }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || 'Save failed'; return; }
+
+      // ── Live-update the task card in the feed ───────────────────────────────
+      const cardEl = document.querySelector('.st-msg.st-task-card [data-edit-task="' + taskId + '"]');
+      if (cardEl) {
+        const card = cardEl.closest('.st-task-card-inner');
+        if (card) {
+          // Title
+          const titleEl = card.querySelector('.st-task-card-title');
+          if (titleEl) titleEl.textContent = data.title;
+          // Due label
+          const dueEl = card.querySelector('.st-task-due');
+          if (data.due_label) {
+            if (dueEl) dueEl.textContent = data.due_label;
+            else {
+              const keyEl = card.querySelector('.st-task-key');
+              if (keyEl) keyEl.insertAdjacentHTML('afterend', '<span class="st-task-due">' + esc(data.due_label) + '</span>');
+            }
+          } else if (dueEl) dueEl.remove();
+          // Priority
+          const prEl = card.querySelector('.st-task-pr');
+          if (prEl) prEl.textContent = data.priority.toUpperCase();
+          // Assignee
+          const assigneeSpan = card.querySelector('.st-task-card-foot .st-muted');
+          if (data.assignee) {
+            if (assigneeSpan) assigneeSpan.textContent = '→ @' + data.assignee;
+            else {
+              const foot = card.querySelector('.st-task-card-foot');
+              if (foot) foot.insertAdjacentHTML('beforeend', '<span class="st-muted">→ @' + esc(data.assignee) + '</span>');
+            }
+          } else if (assigneeSpan) assigneeSpan.remove();
+
+          // Update data attributes on the edit button for future edits
+          cardEl.dataset.taskTitle    = data.title;
+          cardEl.dataset.taskDue      = data.due_date || '';
+          cardEl.dataset.taskPriority = data.priority;
+          cardEl.dataset.taskAssignee = data.assignee || '';
+        }
+      }
+
+      // Also update task rows in task list view if open
+      const taskRowEl = document.querySelector('.st-task-row[data-task-id="' + taskId + '"]');
+      if (taskRowEl) {
+        const nameEl = taskRowEl.querySelector('.st-task-name');
+        if (nameEl) nameEl.textContent = data.title;
+      }
+
+      modal.hidden = true;
+      refreshBootstrap();
+    } catch (err) {
+      errEl.textContent = 'Network error. Please try again.';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Save';
+    }
+  }
+
+  const stTaskEditSave   = document.getElementById('stTaskEditSave');
+  const stTaskEditCancel = document.getElementById('stTaskEditCancel');
+  const stTaskEditClose  = document.getElementById('stTaskEditClose');
+  const stTaskEditModal  = document.getElementById('stTaskEditModal');
+
+  if (stTaskEditSave)   stTaskEditSave.addEventListener('click', saveTaskEdit);
+  if (stTaskEditCancel) stTaskEditCancel.addEventListener('click', function () { stTaskEditModal.hidden = true; });
+  if (stTaskEditClose)  stTaskEditClose.addEventListener('click',  function () { stTaskEditModal.hidden = true; });
+  // Close on backdrop click
+  if (stTaskEditModal) stTaskEditModal.addEventListener('click', function (e) {
+    if (e.target === stTaskEditModal) stTaskEditModal.hidden = true;
+  });
+  // Save on Ctrl+Enter inside the title textarea
+  const stTaskEditTitle = document.getElementById('stTaskEditTitle');
+  if (stTaskEditTitle) stTaskEditTitle.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveTaskEdit(); }
+  });
+
+  // ── Assignee @-mention autocomplete ───────────────────────────────────────
+  const assigneeInput = document.getElementById('stTaskEditAssignee');
+  const assigneeDrop  = document.getElementById('stAssigneeDropdown');
+
+  function showAssigneeDrop(filtered) {
+    if (!assigneeDrop) return;
+    if (!filtered.length) { assigneeDrop.hidden = true; return; }
+    assigneeDrop.innerHTML = filtered.map(function(u) {
+      return '<div class="st-assignee-opt" data-username="' + esc(u.username) + '">' +
+        '<span class="st-assignee-av">' + esc((u.username || '?')[0].toUpperCase()) + '</span>' +
+        '<span><strong>@' + esc(u.username) + '</strong>' +
+          (u.full_name ? ' <span style="color:#9b8fb5;font-size:11px">' + esc(u.full_name) + '</span>' : '') +
+        '</span>' +
+      '</div>';
+    }).join('');
+    assigneeDrop.hidden = false;
+  }
+
+  function hideAssigneeDrop() {
+    if (assigneeDrop) assigneeDrop.hidden = true;
+  }
+
+  if (assigneeInput) {
+    assigneeInput.addEventListener('input', function() {
+      const raw = (this.value || '').trim().replace(/^@/, '').toLowerCase();
+      const users = state.users || [];
+      if (!users.length || !this.value.trim()) { hideAssigneeDrop(); return; }
+      const filtered = users.filter(function(u) {
+        return u.username.toLowerCase().includes(raw) ||
+               (u.full_name && u.full_name.toLowerCase().includes(raw));
+      }).slice(0, 8);
+      showAssigneeDrop(filtered);
+    });
+
+    assigneeInput.addEventListener('keydown', function(e) {
+      if (assigneeDrop && !assigneeDrop.hidden) {
+        const opts = assigneeDrop.querySelectorAll('.st-assignee-opt');
+        const active = assigneeDrop.querySelector('.st-assignee-opt.active');
+        let idx = Array.from(opts).indexOf(active);
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (active) active.classList.remove('active');
+          opts[Math.min(idx + 1, opts.length - 1)].classList.add('active');
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (active) active.classList.remove('active');
+          opts[Math.max(idx - 1, 0)].classList.add('active');
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          const a = assigneeDrop.querySelector('.st-assignee-opt.active') || opts[0];
+          if (a) {
+            e.preventDefault();
+            assigneeInput.value = '@' + a.dataset.username;
+            hideAssigneeDrop();
+          }
+        } else if (e.key === 'Escape') {
+          hideAssigneeDrop();
+        }
+      }
+    });
+
+    // Click to select from dropdown
+    assigneeDrop && assigneeDrop.addEventListener('mousedown', function(e) {
+      const opt = e.target.closest('.st-assignee-opt');
+      if (opt) {
+        e.preventDefault();
+        assigneeInput.value = '@' + opt.dataset.username;
+        hideAssigneeDrop();
+        assigneeInput.focus();
+      }
+    });
+
+    // On focus: show all users if field empty or has @
+    assigneeInput.addEventListener('focus', function() {
+      const raw = (this.value || '').trim().replace(/^@/, '').toLowerCase();
+      const users = state.users || [];
+      if (!users.length) return;
+      const filtered = users.filter(function(u) {
+        return !raw || u.username.toLowerCase().includes(raw) ||
+               (u.full_name && u.full_name.toLowerCase().includes(raw));
+      }).slice(0, 8);
+      showAssigneeDrop(filtered);
+    });
+
+    assigneeInput.addEventListener('blur', function() {
+      // Delay hide so click on option fires first
+      setTimeout(hideAssigneeDrop, 180);
+    });
+  }
 
   // Boot
   const menuToggle = $('#stMenuToggle');

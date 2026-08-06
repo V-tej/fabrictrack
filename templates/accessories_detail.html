@@ -7,7 +7,8 @@
   <!-- Top bar -->
   <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem;">
     <a href="{% url 'accessories' %}" class="btn btn-secondary" style="font-size:0.85rem;">← Back to List</a>
-    <a href="{% url 'accessories_print' record.job_card_no %}" target="_blank" class="btn btn-primary" style="font-size:0.85rem;background:#7c3aed;">🖨️ Print / PDF</a>
+    <a href="{% url 'accessories_print' record.job_card_no %}" target="_blank" class="btn btn-primary"
+      style="font-size:0.85rem;background:#7c3aed;">🖨️ Print / PDF</a>
   </div>
 
   <!-- Two-column layout -->
@@ -15,629 +16,719 @@
 
     <!-- Left: Main accessories table (scrollable) -->
     <div class="section-card acc-detail-main" style="flex:1; min-width:0; margin:0; overflow-x:auto;">
-    <div style="text-align:center;margin-bottom:1.5rem;">
-      <h2 style="margin:0;font-size:1.4rem;color:#f1f5f9;">Dhruv Fabrics</h2>
-      <h3 style="margin:0.25rem 0 0 0;font-size:1.1rem;color:#94a3b8;letter-spacing:0.1em;">ACCESSORIES</h3>
-      <div style="margin-top:0.75rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
-        <span style="color:#fbbf24;font-weight:bold;">Job Card: {{ record.job_card_no }}</span>
-        <span style="color:#60a5fa;">Total Pcs: <strong>{{ record.total_pcs }}</strong></span>
-        {% if record.is_complete %}
-          <span style="background:#dcfce7;color:#16a34a;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">✅ Completed</span>
-        {% elif record.is_started %}
-          <span style="background:#fee2e2;color:#dc2626;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">🔴 Pending</span>
-        {% else %}
-          <span style="background:#f3f4f6;color:#6b7280;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">⬜ Not Started</span>
-        {% endif %}
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <h2 style="margin:0;font-size:1.4rem;color:#f1f5f9;">Dhruv Fabrics</h2>
+        <h3 style="margin:0.25rem 0 0 0;font-size:1.1rem;color:#94a3b8;letter-spacing:0.1em;">ACCESSORIES</h3>
+        <div style="margin-top:0.75rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
+          <span style="color:#fbbf24;font-weight:bold;">Job Card: {{ record.job_card_no }}</span>
+          <span style="color:#60a5fa;">Total Pcs: <strong>{{ record.total_pcs }}</strong></span>
+          {% if record.is_complete %}
+          <span
+            style="background:#dcfce7;color:#16a34a;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">✅
+            Completed</span>
+          {% elif record.is_started %}
+          <span
+            style="background:#fee2e2;color:#dc2626;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">🔴
+            Pending</span>
+          {% else %}
+          <span
+            style="background:#f3f4f6;color:#6b7280;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">⬜
+            Not Started</span>
+          {% endif %}
+        </div>
       </div>
-    </div>
 
-    <!-- Filters Row -->
-    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <!-- Item Name Filter -->
-      <div style="display:flex; align-items:center; gap:0.5rem;">
-        <label for="detailItemFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Item:</label>
-        <select id="detailItemFilter" style="padding: 0.5rem 1.5rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
-          <option value="">-- All Items --</option>
-          {% for entry in entries %}
-            <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <!-- Status Color Filter -->
-      <div style="display:flex; align-items:center; gap:0.5rem;">
-        <label for="detailStatusFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Status:</label>
-        <select id="detailStatusFilter" style="padding: 0.5rem 1rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; font-weight: 600; color: #f1f5f9;">
-          <option value="" style="color:#f1f5f9;">-- All --</option>
-          <option value="yellow" style="color:#fbbf24;">🟡 Yellow</option>
-          <option value="red" style="color:#ef4444;">🔴 Red</option>
-          <option value="green" style="color:#22c55e;">🟢 Green</option>
-        </select>
-      </div>
-    </div>
-
-    <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
-      {% csrf_token %}
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-        <span style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Fill in the multiplier quantities and select status:</span>
-        <button type="submit" class="btn btn-primary" style="font-size:0.85rem; background: #10b981; border-color: #10b981;">💾 Save Changes</button>
-      </div>
-      <div class="table-wrapper" style="overflow-x:auto;">
-        <table id="accTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:750px;">
-          <thead>
-            <tr style="background:#1e3a5f;color:#fff;">
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:50px;">Sr. No.</th>
-              <th style="padding:0.65rem 0.75rem;text-align:left;min-width:140px;">Item Name</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:80px;">Total Pcs</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">A</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">B</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">C</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">D</th>
-              <th style="padding:0.65rem 0.75rem;text-align:center;width:85px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
+      <!-- Filters Row -->
+      <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <!-- Item Name Filter -->
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <label for="detailItemFilter"
+            style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Item:</label>
+          <select id="detailItemFilter"
+            style="padding: 0.5rem 1.5rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
+            <option value="">-- All Items --</option>
             {% for entry in entries %}
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-              <td style="padding:0.8rem 0.75rem;text-align:center;color:#9ca3af;vertical-align:middle;">{{ entry.sr_no }}</td>
-              <td style="padding:0.8rem 0.75rem;font-weight:600;color:#f1f5f9;vertical-align:middle;">{{ entry.item_name }}</td>
-              <td style="padding:0.8rem 0.75rem;text-align:center;color:#60a5fa;font-weight:600;vertical-align:middle;">{{ record.total_pcs }}</td>
-              
-              <!-- Column A -->
-              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
-                  <input type="number" name="item_{{ entry.sr_no }}_a"
-                    value="{% if entry.qty_a is not None %}{{ entry.qty_a }}{% endif %}"
-                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="a"
-                    step="0.01" min="0" placeholder="Qty"
-                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
-                  <span class="calc-box" id="calc_{{ entry.sr_no }}_a"
-                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+            <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <!-- Status Color Filter -->
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <label for="detailStatusFilter"
+            style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Status:</label>
+          <select id="detailStatusFilter"
+            style="padding: 0.5rem 1rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; font-weight: 600; color: #f1f5f9;">
+            <option value="" style="color:#f1f5f9;">-- All --</option>
+            <option value="yellow" style="color:#fbbf24;">🟡 Yellow</option>
+            <option value="red" style="color:#ef4444;">🔴 Red</option>
+            <option value="green" style="color:#22c55e;">🟢 Green</option>
+          </select>
+        </div>
+      </div>
+
+      <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Fill in the multiplier quantities and
+            select status:</span>
+          <button type="submit" class="btn btn-primary"
+            style="font-size:0.85rem; background: #10b981; border-color: #10b981;">💾 Save Changes</button>
+        </div>
+        <div class="table-wrapper" style="overflow-x:auto;">
+          <table id="accTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:750px;">
+            <thead>
+              <tr style="background:#1e3a5f;color:#fff;">
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:50px;">Sr. No.</th>
+                <th style="padding:0.65rem 0.75rem;text-align:left;min-width:140px;">Item Name</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:80px;">Total Pcs</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">A</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">B</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">C</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:95px;">D</th>
+                <th style="padding:0.65rem 0.75rem;text-align:center;width:85px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in entries %}
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:0.8rem 0.75rem;text-align:center;color:#9ca3af;vertical-align:middle;">{{ entry.sr_no
+                  }}</td>
+                <td style="padding:0.8rem 0.75rem;font-weight:600;color:#f1f5f9;vertical-align:middle;">{{
+                  entry.item_name }}</td>
+                <td
+                  style="padding:0.8rem 0.75rem;text-align:center;color:#60a5fa;font-weight:600;vertical-align:middle;">
+                  {{ record.total_pcs }}</td>
+
+                <!-- Column A -->
+                <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                    <input type="number" name="item_{{ entry.sr_no }}_a"
+                      value="{% if entry.qty_a is not None %}{{ entry.qty_a }}{% endif %}" class="qty-input"
+                      data-sr="{{ entry.sr_no }}" data-col="a" step="0.01" min="0" placeholder="Qty"
+                      style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                    <span class="calc-box" id="calc_{{ entry.sr_no }}_a" style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
                     {% if entry.status_a == 'green' %}background:#15803d;color:#f0fdf4;
                     {% elif entry.status_a == 'red' %}background:#b91c1c;color:#fef2f2;
                     {% elif entry.status_a == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_a and entry.qty_a > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                    {% if entry.total_a is not None %}{{ entry.total_a }}{% else %}0{% endif %}
-                  </span>
-                  <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}" data-col="a"
-                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
+                      {% if entry.total_a is not None %}{{ entry.total_a }}{% else %}0{% endif %}
+                    </span>
+                    <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}"
+                      data-col="a"
+                      style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_a == 'green' %}color:#22c55e;{% elif entry.status_a == 'red' %}color:#ef4444;{% elif entry.status_a == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_a %}selected{% endif %} style="color:#9ca3af;">—</option>
-                    <option value="yellow" {% if entry.status_a == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
-                    <option value="red" {% if entry.status_a == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
-                    <option value="green" {% if entry.status_a == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
-                  </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_a" style="margin-top:0.4rem; display:{% if entry.status_a == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
-                    <select name="item_{{ entry.sr_no }}_vendor_a" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="a" data-selected="{{ entry.vendor_a|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Vendor...</option>
+                      <option value="" {% if not entry.status_a %}selected{% endif %} style="color:#9ca3af;">—</option>
+                      <option value="yellow" {% if entry.status_a=='yellow' %}selected{% endif %}
+                        style="color:#fbbf24;">🟡 Y</option>
+                      <option value="red" {% if entry.status_a=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      </option>
+                      <option value="green" {% if entry.status_a=='green' %}selected{% endif %} style="color:#22c55e;">
+                        🟢 G</option>
                     </select>
-                    <select name="item_{{ entry.sr_no }}_article_a" class="article-select" data-sr="{{ entry.sr_no }}" data-col="a" data-selected="{{ entry.article_a|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Article...</option>
-                    </select>
-                    {% if entry.photo_data_a %}
-                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
-                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                    <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_a"
+                      style="margin-top:0.4rem; display:{% if entry.status_a == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
+                      <select name="item_{{ entry.sr_no }}_vendor_a" class="vendor-select" data-sr="{{ entry.sr_no }}"
+                        data-col="a" data-selected="{{ entry.vendor_a|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Vendor...</option>
+                      </select>
+                      <select name="item_{{ entry.sr_no }}_article_a" class="article-select" data-sr="{{ entry.sr_no }}"
+                        data-col="a" data-selected="{{ entry.article_a|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Article...</option>
+                      </select>
+                      {% if entry.photo_data_a %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" target="_blank"
+                        style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
+                        title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'a' %}"
+                          style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
                         <span>View</span>
                       </a>
-                    {% endif %}
-                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
-                      📷
-                      <input type="file" name="item_{{ entry.sr_no }}_photo_a" accept="image/*" style="display:none;" onchange="showFileName(this)">
-                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_a %}Replace{% else %}Upload{% endif %}</span>
-                    </label>
+                      {% endif %}
+                      <label
+                        style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                        📷
+                        <input type="file" name="item_{{ entry.sr_no }}_photo_a" accept="image/*" style="display:none;"
+                          onchange="showFileName(this)">
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_a
+                          %}Replace{% else %}Upload{% endif %}</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              <!-- Column B -->
-              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
-                  <input type="number" name="item_{{ entry.sr_no }}_b"
-                    value="{% if entry.qty_b is not None %}{{ entry.qty_b }}{% endif %}"
-                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="b"
-                    step="0.01" min="0" placeholder="Qty"
-                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
-                  <span class="calc-box" id="calc_{{ entry.sr_no }}_b"
-                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                <!-- Column B -->
+                <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                    <input type="number" name="item_{{ entry.sr_no }}_b"
+                      value="{% if entry.qty_b is not None %}{{ entry.qty_b }}{% endif %}" class="qty-input"
+                      data-sr="{{ entry.sr_no }}" data-col="b" step="0.01" min="0" placeholder="Qty"
+                      style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                    <span class="calc-box" id="calc_{{ entry.sr_no }}_b" style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
                     {% if entry.status_b == 'green' %}background:#15803d;color:#f0fdf4;
                     {% elif entry.status_b == 'red' %}background:#b91c1c;color:#fef2f2;
                     {% elif entry.status_b == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_b and entry.qty_b > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                    {% if entry.total_b is not None %}{{ entry.total_b }}{% else %}0{% endif %}
-                  </span>
-                  <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}" data-col="b"
-                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
+                      {% if entry.total_b is not None %}{{ entry.total_b }}{% else %}0{% endif %}
+                    </span>
+                    <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}"
+                      data-col="b"
+                      style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_b == 'green' %}color:#22c55e;{% elif entry.status_b == 'red' %}color:#ef4444;{% elif entry.status_b == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_b %}selected{% endif %} style="color:#9ca3af;">—</option>
-                    <option value="yellow" {% if entry.status_b == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
-                    <option value="red" {% if entry.status_b == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
-                    <option value="green" {% if entry.status_b == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
-                  </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_b" style="margin-top:0.4rem; display:{% if entry.status_b == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
-                    <select name="item_{{ entry.sr_no }}_vendor_b" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="b" data-selected="{{ entry.vendor_b|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Vendor...</option>
+                      <option value="" {% if not entry.status_b %}selected{% endif %} style="color:#9ca3af;">—</option>
+                      <option value="yellow" {% if entry.status_b=='yellow' %}selected{% endif %}
+                        style="color:#fbbf24;">🟡 Y</option>
+                      <option value="red" {% if entry.status_b=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      </option>
+                      <option value="green" {% if entry.status_b=='green' %}selected{% endif %} style="color:#22c55e;">
+                        🟢 G</option>
                     </select>
-                    <select name="item_{{ entry.sr_no }}_article_b" class="article-select" data-sr="{{ entry.sr_no }}" data-col="b" data-selected="{{ entry.article_b|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Article...</option>
-                    </select>
-                    {% if entry.photo_data_b %}
-                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
-                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                    <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_b"
+                      style="margin-top:0.4rem; display:{% if entry.status_b == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
+                      <select name="item_{{ entry.sr_no }}_vendor_b" class="vendor-select" data-sr="{{ entry.sr_no }}"
+                        data-col="b" data-selected="{{ entry.vendor_b|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Vendor...</option>
+                      </select>
+                      <select name="item_{{ entry.sr_no }}_article_b" class="article-select" data-sr="{{ entry.sr_no }}"
+                        data-col="b" data-selected="{{ entry.article_b|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Article...</option>
+                      </select>
+                      {% if entry.photo_data_b %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" target="_blank"
+                        style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
+                        title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'b' %}"
+                          style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
                         <span>View</span>
                       </a>
-                    {% endif %}
-                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
-                      📷
-                      <input type="file" name="item_{{ entry.sr_no }}_photo_b" accept="image/*" style="display:none;" onchange="showFileName(this)">
-                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_b %}Replace{% else %}Upload{% endif %}</span>
-                    </label>
+                      {% endif %}
+                      <label
+                        style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                        📷
+                        <input type="file" name="item_{{ entry.sr_no }}_photo_b" accept="image/*" style="display:none;"
+                          onchange="showFileName(this)">
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_b
+                          %}Replace{% else %}Upload{% endif %}</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              <!-- Column C -->
-              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
-                  <input type="number" name="item_{{ entry.sr_no }}_c"
-                    value="{% if entry.qty_c is not None %}{{ entry.qty_c }}{% endif %}"
-                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="c"
-                    step="0.01" min="0" placeholder="Qty"
-                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
-                  <span class="calc-box" id="calc_{{ entry.sr_no }}_c"
-                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                <!-- Column C -->
+                <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                    <input type="number" name="item_{{ entry.sr_no }}_c"
+                      value="{% if entry.qty_c is not None %}{{ entry.qty_c }}{% endif %}" class="qty-input"
+                      data-sr="{{ entry.sr_no }}" data-col="c" step="0.01" min="0" placeholder="Qty"
+                      style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                    <span class="calc-box" id="calc_{{ entry.sr_no }}_c" style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
                     {% if entry.status_c == 'green' %}background:#15803d;color:#f0fdf4;
                     {% elif entry.status_c == 'red' %}background:#b91c1c;color:#fef2f2;
                     {% elif entry.status_c == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_c and entry.qty_c > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                    {% if entry.total_c is not None %}{{ entry.total_c }}{% else %}0{% endif %}
-                  </span>
-                  <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}" data-col="c"
-                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
+                      {% if entry.total_c is not None %}{{ entry.total_c }}{% else %}0{% endif %}
+                    </span>
+                    <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}"
+                      data-col="c"
+                      style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_c == 'green' %}color:#22c55e;{% elif entry.status_c == 'red' %}color:#ef4444;{% elif entry.status_c == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_c %}selected{% endif %} style="color:#9ca3af;">—</option>
-                    <option value="yellow" {% if entry.status_c == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
-                    <option value="red" {% if entry.status_c == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
-                    <option value="green" {% if entry.status_c == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
-                  </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_c" style="margin-top:0.4rem; display:{% if entry.status_c == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
-                    <select name="item_{{ entry.sr_no }}_vendor_c" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="c" data-selected="{{ entry.vendor_c|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Vendor...</option>
+                      <option value="" {% if not entry.status_c %}selected{% endif %} style="color:#9ca3af;">—</option>
+                      <option value="yellow" {% if entry.status_c=='yellow' %}selected{% endif %}
+                        style="color:#fbbf24;">🟡 Y</option>
+                      <option value="red" {% if entry.status_c=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      </option>
+                      <option value="green" {% if entry.status_c=='green' %}selected{% endif %} style="color:#22c55e;">
+                        🟢 G</option>
                     </select>
-                    <select name="item_{{ entry.sr_no }}_article_c" class="article-select" data-sr="{{ entry.sr_no }}" data-col="c" data-selected="{{ entry.article_c|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Article...</option>
-                    </select>
-                    {% if entry.photo_data_c %}
-                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
-                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                    <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_c"
+                      style="margin-top:0.4rem; display:{% if entry.status_c == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
+                      <select name="item_{{ entry.sr_no }}_vendor_c" class="vendor-select" data-sr="{{ entry.sr_no }}"
+                        data-col="c" data-selected="{{ entry.vendor_c|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Vendor...</option>
+                      </select>
+                      <select name="item_{{ entry.sr_no }}_article_c" class="article-select" data-sr="{{ entry.sr_no }}"
+                        data-col="c" data-selected="{{ entry.article_c|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Article...</option>
+                      </select>
+                      {% if entry.photo_data_c %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" target="_blank"
+                        style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
+                        title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'c' %}"
+                          style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
                         <span>View</span>
                       </a>
-                    {% endif %}
-                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
-                      📷
-                      <input type="file" name="item_{{ entry.sr_no }}_photo_c" accept="image/*" style="display:none;" onchange="showFileName(this)">
-                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_c %}Replace{% else %}Upload{% endif %}</span>
-                    </label>
+                      {% endif %}
+                      <label
+                        style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                        📷
+                        <input type="file" name="item_{{ entry.sr_no }}_photo_c" accept="image/*" style="display:none;"
+                          onchange="showFileName(this)">
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_c
+                          %}Replace{% else %}Upload{% endif %}</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              <!-- Column D -->
-              <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
-                  <input type="number" name="item_{{ entry.sr_no }}_d"
-                    value="{% if entry.qty_d is not None %}{{ entry.qty_d }}{% endif %}"
-                    class="qty-input" data-sr="{{ entry.sr_no }}" data-col="d"
-                    step="0.01" min="0" placeholder="Qty"
-                    style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
-                  <span class="calc-box" id="calc_{{ entry.sr_no }}_d"
-                    style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
+                <!-- Column D -->
+                <td style="padding:0.8rem 0.4rem;text-align:center;vertical-align:middle;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;">
+                    <input type="number" name="item_{{ entry.sr_no }}_d"
+                      value="{% if entry.qty_d is not None %}{{ entry.qty_d }}{% endif %}" class="qty-input"
+                      data-sr="{{ entry.sr_no }}" data-col="d" step="0.01" min="0" placeholder="Qty"
+                      style="width:75px;padding:0.25rem 0.4rem;border:1px solid #374151;border-radius:6px;background:#0f172a;color:#f1f5f9;text-align:center;font-size:0.85rem;">
+                    <span class="calc-box" id="calc_{{ entry.sr_no }}_d" style="font-weight:700;font-size:0.9rem;display:inline-block;width:75px;text-align:center;padding:0.2rem 0.4rem;border-radius:6px;
                     {% if entry.status_d == 'green' %}background:#15803d;color:#f0fdf4;
                     {% elif entry.status_d == 'red' %}background:#b91c1c;color:#fef2f2;
                     {% elif entry.status_d == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_d and entry.qty_d > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                    {% if entry.total_d is not None %}{{ entry.total_d }}{% else %}0{% endif %}
-                  </span>
-                  <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}" data-col="d"
-                    style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
+                      {% if entry.total_d is not None %}{{ entry.total_d }}{% else %}0{% endif %}
+                    </span>
+                    <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}"
+                      data-col="d"
+                      style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_d == 'green' %}color:#22c55e;{% elif entry.status_d == 'red' %}color:#ef4444;{% elif entry.status_d == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
-                    <option value="" {% if not entry.status_d %}selected{% endif %} style="color:#9ca3af;">—</option>
-                    <option value="yellow" {% if entry.status_d == 'yellow' %}selected{% endif %} style="color:#fbbf24;">🟡 Y</option>
-                    <option value="red" {% if entry.status_d == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R</option>
-                    <option value="green" {% if entry.status_d == 'green' %}selected{% endif %} style="color:#22c55e;">🟢 G</option>
-                  </select>
-                  <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_d" style="margin-top:0.4rem; display:{% if entry.status_d == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
-                    <select name="item_{{ entry.sr_no }}_vendor_d" class="vendor-select" data-sr="{{ entry.sr_no }}" data-col="d" data-selected="{{ entry.vendor_d|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Vendor...</option>
+                      <option value="" {% if not entry.status_d %}selected{% endif %} style="color:#9ca3af;">—</option>
+                      <option value="yellow" {% if entry.status_d=='yellow' %}selected{% endif %}
+                        style="color:#fbbf24;">🟡 Y</option>
+                      <option value="red" {% if entry.status_d=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      </option>
+                      <option value="green" {% if entry.status_d=='green' %}selected{% endif %} style="color:#22c55e;">
+                        🟢 G</option>
                     </select>
-                    <select name="item_{{ entry.sr_no }}_article_d" class="article-select" data-sr="{{ entry.sr_no }}" data-col="d" data-selected="{{ entry.article_d|default:'' }}" style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
-                      <option value="">Select Article...</option>
-                    </select>
-                    {% if entry.photo_data_d %}
-                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;" title="View Full Photo">
-                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
+                    <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_d"
+                      style="margin-top:0.4rem; display:{% if entry.status_d == 'yellow' %}flex{% else %}none{% endif %}; flex-direction:column; gap:0.25rem; width:90px;">
+                      <select name="item_{{ entry.sr_no }}_vendor_d" class="vendor-select" data-sr="{{ entry.sr_no }}"
+                        data-col="d" data-selected="{{ entry.vendor_d|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Vendor...</option>
+                      </select>
+                      <select name="item_{{ entry.sr_no }}_article_d" class="article-select" data-sr="{{ entry.sr_no }}"
+                        data-col="d" data-selected="{{ entry.article_d|default:'' }}"
+                        style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
+                        <option value="">Select Article...</option>
+                      </select>
+                      {% if entry.photo_data_d %}
+                      <a href="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" target="_blank"
+                        style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
+                        title="View Full Photo">
+                        <img src="{% url 'serve_accessories_cell_photo' entry.id 'd' %}"
+                          style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1.5px solid #fbbf24;">
                         <span>View</span>
                       </a>
-                    {% endif %}
-                    <label style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
-                      📷
-                      <input type="file" name="item_{{ entry.sr_no }}_photo_d" accept="image/*" style="display:none;" onchange="showFileName(this)">
-                      <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_d %}Replace{% else %}Upload{% endif %}</span>
-                    </label>
+                      {% endif %}
+                      <label
+                        style="font-size:0.7rem; color:#94a3b8; margin-top:1px; cursor:pointer; display:flex; align-items:center; gap:0.25rem;">
+                        📷
+                        <input type="file" name="item_{{ entry.sr_no }}_photo_d" accept="image/*" style="display:none;"
+                          onchange="showFileName(this)">
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_d
+                          %}Replace{% else %}Upload{% endif %}</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              <!-- Grand Total -->
-              <td style="padding:0.8rem 0.75rem;text-align:center;vertical-align:middle;">
-                <span class="row-total" id="row_total_{{ entry.sr_no }}"
-                  style="font-weight:700;font-size:1.05rem;color:#f1f5f9;background:rgba(255,255,255,0.05);padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;min-width:60px;">
-                  {% if entry.grand_total is not None %}{{ entry.grand_total }}{% else %}0{% endif %}
-                </span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Job Card Photos Section -->
-      <div class="form-section" style="margin-top: 2rem; border-top: 1px solid #374151; padding-top: 1.5rem;">
-        <h3 style="color:#f1f5f9; font-size:1.1rem; margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">📷 Job Card Photos</h3>
-        
-        <div class="form-group">
-          <label for="id_photos" class="form-label" style="display:block; margin-bottom:0.75rem; color:#9ca3af; font-size:0.85rem;">
-            Upload Photos <span class="file-count-badge" style="background:#1e293b; color:#94a3b8; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.75rem; margin-left:0.5rem;">Up to 5 files • Max 100 MB each</span>
-          </label>
-
-          {% if record.photos.all %}
-          <div class="existing-photos" style="margin-bottom: 1.5rem;">
-            <label class="form-label" style="font-weight:600; font-size: 0.9rem; margin-bottom: 0.75rem; display:block; color:#f1f5f9;">
-              Current Photos (Click red cross to delete):
-            </label>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-              {% for photo in record.photos.all %}
-              <div style="position: relative; width: 90px; height: 90px;">
-                <a href="{% url 'serve_db_image' 'accessories' photo.id %}" target="_blank">
-                  <img src="{% url 'serve_db_image' 'accessories' photo.id %}"
-                    style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #374151;" />
-                </a>
-                <a href="?delete_photo={{ photo.id }}"
-                  style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid #0f172a;"
-                  title="Delete Photo" onclick="return confirm('Are you sure you want to delete this photo?');">×</a>
-              </div>
+                <!-- Grand Total -->
+                <td style="padding:0.8rem 0.75rem;text-align:center;vertical-align:middle;">
+                  <span class="row-total" id="row_total_{{ entry.sr_no }}"
+                    style="font-weight:700;font-size:1.05rem;color:#f1f5f9;background:rgba(255,255,255,0.05);padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;min-width:60px;">
+                    {% if entry.grand_total is not None %}{{ entry.grand_total }}{% else %}0{% endif %}
+                  </span>
+                </td>
+              </tr>
               {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-
-          <div class="file-upload-zone" id="fileUploadZone">
-            <div class="file-upload-inner">
-              <div class="upload-icon">📸</div>
-              <p class="upload-text" style="margin: 0; color:#cbd5e1; font-weight:600;">Click to select photos or drag &amp; drop here</p>
-              <p class="upload-hint" style="margin: 4px 0 0 0; color:#64748b;">JPG, PNG, HEIC supported • Up to 5 photos</p>
-              <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
-            </div>
-          </div>
-
-          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
-          <div class="photo-count-display" id="photoCountDisplay" style="margin-top: 8px; color: #94a3b8; font-size: 0.85rem;"></div>
+            </tbody>
+          </table>
         </div>
-      </div>
 
-      <div style="margin-top:1.5rem;">
-        <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Notes (optional)</label>
-        <textarea name="notes" rows="2" placeholder="Any additional notes..."
-          style="width:100%;background:#0f172a;border:1px solid #374151;border-radius:8px;color:#f1f5f9;padding:0.6rem 0.75rem;font-size:0.9rem;resize:vertical;box-sizing:border-box;">{{ record.notes|default:"" }}</textarea>
-      </div>
+        <!-- Job Card Photos Section -->
+        <div class="form-section" style="margin-top: 2rem; border-top: 1px solid #374151; padding-top: 1.5rem;">
+          <h3 style="color:#f1f5f9; font-size:1.1rem; margin:0 0 1rem 0; display:flex; align-items:center; gap:0.5rem;">
+            📷 Job Card Photos</h3>
 
-      <div class="form-actions" style="margin-top:1.5rem;">
-        <a href="{% url 'accessories' %}" class="btn btn-secondary">← Back</a>
-        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
-      </div>
-    </form>
-  </div>
+          <div class="form-group">
+            <label for="id_photos" class="form-label"
+              style="display:block; margin-bottom:0.75rem; color:#9ca3af; font-size:0.85rem;">
+              Upload Photos <span class="file-count-badge"
+                style="background:#1e293b; color:#94a3b8; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.75rem; margin-left:0.5rem;">Up
+                to 5 files • Max 100 MB each</span>
+            </label>
 
-  <!-- Right: Custom Accessory Items panel -->
-  <div class="section-card acc-detail-side" style="margin: 0; width: 300px; flex-shrink: 0; position: sticky; top: 1.5rem; box-sizing: border-box;">
-    <h3 style="margin: 0 0 0.3rem 0; font-size: 1rem; color: #f1f5f9; font-weight: 700;">🧷 Custom Accessory Items</h3>
-    <p style="color:#9ca3af; margin: 0 0 1rem 0; font-size: 0.8rem;">Items added here will appear only on this Job Card.</p>
+            {% if record.photos.all %}
+            <div class="existing-photos" style="margin-bottom: 1.5rem;">
+              <label class="form-label"
+                style="font-weight:600; font-size: 0.9rem; margin-bottom: 0.75rem; display:block; color:#f1f5f9;">
+                Current Photos (Click red cross to delete):
+              </label>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                {% for photo in record.photos.all %}
+                <div style="position: relative; width: 90px; height: 90px;">
+                  <a href="{% url 'serve_db_image' 'accessories' photo.id %}" target="_blank">
+                    <img src="{% url 'serve_db_image' 'accessories' photo.id %}"
+                      style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #374151;" />
+                  </a>
+                  <a href="?delete_photo={{ photo.id }}"
+                    style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; text-decoration: none; font-weight: bold; border: 2px solid #0f172a;"
+                    title="Delete Photo" onclick="return confirm('Are you sure you want to delete this photo?');">×</a>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
 
-    <form method="POST" action="{% url 'accessories_detail' record.job_card_no %}" style="margin-bottom: 1.25rem;">
-      {% csrf_token %}
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <label style="color:#9ca3af; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Item Name</label>
-        <div style="display: flex; gap: 0.4rem;">
-          <input type="text" name="new_item_name" required placeholder="e.g. BUTTON" 
-            style="flex:1; padding:0.4rem 0.6rem; border:1px solid #374151; border-radius:6px; background:#0f172a; color:#f1f5f9; font-size:0.85rem; min-width:0;">
-          <button type="submit" name="add_accessory_item" 
-            style="padding:0.4rem 0.75rem; background:#10b981; border:none; border-radius:6px; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">+ Add</button>
+            <div class="file-upload-zone" id="fileUploadZone">
+              <div class="file-upload-inner">
+                <div class="upload-icon">📸</div>
+                <p class="upload-text" style="margin: 0; color:#cbd5e1; font-weight:600;">Click to select photos or drag
+                  &amp; drop here</p>
+                <p class="upload-hint" style="margin: 4px 0 0 0; color:#64748b;">JPG, PNG, HEIC supported • Up to 5
+                  photos</p>
+                <input type="file" name="photos" id="id_photos" multiple accept="image/*" class="file-input" />
+              </div>
+            </div>
+
+            <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+            <div class="photo-count-display" id="photoCountDisplay"
+              style="margin-top: 8px; color: #94a3b8; font-size: 0.85rem;"></div>
+          </div>
         </div>
-      </div>
-    </form>
 
-    <div style="border-top: 1px solid #1e293b; padding-top: 0.75rem;">
-      <p style="color:#64748b; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.5rem 0;">Active Custom Items</p>
-      {% if custom_names_obj %}
-        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.4rem; max-height:300px; overflow-y:auto;">
+        <div style="margin-top:1.5rem;">
+          <label style="color:#9ca3af;font-size:0.85rem;display:block;margin-bottom:0.4rem;">Notes (optional)</label>
+          <textarea name="notes" rows="2" placeholder="Any additional notes..."
+            style="width:100%;background:#0f172a;border:1px solid #374151;border-radius:8px;color:#f1f5f9;padding:0.6rem 0.75rem;font-size:0.9rem;resize:vertical;box-sizing:border-box;">{{ record.notes|default:"" }}</textarea>
+        </div>
+
+        <div class="form-actions" style="margin-top:1.5rem;">
+          <a href="{% url 'accessories' %}" class="btn btn-secondary">← Back</a>
+          <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right: Custom Accessory Items panel -->
+    <div class="section-card acc-detail-side"
+      style="margin: 0; width: 300px; flex-shrink: 0; position: sticky; top: 1.5rem; box-sizing: border-box;">
+      <h3 style="margin: 0 0 0.3rem 0; font-size: 1rem; color: #f1f5f9; font-weight: 700;">🧷 Custom Accessory Items
+      </h3>
+      <p style="color:#9ca3af; margin: 0 0 1rem 0; font-size: 0.8rem;">Items added here will appear only on this Job
+        Card.</p>
+
+      <form method="POST" action="{% url 'accessories_detail' record.job_card_no %}" style="margin-bottom: 1.25rem;">
+        {% csrf_token %}
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label
+            style="color:#9ca3af; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Item
+            Name</label>
+          <div style="display: flex; gap: 0.4rem;">
+            <input type="text" name="new_item_name" required placeholder="e.g. BUTTON"
+              style="flex:1; padding:0.4rem 0.6rem; border:1px solid #374151; border-radius:6px; background:#0f172a; color:#f1f5f9; font-size:0.85rem; min-width:0;">
+            <button type="submit" name="add_accessory_item"
+              style="padding:0.4rem 0.75rem; background:#10b981; border:none; border-radius:6px; color:#fff; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">+
+              Add</button>
+          </div>
+        </div>
+      </form>
+
+      <div style="border-top: 1px solid #1e293b; padding-top: 0.75rem;">
+        <p
+          style="color:#64748b; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin:0 0 0.5rem 0;">
+          Active Custom Items</p>
+        {% if custom_names_obj %}
+        <ul
+          style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.4rem; max-height:300px; overflow-y:auto;">
           {% for item in custom_names_obj %}
-          <li style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.6rem; background:rgba(255,255,255,0.025); border:1px solid #1e293b; border-radius:6px;">
+          <li
+            style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.6rem; background:rgba(255,255,255,0.025); border:1px solid #1e293b; border-radius:6px;">
             <span style="font-size:0.82rem; font-weight:600; color:#e2e8f0;">{{ item.item_name }}</span>
             <form method="POST" action="{% url 'accessories_detail' record.job_card_no %}" style="margin:0;"
               onsubmit="return confirm('Delete {{ item.item_name }} from this Job Card?');">
               {% csrf_token %}
               <input type="hidden" name="item_id" value="{{ item.id }}">
               <button type="submit" name="delete_accessory_item"
-                style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem; padding:0; line-height:1;" title="Delete">🗑️</button>
+                style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem; padding:0; line-height:1;"
+                title="Delete">🗑️</button>
             </form>
           </li>
           {% endfor %}
         </ul>
-      {% else %}
-        <p style="color:#475569; font-size:0.82rem; font-style:italic; text-align:center; margin:0.75rem 0;">No custom items added yet.</p>
-      {% endif %}
+        {% else %}
+        <p style="color:#475569; font-size:0.82rem; font-style:italic; text-align:center; margin:0.75rem 0;">No custom
+          items added yet.</p>
+        {% endif %}
+      </div>
     </div>
+
   </div>
+  {% endblock %}
 
-</div>
-{% endblock %}
+  {% block extra_scripts %}
+  <script>
+    (function () {
+      const totalPcs = {{ record.total_pcs }
+    };
 
-{% block extra_scripts %}
-<script>
-(function () {
-  const totalPcs = {{ record.total_pcs }};
+    // Setup detail dropdown filters (item name + status color)
+    const detailItemFilter = document.getElementById('detailItemFilter');
+    const detailStatusFilter = document.getElementById('detailStatusFilter');
 
-  // Setup detail dropdown filters (item name + status color)
-  const detailItemFilter = document.getElementById('detailItemFilter');
-  const detailStatusFilter = document.getElementById('detailStatusFilter');
+    function filterDetailTable() {
+      const selectedItem = detailItemFilter ? detailItemFilter.value.toLowerCase().trim() : '';
+      const selectedStatus = detailStatusFilter ? detailStatusFilter.value : '';
 
-  function filterDetailTable() {
-    const selectedItem = detailItemFilter ? detailItemFilter.value.toLowerCase().trim() : '';
-    const selectedStatus = detailStatusFilter ? detailStatusFilter.value : '';
+      const tableRows = document.querySelectorAll('#accTable tbody tr');
+      tableRows.forEach(row => {
+        const nameCell = row.cells[1];
+        if (!nameCell) return;
+        const itemName = nameCell.textContent.toLowerCase().trim();
 
-    const tableRows = document.querySelectorAll('#accTable tbody tr');
-    tableRows.forEach(row => {
-      const nameCell = row.cells[1];
-      if (!nameCell) return;
-      const itemName = nameCell.textContent.toLowerCase().trim();
+        const matchesItem = !selectedItem || itemName === selectedItem;
 
-      const matchesItem = !selectedItem || itemName === selectedItem;
+        let matchesStatus = true;
+        if (selectedStatus) {
+          // Check if any of columns A,B,C,D has the selected status
+          const statusSelects = row.querySelectorAll('.status-select');
+          matchesStatus = Array.from(statusSelects).some(sel => sel.value === selectedStatus);
+        }
 
-      let matchesStatus = true;
-      if (selectedStatus) {
-        // Check if any of columns A,B,C,D has the selected status
-        const statusSelects = row.querySelectorAll('.status-select');
-        matchesStatus = Array.from(statusSelects).some(sel => sel.value === selectedStatus);
-      }
-
-      row.style.display = (matchesItem && matchesStatus) ? '' : 'none';
-    });
-  }
-
-  if (detailItemFilter) detailItemFilter.addEventListener('change', filterDetailTable);
-  if (detailStatusFilter) {
-    detailStatusFilter.addEventListener('change', function() {
-      // Color the dropdown text to match selection
-      const colors = { 'yellow': '#fbbf24', 'red': '#ef4444', 'green': '#22c55e', '': '#f1f5f9' };
-      this.style.color = colors[this.value] || '#f1f5f9';
-      filterDetailTable();
-    });
-  }
-
-  function updateRowTotal(sr) {
-    let sum = 0;
-    ['a', 'b', 'c', 'd'].forEach(col => {
-      const calcBox = document.getElementById('calc_' + sr + '_' + col);
-      if (calcBox) {
-        sum += parseInt(calcBox.textContent) || 0;
-      }
-    });
-    const totalEl = document.getElementById('row_total_' + sr);
-    if (totalEl) {
-      totalEl.textContent = sum;
+        row.style.display = (matchesItem && matchesStatus) ? '' : 'none';
+      });
     }
-  }
 
-  function applyStatusColor(sel) {
-    const sr = sel.dataset.sr;
-    const col = sel.dataset.col;
-    const calcBox = document.getElementById('calc_' + sr + '_' + col);
-    const yellowDiv = document.getElementById('yellow_details_' + sr + '_' + col);
-    const input = document.querySelector(`input[name="item_${sr}_${col}"]`);
-    const qty = input ? parseFloat(input.value) : 0;
-    
-    if (sel.value === 'green') {
-      sel.style.color = '#22c55e';
-      if (calcBox) {
-        calcBox.style.background = '#15803d';
-        calcBox.style.color = '#f0fdf4';
+    if (detailItemFilter) detailItemFilter.addEventListener('change', filterDetailTable);
+    if (detailStatusFilter) {
+      detailStatusFilter.addEventListener('change', function () {
+        // Color the dropdown text to match selection
+        const colors = { 'yellow': '#fbbf24', 'red': '#ef4444', 'green': '#22c55e', '': '#f1f5f9' };
+        this.style.color = colors[this.value] || '#f1f5f9';
+        filterDetailTable();
+      });
+    }
+
+    function updateRowTotal(sr) {
+      let sum = 0;
+      ['a', 'b', 'c', 'd'].forEach(col => {
+        const calcBox = document.getElementById('calc_' + sr + '_' + col);
+        if (calcBox) {
+          sum += parseInt(calcBox.textContent) || 0;
+        }
+      });
+      const totalEl = document.getElementById('row_total_' + sr);
+      if (totalEl) {
+        totalEl.textContent = sum;
       }
-      if (yellowDiv) yellowDiv.style.display = 'none';
-    } else if (sel.value === 'red') {
-      sel.style.color = '#ef4444';
-      if (calcBox) {
-        calcBox.style.background = '#b91c1c';
-        calcBox.style.color = '#fef2f2';
-      }
-      if (yellowDiv) yellowDiv.style.display = 'none';
-    } else if (sel.value === 'yellow') {
-      sel.style.color = '#fbbf24';
-      if (calcBox) {
-        calcBox.style.background = '#d97706';
-        calcBox.style.color = '#fef3c7';
-      }
-      if (yellowDiv) yellowDiv.style.display = 'flex';
-    } else {
-      sel.style.color = '#9ca3af';
-      if (calcBox) {
-        if (!isNaN(qty) && qty > 0) {
+    }
+
+    function applyStatusColor(sel) {
+      const sr = sel.dataset.sr;
+      const col = sel.dataset.col;
+      const calcBox = document.getElementById('calc_' + sr + '_' + col);
+      const yellowDiv = document.getElementById('yellow_details_' + sr + '_' + col);
+      const input = document.querySelector(`input[name="item_${sr}_${col}"]`);
+      const qty = input ? parseFloat(input.value) : 0;
+
+      if (sel.value === 'green') {
+        sel.style.color = '#22c55e';
+        if (calcBox) {
+          calcBox.style.background = '#15803d';
+          calcBox.style.color = '#f0fdf4';
+        }
+        if (yellowDiv) yellowDiv.style.display = 'none';
+      } else if (sel.value === 'red') {
+        sel.style.color = '#ef4444';
+        if (calcBox) {
           calcBox.style.background = '#b91c1c';
           calcBox.style.color = '#fef2f2';
-        } else {
-          calcBox.style.background = 'rgba(255,255,255,0.05)';
-          calcBox.style.color = '#475569';
         }
-      }
-      if (yellowDiv) yellowDiv.style.display = 'none';
-    }
-  }
-
-  document.querySelectorAll('.status-select').forEach(sel => {
-    sel.addEventListener('change', function () { applyStatusColor(sel); });
-  });
-
-  document.querySelectorAll('.qty-input').forEach(input => {
-    function recalc() {
-      const sr  = input.dataset.sr;
-      const col = input.dataset.col;
-      const qty = parseFloat(input.value);
-      const el  = document.getElementById('calc_' + sr + '_' + col);
-      if (el) {
-        if (!isNaN(qty) && qty > 0 && totalPcs > 0) {
-          el.textContent = Math.round(totalPcs * qty);
-          const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
-          if (sel && sel.value === 'green') {
-            el.style.background = '#15803d';
-            el.style.color = '#f0fdf4';
-          } else if (sel && sel.value === 'red') {
-            el.style.background = '#b91c1c';
-            el.style.color = '#fef2f2';
-          } else if (sel && sel.value === 'yellow') {
-            el.style.background = '#d97706';
-            el.style.color = '#fef3c7';
+        if (yellowDiv) yellowDiv.style.display = 'none';
+      } else if (sel.value === 'yellow') {
+        sel.style.color = '#fbbf24';
+        if (calcBox) {
+          calcBox.style.background = '#d97706';
+          calcBox.style.color = '#fef3c7';
+        }
+        if (yellowDiv) yellowDiv.style.display = 'flex';
+      } else {
+        sel.style.color = '#9ca3af';
+        if (calcBox) {
+          if (!isNaN(qty) && qty > 0) {
+            calcBox.style.background = '#b91c1c';
+            calcBox.style.color = '#fef2f2';
           } else {
-            el.style.background = '#b91c1c';
-            el.style.color = '#fef2f2';
-          }
-        } else {
-          el.textContent = '0';
-          const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
-          if (sel && sel.value === 'green') {
-            el.style.background = '#15803d';
-            el.style.color = '#f0fdf4';
-          } else if (sel && sel.value === 'red') {
-            el.style.background = '#b91c1c';
-            el.style.color = '#fef2f2';
-          } else if (sel && sel.value === 'yellow') {
-            el.style.background = '#d97706';
-            el.style.color = '#fef3c7';
-          } else {
-            el.style.background = 'rgba(255,255,255,0.05)';
-            el.style.color = '#475569';
+            calcBox.style.background = 'rgba(255,255,255,0.05)';
+            calcBox.style.color = '#475569';
           }
         }
+        if (yellowDiv) yellowDiv.style.display = 'none';
       }
-      updateRowTotal(sr);
     }
-    input.addEventListener('input', recalc);
-  });
 
-  // Dependent dropdowns for Vendor and Article
-  const vendorGroups = JSON.parse('{{ vendor_groups_json|escapejs }}');
-  const vendorPhotoMap = JSON.parse('{{ vendor_photo_map_json|escapejs }}');
-  
-  function updateVendorPhoto(sr, col, vendor, article) {
-    const yellowDiv = document.getElementById('yellow_details_' + sr + '_' + col);
-    if (!yellowDiv) return;
-    // Remove existing auto-photo if any
-    const existing = yellowDiv.querySelector('.vendor-auto-photo');
-    if (existing) existing.remove();
-    
-    if (vendor && article && vendorPhotoMap[vendor] && vendorPhotoMap[vendor][article]) {
-      const photoUrl = vendorPhotoMap[vendor][article];
-      const photoWrap = document.createElement('div');
-      photoWrap.className = 'vendor-auto-photo';
-      photoWrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:2px;';
-      photoWrap.innerHTML = `<a href="${photoUrl}" target="_blank" title="View Vendor Photo"
+    document.querySelectorAll('.status-select').forEach(sel => {
+      sel.addEventListener('change', function () { applyStatusColor(sel); });
+    });
+
+    document.querySelectorAll('.qty-input').forEach(input => {
+      function recalc() {
+        const sr = input.dataset.sr;
+        const col = input.dataset.col;
+        const qty = parseFloat(input.value);
+        const el = document.getElementById('calc_' + sr + '_' + col);
+        if (el) {
+          if (!isNaN(qty) && qty > 0 && totalPcs > 0) {
+            el.textContent = Math.round(totalPcs * qty);
+            const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
+            if (sel && sel.value === 'green') {
+              el.style.background = '#15803d';
+              el.style.color = '#f0fdf4';
+            } else if (sel && sel.value === 'red') {
+              el.style.background = '#b91c1c';
+              el.style.color = '#fef2f2';
+            } else if (sel && sel.value === 'yellow') {
+              el.style.background = '#d97706';
+              el.style.color = '#fef3c7';
+            } else {
+              el.style.background = '#b91c1c';
+              el.style.color = '#fef2f2';
+            }
+          } else {
+            el.textContent = '0';
+            const sel = document.querySelector(`select[name="item_${sr}_status_${col}"]`);
+            if (sel && sel.value === 'green') {
+              el.style.background = '#15803d';
+              el.style.color = '#f0fdf4';
+            } else if (sel && sel.value === 'red') {
+              el.style.background = '#b91c1c';
+              el.style.color = '#fef2f2';
+            } else if (sel && sel.value === 'yellow') {
+              el.style.background = '#d97706';
+              el.style.color = '#fef3c7';
+            } else {
+              el.style.background = 'rgba(255,255,255,0.05)';
+              el.style.color = '#475569';
+            }
+          }
+        }
+        updateRowTotal(sr);
+      }
+      input.addEventListener('input', recalc);
+    });
+
+    // Dependent dropdowns for Vendor and Article
+    const vendorGroups = JSON.parse('{{ vendor_groups_json|escapejs }}');
+    const vendorPhotoMap = JSON.parse('{{ vendor_photo_map_json|escapejs }}');
+
+    function updateVendorPhoto(sr, col, vendor, article) {
+      const yellowDiv = document.getElementById('yellow_details_' + sr + '_' + col);
+      if (!yellowDiv) return;
+      // Remove existing auto-photo if any
+      const existing = yellowDiv.querySelector('.vendor-auto-photo');
+      if (existing) existing.remove();
+
+      if (vendor && article && vendorPhotoMap[vendor] && vendorPhotoMap[vendor][article]) {
+        const photoUrl = vendorPhotoMap[vendor][article];
+        const photoWrap = document.createElement('div');
+        photoWrap.className = 'vendor-auto-photo';
+        photoWrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:2px;';
+        photoWrap.innerHTML = `<a href="${photoUrl}" target="_blank" title="View Vendor Photo"
         style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;color:#22c55e;text-decoration:none;">
         <img src="${photoUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid #fbbf24;">
         <span>Photo</span></a>`;
-      // Insert before the file upload label (last child)
-      const uploadLabel = yellowDiv.querySelector('label');
-      if (uploadLabel) {
-        yellowDiv.insertBefore(photoWrap, uploadLabel);
-      } else {
-        yellowDiv.appendChild(photoWrap);
+        // Insert before the file upload label (last child)
+        const uploadLabel = yellowDiv.querySelector('label');
+        if (uploadLabel) {
+          yellowDiv.insertBefore(photoWrap, uploadLabel);
+        } else {
+          yellowDiv.appendChild(photoWrap);
+        }
       }
     }
-  }
-  
-  function populateArticles(vendorSelect) {
-    const sr = vendorSelect.dataset.sr;
-    const col = vendorSelect.dataset.col;
-    const articleSelect = document.querySelector(`.article-select[data-sr="${sr}"][data-col="${col}"]`);
-    if (!articleSelect) return;
-    
-    const selectedVendor = vendorSelect.value;
-    articleSelect.innerHTML = '<option value="">Select Article...</option>';
-    
-    if (selectedVendor && vendorGroups[selectedVendor]) {
-      vendorGroups[selectedVendor].forEach(article => {
+
+    function populateArticles(vendorSelect) {
+      const sr = vendorSelect.dataset.sr;
+      const col = vendorSelect.dataset.col;
+      const articleSelect = document.querySelector(`.article-select[data-sr="${sr}"][data-col="${col}"]`);
+      if (!articleSelect) return;
+
+      const selectedVendor = vendorSelect.value;
+      articleSelect.innerHTML = '<option value="">Select Article...</option>';
+
+      if (selectedVendor && vendorGroups[selectedVendor]) {
+        vendorGroups[selectedVendor].forEach(article => {
+          const opt = document.createElement('option');
+          opt.value = article;
+          opt.textContent = article;
+          articleSelect.appendChild(opt);
+        });
+      }
+
+      const selectedArticle = articleSelect.dataset.selected;
+      if (selectedArticle) {
+        articleSelect.value = selectedArticle;
+        // Clear standard selected attribute after restoring
+        articleSelect.removeAttribute('data-selected');
+      }
+
+      // Update vendor photo
+      updateVendorPhoto(sr, col, selectedVendor, articleSelect.value);
+    }
+
+    // Populate all vendor selects on page load
+    document.querySelectorAll('.vendor-select').forEach(select => {
+      select.innerHTML = '<option value="">Select Vendor...</option>';
+      Object.keys(vendorGroups).sort().forEach(vendor => {
         const opt = document.createElement('option');
-        opt.value = article;
-        opt.textContent = article;
-        articleSelect.appendChild(opt);
+        opt.value = vendor;
+        opt.textContent = vendor;
+        select.appendChild(opt);
       });
-    }
-    
-    const selectedArticle = articleSelect.dataset.selected;
-    if (selectedArticle) {
-      articleSelect.value = selectedArticle;
-      // Clear standard selected attribute after restoring
-      articleSelect.removeAttribute('data-selected');
-    }
-    
-    // Update vendor photo
-    updateVendorPhoto(sr, col, selectedVendor, articleSelect.value);
-  }
 
-  // Populate all vendor selects on page load
-  document.querySelectorAll('.vendor-select').forEach(select => {
-    select.innerHTML = '<option value="">Select Vendor...</option>';
-    Object.keys(vendorGroups).sort().forEach(vendor => {
-      const opt = document.createElement('option');
-      opt.value = vendor;
-      opt.textContent = vendor;
-      select.appendChild(opt);
+      const selectedVendor = select.dataset.selected;
+      if (selectedVendor) {
+        select.value = selectedVendor;
+        select.removeAttribute('data-selected');
+      }
+
+      populateArticles(select);
     });
-    
-    const selectedVendor = select.dataset.selected;
-    if (selectedVendor) {
-      select.value = selectedVendor;
-      select.removeAttribute('data-selected');
-    }
-    
-    populateArticles(select);
-  });
 
-  // Listen to vendor selection changes
-  document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('vendor-select')) {
-      populateArticles(e.target);
-    }
-    // Also update photo on article change
-    if (e.target.classList.contains('article-select')) {
-      const sr = e.target.dataset.sr;
-      const col = e.target.dataset.col;
-      const vendorSelect = document.querySelector(`.vendor-select[data-sr="${sr}"][data-col="${col}"]`);
-      if (vendorSelect) {
-        updateVendorPhoto(sr, col, vendorSelect.value, e.target.value);
+    // Listen to vendor selection changes
+    document.addEventListener('change', function (e) {
+      if (e.target.classList.contains('vendor-select')) {
+        populateArticles(e.target);
+      }
+      // Also update photo on article change
+      if (e.target.classList.contains('article-select')) {
+        const sr = e.target.dataset.sr;
+        const col = e.target.dataset.col;
+        const vendorSelect = document.querySelector(`.vendor-select[data-sr="${sr}"][data-col="${col}"]`);
+        if (vendorSelect) {
+          updateVendorPhoto(sr, col, vendorSelect.value, e.target.value);
+        }
+      }
+    });
+}) ();
+
+    function showFileName(input) {
+      if (input.files && input.files[0]) {
+        const labelSpan = input.parentElement.querySelector('.file-label-text');
+        if (labelSpan) {
+          const name = input.files[0].name;
+          labelSpan.textContent = name.length > 10 ? name.substring(0, 8) + '...' : name;
+          labelSpan.style.color = '#34d399';
+        }
       }
     }
-  });
-})();
-
-function showFileName(input) {
-  if (input.files && input.files[0]) {
-    const labelSpan = input.parentElement.querySelector('.file-label-text');
-    if (labelSpan) {
-      const name = input.files[0].name;
-      labelSpan.textContent = name.length > 10 ? name.substring(0, 8) + '...' : name;
-      labelSpan.style.color = '#34d399';
-    }
-  }
-}
-</script>
-{% endblock %}
+  </script>
+  {% endblock %}
