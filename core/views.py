@@ -4753,16 +4753,16 @@ def accessories_detail_view(request, job_card_no):
     # Pre-compute totals per entry in Python — avoids N×4 extra DB queries from model properties
     tp = int(record.total_pcs or 0)
     for e in entries:
-        e._total_a = int(tp * e.qty_a) if e.qty_a is not None and tp else None
-        e._total_b = int(tp * e.qty_b) if e.qty_b is not None and tp else None
-        e._total_c = int(tp * e.qty_c) if e.qty_c is not None and tp else None
-        e._total_d = int(tp * e.qty_d) if e.qty_d is not None and tp else None
-        e._grand_total = ((e._total_a or 0) + (e._total_b or 0) + (e._total_c or 0) + (e._total_d or 0)) or None
+        e.total_a_calc = int(tp * e.qty_a) if e.qty_a is not None and tp else None
+        e.total_b_calc = int(tp * e.qty_b) if e.qty_b is not None and tp else None
+        e.total_c_calc = int(tp * e.qty_c) if e.qty_c is not None and tp else None
+        e.total_d_calc = int(tp * e.qty_d) if e.qty_d is not None and tp else None
+        e.grand_total_calc = ((e.total_a_calc or 0) + (e.total_b_calc or 0) + (e.total_c_calc or 0) + (e.total_d_calc or 0)) or None
         # Check cell photo existence without loading binary blob
-        e._has_photo_a = bool(e.photo_name_a)
-        e._has_photo_b = bool(e.photo_name_b)
-        e._has_photo_c = bool(e.photo_name_c)
-        e._has_photo_d = bool(e.photo_name_d)
+        e.has_photo_a = bool(e.photo_name_a)
+        e.has_photo_b = bool(e.photo_name_b)
+        e.has_photo_c = bool(e.photo_name_c)
+        e.has_photo_d = bool(e.photo_name_d)
 
     return render(request, 'accessories_detail.html', {
         'record': record, 'entries': entries, 'is_admin': is_admin,

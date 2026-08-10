@@ -113,18 +113,18 @@
                     {% elif entry.status_a == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_a and entry.qty_a > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                      {% if entry._total_a is not None %}{{ entry._total_a }}{% else %}0{% endif %}
+                      {% if entry.total_a_calc is not None %}{{ entry.total_a_calc }}{% else %}0{% endif %}
                     </span>
                     <select name="item_{{ entry.sr_no }}_status_a" class="status-select" data-sr="{{ entry.sr_no }}"
                       data-col="a"
                       style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_a == 'green' %}color:#22c55e;{% elif entry.status_a == 'red' %}color:#ef4444;{% elif entry.status_a == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
                       <option value="" {% if not entry.status_a %}selected{% endif %} style="color:#9ca3af;">—</option>
-                      <option value="yellow" {% if entry.status_a=='yellow' %}selected{% endif %}
+                      <option value="yellow" {% if entry.status_a == 'yellow' %}selected{% endif %}
                         style="color:#fbbf24;">🟡 Y</option>
-                      <option value="red" {% if entry.status_a=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      <option value="red" {% if entry.status_a == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R
                       </option>
-                      <option value="green" {% if entry.status_a=='green' %}selected{% endif %} style="color:#22c55e;">
+                      <option value="green" {% if entry.status_a == 'green' %}selected{% endif %} style="color:#22c55e;">
                         🟢 G</option>
                     </select>
                     <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_a"
@@ -139,7 +139,7 @@
                         style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                         <option value="">Select Article...</option>
                       </select>
-                      {% if entry._has_photo_a %}
+                      {% if entry.has_photo_a %}
                       <a href="{% url 'serve_accessories_cell_photo' entry.id 'a' %}" target="_blank"
                         style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
                         title="View Full Photo">
@@ -153,8 +153,7 @@
                         📷
                         <input type="file" name="item_{{ entry.sr_no }}_photo_a" accept="image/*" style="display:none;"
                           onchange="showFileName(this)">
-                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_a
-                          %}Replace{% else %}Upload{% endif %}</span>
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.has_photo_a %}Replace{% else %}Upload{% endif %}</span>
                       </label>
                     </div>
                   </div>
@@ -173,18 +172,18 @@
                     {% elif entry.status_b == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_b and entry.qty_b > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                      {% if entry._total_b is not None %}{{ entry._total_b }}{% else %}0{% endif %}
+                      {% if entry.total_b_calc is not None %}{{ entry.total_b_calc }}{% else %}0{% endif %}
                     </span>
                     <select name="item_{{ entry.sr_no }}_status_b" class="status-select" data-sr="{{ entry.sr_no }}"
                       data-col="b"
                       style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_b == 'green' %}color:#22c55e;{% elif entry.status_b == 'red' %}color:#ef4444;{% elif entry.status_b == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
                       <option value="" {% if not entry.status_b %}selected{% endif %} style="color:#9ca3af;">—</option>
-                      <option value="yellow" {% if entry.status_b=='yellow' %}selected{% endif %}
+                      <option value="yellow" {% if entry.status_b == 'yellow' %}selected{% endif %}
                         style="color:#fbbf24;">🟡 Y</option>
-                      <option value="red" {% if entry.status_b=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      <option value="red" {% if entry.status_b == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R
                       </option>
-                      <option value="green" {% if entry.status_b=='green' %}selected{% endif %} style="color:#22c55e;">
+                      <option value="green" {% if entry.status_b == 'green' %}selected{% endif %} style="color:#22c55e;">
                         🟢 G</option>
                     </select>
                     <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_b"
@@ -199,7 +198,7 @@
                         style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                         <option value="">Select Article...</option>
                       </select>
-                      {% if entry._has_photo_b %}
+                      {% if entry.has_photo_b %}
                       <a href="{% url 'serve_accessories_cell_photo' entry.id 'b' %}" target="_blank"
                         style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
                         title="View Full Photo">
@@ -213,8 +212,7 @@
                         📷
                         <input type="file" name="item_{{ entry.sr_no }}_photo_b" accept="image/*" style="display:none;"
                           onchange="showFileName(this)">
-                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_b
-                          %}Replace{% else %}Upload{% endif %}</span>
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.has_photo_b %}Replace{% else %}Upload{% endif %}</span>
                       </label>
                     </div>
                   </div>
@@ -233,18 +231,18 @@
                     {% elif entry.status_c == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_c and entry.qty_c > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                      {% if entry._total_c is not None %}{{ entry._total_c }}{% else %}0{% endif %}
+                      {% if entry.total_c_calc is not None %}{{ entry.total_c_calc }}{% else %}0{% endif %}
                     </span>
                     <select name="item_{{ entry.sr_no }}_status_c" class="status-select" data-sr="{{ entry.sr_no }}"
                       data-col="c"
                       style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_c == 'green' %}color:#22c55e;{% elif entry.status_c == 'red' %}color:#ef4444;{% elif entry.status_c == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
                       <option value="" {% if not entry.status_c %}selected{% endif %} style="color:#9ca3af;">—</option>
-                      <option value="yellow" {% if entry.status_c=='yellow' %}selected{% endif %}
+                      <option value="yellow" {% if entry.status_c == 'yellow' %}selected{% endif %}
                         style="color:#fbbf24;">🟡 Y</option>
-                      <option value="red" {% if entry.status_c=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      <option value="red" {% if entry.status_c == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R
                       </option>
-                      <option value="green" {% if entry.status_c=='green' %}selected{% endif %} style="color:#22c55e;">
+                      <option value="green" {% if entry.status_c == 'green' %}selected{% endif %} style="color:#22c55e;">
                         🟢 G</option>
                     </select>
                     <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_c"
@@ -259,7 +257,7 @@
                         style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                         <option value="">Select Article...</option>
                       </select>
-                      {% if entry._has_photo_c %}
+                      {% if entry.has_photo_c %}
                       <a href="{% url 'serve_accessories_cell_photo' entry.id 'c' %}" target="_blank"
                         style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
                         title="View Full Photo">
@@ -273,8 +271,7 @@
                         📷
                         <input type="file" name="item_{{ entry.sr_no }}_photo_c" accept="image/*" style="display:none;"
                           onchange="showFileName(this)">
-                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_c
-                          %}Replace{% else %}Upload{% endif %}</span>
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.has_photo_c %}Replace{% else %}Upload{% endif %}</span>
                       </label>
                     </div>
                   </div>
@@ -293,18 +290,18 @@
                     {% elif entry.status_d == 'yellow' %}background:#d97706;color:#fef3c7;
                     {% elif entry.qty_d and entry.qty_d > 0 %}background:#b91c1c;color:#fef2f2;
                     {% else %}background:rgba(255,255,255,0.05);color:#475569;{% endif %}">
-                      {% if entry._total_d is not None %}{{ entry._total_d }}{% else %}0{% endif %}
+                      {% if entry.total_d_calc is not None %}{{ entry.total_d_calc }}{% else %}0{% endif %}
                     </span>
                     <select name="item_{{ entry.sr_no }}_status_d" class="status-select" data-sr="{{ entry.sr_no }}"
                       data-col="d"
                       style="padding:0.2rem 0.3rem;border:1px solid #374151;border-radius:6px;background:#0f172a;font-size:0.75rem;cursor:pointer;width:90px;
                     {% if entry.status_d == 'green' %}color:#22c55e;{% elif entry.status_d == 'red' %}color:#ef4444;{% elif entry.status_d == 'yellow' %}color:#fbbf24;{% else %}color:#9ca3af;{% endif %}">
                       <option value="" {% if not entry.status_d %}selected{% endif %} style="color:#9ca3af;">—</option>
-                      <option value="yellow" {% if entry.status_d=='yellow' %}selected{% endif %}
+                      <option value="yellow" {% if entry.status_d == 'yellow' %}selected{% endif %}
                         style="color:#fbbf24;">🟡 Y</option>
-                      <option value="red" {% if entry.status_d=='red' %}selected{% endif %} style="color:#ef4444;">🔴 R
+                      <option value="red" {% if entry.status_d == 'red' %}selected{% endif %} style="color:#ef4444;">🔴 R
                       </option>
-                      <option value="green" {% if entry.status_d=='green' %}selected{% endif %} style="color:#22c55e;">
+                      <option value="green" {% if entry.status_d == 'green' %}selected{% endif %} style="color:#22c55e;">
                         🟢 G</option>
                     </select>
                     <div class="yellow-details" id="yellow_details_{{ entry.sr_no }}_d"
@@ -319,7 +316,7 @@
                         style="padding:0.2rem; border:1px solid #374151; border-radius:4px; background:#0f172a; color:#f1f5f9; font-size:0.75rem; width:100%; box-sizing:border-box;">
                         <option value="">Select Article...</option>
                       </select>
-                      {% if entry._has_photo_d %}
+                      {% if entry.has_photo_d %}
                       <a href="{% url 'serve_accessories_cell_photo' entry.id 'd' %}" target="_blank"
                         style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22c55e; text-decoration:none; margin-top:2px;"
                         title="View Full Photo">
@@ -333,8 +330,7 @@
                         📷
                         <input type="file" name="item_{{ entry.sr_no }}_photo_d" accept="image/*" style="display:none;"
                           onchange="showFileName(this)">
-                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.photo_data_d
-                          %}Replace{% else %}Upload{% endif %}</span>
+                        <span class="file-label-text" style="font-size:0.7rem; color:#60a5fa;">{% if entry.has_photo_d %}Replace{% else %}Upload{% endif %}</span>
                       </label>
                     </div>
                   </div>
@@ -344,7 +340,7 @@
                 <td style="padding:0.8rem 0.75rem;text-align:center;vertical-align:middle;">
                   <span class="row-total" id="row_total_{{ entry.sr_no }}"
                     style="font-weight:700;font-size:1.05rem;color:#f1f5f9;background:rgba(255,255,255,0.05);padding:0.3rem 0.75rem;border-radius:6px;display:inline-block;min-width:60px;">
-                    {% if entry._grand_total is not None %}{{ entry._grand_total }}{% else %}0{% endif %}
+                    {% if entry.grand_total_calc is not None %}{{ entry.grand_total_calc }}{% else %}0{% endif %}
                   </span>
                 </td>
               </tr>
