@@ -196,6 +196,43 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination -->
+    {% if paginator.num_pages > 1 %}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+      <div style="color:#64748b;font-size:0.85rem;">
+        Showing <strong style="color:#f1f5f9;">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
+        of <strong style="color:#f1f5f9;">{{ paginator.count }}</strong> job cards
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}"
+           style="padding:0.35rem 0.85rem;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:0.85rem;text-decoration:none;transition:all 0.15s;"
+           onmouseover="this.style.background='#334155';this.style.color='#f1f5f9';"
+           onmouseout="this.style.background='#1e293b';this.style.color='#94a3b8';">← Prev</a>
+        {% endif %}
+
+        {% for num in paginator.page_range %}
+          {% if num == page_obj.number %}
+          <span style="padding:0.35rem 0.75rem;background:#3b82f6;border:1px solid #3b82f6;border-radius:8px;color:#fff;font-size:0.85rem;font-weight:700;min-width:36px;text-align:center;">{{ num }}</span>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <a href="?page={{ num }}"
+             style="padding:0.35rem 0.75rem;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:0.85rem;text-decoration:none;min-width:36px;text-align:center;transition:all 0.15s;"
+             onmouseover="this.style.background='#334155';this.style.color='#f1f5f9';"
+             onmouseout="this.style.background='#1e293b';this.style.color='#94a3b8';">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}"
+           style="padding:0.35rem 0.85rem;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:0.85rem;text-decoration:none;transition:all 0.15s;"
+           onmouseover="this.style.background='#334155';this.style.color='#f1f5f9';"
+           onmouseout="this.style.background='#1e293b';this.style.color='#94a3b8';">Next →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {% else %}
     <div style="text-align:center;padding:3rem;color:#9ca3af;">
       <div style="font-size:3rem;">Accessories</div>

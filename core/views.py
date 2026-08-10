@@ -4557,8 +4557,16 @@ def accessories_view(request):
         'total_cells': total_cells_count,
     }
 
+    # Paginate job_cards — 15 per page
+    from django.core.paginator import Paginator
+    paginator = Paginator(job_cards, 15)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'accessories.html', {
-        'job_cards': job_cards,
+        'job_cards': page_obj,          # now a Page object (iterable like a list)
+        'page_obj': page_obj,
+        'paginator': paginator,
         'all_accessories_list': all_accessories_list,
         'kpi_summary': kpi_summary,
         'is_admin': is_admin
