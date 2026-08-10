@@ -4470,15 +4470,39 @@ def accessories_view(request):
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied
 
-    from django.db.models import Sum, Max
+    from django.db.models import Sum, Max, Count, Q
+
     jc_data = (
         CuttingReport.objects
         .values('job_card_no')
         .annotate(total=Sum('total_pcs'), item_name=Max('item_name'))
         .order_by('job_card_no')
     )
-    existing = {r.job_card_no: r for r in AccessoriesRecord.objects.prefetch_related('entries', 'photos').all()}
-    cutting_reports = {cr.job_card_no: cr for cr in CuttingReport.objects.prefetch_related('photos').all()}
+
+    # Defer photo binary blobs — they can be MBs each and are NOT needed on list page
+    existing = {
+        r.job_card_no: r
+        for r in AccessoriesRecord.objects
+        .prefetch_related(
+            models.Prefetch(
+                'entries',
+                queryset=AccessoriesItemEntry.objects.defer(
+                    'photo_data_a', 'photo_data_b', 'photo_data_c', 'photo_data_d'
+                )
+            ),
+            models.Prefetch(
+                'photos',
+                queryset=AccessoriesPhoto.objects.only('id')
+            )
+        )
+        .all()
+    }
+
+    # For cutting report photos, only fetch IDs — no binary data
+    cutting_photo_map = {}
+    for cp in CuttingReportPhoto.objects.only('id', 'cutting_report__job_card_no').select_related('cutting_report'):
+        jcn = cp.cutting_report.job_card_no
+        cutting_photo_map.setdefault(jcn, []).append(cp.id)
 
     job_cards = []
     yellow_jc_count = 0
@@ -4487,9 +4511,29 @@ def accessories_view(request):
 
     for jc in jc_data:
         rec = existing.get(jc['job_card_no'])
-        cr = cutting_reports.get(jc['job_card_no'])
-        if rec and rec.is_started:
-            status = 'complete' if rec.is_complete else 'pending'
+
+        if rec:
+            entries = rec.entries.all()  # uses prefetch cache — no extra query
+            started = any(
+                (e.qty_a and e.qty_a > 0) or (e.qty_b and e.qty_b > 0) or
+                (e.qty_c and e.qty_c > 0) or (e.qty_d and e.qty_d > 0) or
+                e.status_a in ('green', 'red', 'yellow') or
+                e.status_b in ('green', 'red', 'yellow') or
+                e.status_c in ('green', 'red', 'yellow') or
+                e.status_d in ('green', 'red', 'yellow')
+                for e in entries
+            )
+            if started:
+                complete = all(
+                    (e.status_a == 'green' if (e.qty_a and e.qty_a > 0) else e.status_a not in ('red', 'yellow')) and
+                    (e.status_b == 'green' if (e.qty_b and e.qty_b > 0) else e.status_b not in ('red', 'yellow')) and
+                    (e.status_c == 'green' if (e.qty_c and e.qty_c > 0) else e.status_c not in ('red', 'yellow')) and
+                    (e.status_d == 'green' if (e.qty_d and e.qty_d > 0) else e.status_d not in ('red', 'yellow'))
+                    for e in entries
+                )
+                status = 'complete' if complete else 'pending'
+            else:
+                status = 'new'
         else:
             status = 'new'
 
@@ -4499,14 +4543,13 @@ def accessories_view(request):
             yellow_jc_count += 1
         else:
             red_jc_count += 1
-            
-        # Collect photos from both cutting report and accessories record
+
+        # Collect photo IDs (no binary data)
         job_card_photos = []
-        if cr:
-            for p in cr.photos.all():
-                job_card_photos.append({'id': p.id, 'type': 'cutting'})
+        for pid in cutting_photo_map.get(jc['job_card_no'], []):
+            job_card_photos.append({'id': pid, 'type': 'cutting'})
         if rec:
-            for p in rec.photos.all():
+            for p in rec.photos.all():  # uses prefetch cache
                 job_card_photos.append({'id': p.id, 'type': 'accessories'})
 
         job_cards.append({
@@ -4518,33 +4561,31 @@ def accessories_view(request):
             'photos':      job_card_photos,
         })
 
-    # Find all unique item names in database entries, subtract standard ones, and sort the rest
+    # Unique item names — only name field needed
     db_item_names = set(AccessoriesItemEntry.objects.values_list('item_name', flat=True))
     custom_names = sorted(list(db_item_names - set(ACCESSORIES_ITEMS)))
     all_accessories_list = list(ACCESSORIES_ITEMS) + custom_names
 
-    # Count cell-level statuses across all A, B, C, D columns of all entries
-    cell_yellow_count = 0
-    cell_red_count = 0
-    cell_green_count = 0
-    total_cells_count = 0
-
-    for entry in AccessoriesItemEntry.objects.all():
-        for col in ['a', 'b', 'c', 'd']:
-            st = getattr(entry, f'status_{col}', '')
-            qty = getattr(entry, f'qty_{col}', None)
-            if st == 'yellow':
-                cell_yellow_count += 1
-                total_cells_count += 1
-            elif st == 'green':
-                cell_green_count += 1
-                total_cells_count += 1
-            elif st == 'red':
-                cell_red_count += 1
-                total_cells_count += 1
-            elif qty is not None and qty > 0:
-                cell_red_count += 1
-                total_cells_count += 1
+    # KPI cell counts — use DB aggregation instead of loading all entries into Python
+    from django.db.models import Case, When, IntegerField
+    cell_stats = AccessoriesItemEntry.objects.aggregate(
+        cell_yellow=Count(Case(When(status_a='yellow', then=1), output_field=IntegerField())) +
+                    Count(Case(When(status_b='yellow', then=1), output_field=IntegerField())) +
+                    Count(Case(When(status_c='yellow', then=1), output_field=IntegerField())) +
+                    Count(Case(When(status_d='yellow', then=1), output_field=IntegerField())),
+        cell_green=Count(Case(When(status_a='green', then=1), output_field=IntegerField())) +
+                   Count(Case(When(status_b='green', then=1), output_field=IntegerField())) +
+                   Count(Case(When(status_c='green', then=1), output_field=IntegerField())) +
+                   Count(Case(When(status_d='green', then=1), output_field=IntegerField())),
+        cell_red=Count(Case(When(status_a='red', then=1), output_field=IntegerField())) +
+                 Count(Case(When(status_b='red', then=1), output_field=IntegerField())) +
+                 Count(Case(When(status_c='red', then=1), output_field=IntegerField())) +
+                 Count(Case(When(status_d='red', then=1), output_field=IntegerField())),
+    )
+    cell_yellow_count = cell_stats['cell_yellow'] or 0
+    cell_green_count  = cell_stats['cell_green'] or 0
+    cell_red_count    = cell_stats['cell_red'] or 0
+    total_cells_count = cell_yellow_count + cell_green_count + cell_red_count
 
     kpi_summary = {
         'total_jc': len(job_cards),
@@ -4557,20 +4598,21 @@ def accessories_view(request):
         'total_cells': total_cells_count,
     }
 
-    # Paginate job_cards — 15 per page
+    # Paginate — 15 per page
     from django.core.paginator import Paginator
     paginator = Paginator(job_cards, 15)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'accessories.html', {
-        'job_cards': page_obj,          # now a Page object (iterable like a list)
+        'job_cards': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
         'all_accessories_list': all_accessories_list,
         'kpi_summary': kpi_summary,
         'is_admin': is_admin
     })
+
 
 
 @login_required
