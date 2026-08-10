@@ -4575,6 +4575,11 @@ def accessories_detail_view(request, job_card_no):
         raise PermissionDenied
 
     from django.db.models import Sum, Max
+    import json
+    from collections import defaultdict
+    from .models import MasterName
+    from django.urls import reverse as url_reverse
+
     total_pcs = CuttingReport.objects.filter(job_card_no=job_card_no).aggregate(t=Sum('total_pcs'))['t'] or 0
 
     record, created = AccessoriesRecord.objects.get_or_create(
@@ -4594,18 +4599,26 @@ def accessories_detail_view(request, job_card_no):
         return redirect('accessories_detail', job_card_no=job_card_no)
 
     # Ensure all standard accessory entries exist for this record
-    existing_entries = {e.item_name: e for e in record.entries.all()}
+    existing_entries = {e.item_name: e for e in record.entries.only('item_name', 'sr_no')}
     for name in ACCESSORIES_ITEMS:
         if name not in existing_entries:
             max_sr = record.entries.aggregate(m=Max('sr_no'))['m'] or 0
             AccessoriesItemEntry.objects.create(record=record, sr_no=max_sr + 1, item_name=name)
 
-    # Re-fetch and normalize sr_no order
-    entries = list(record.entries.order_by('sr_no'))
+    # Re-fetch and normalize sr_no — defer photo binary blobs (can be MBs each)
+    entries = list(
+        record.entries
+        .defer('photo_data_a', 'photo_data_b', 'photo_data_c', 'photo_data_d')
+        .order_by('sr_no')
+    )
+    # Fix sr_no gaps with a single bulk_update instead of one save per entry
+    to_update = []
     for i, entry in enumerate(entries):
         if entry.sr_no != i + 1:
             entry.sr_no = i + 1
-            entry.save(update_fields=['sr_no'])
+            to_update.append(entry)
+    if to_update:
+        AccessoriesItemEntry.objects.bulk_update(to_update, ['sr_no'])
 
     if request.method == 'POST':
         if 'add_accessory_item' in request.POST:
@@ -4701,31 +4714,63 @@ def accessories_detail_view(request, job_card_no):
         return redirect('accessories_detail', job_card_no=job_card_no)
 
     custom_names_obj = record.entries.exclude(item_name__in=ACCESSORIES_ITEMS).order_by('sr_no')
-    
-    # Query masters in Vendor department and group articles by vendor
+
+    # Vendor groups — use only() to skip unused fields
     from collections import defaultdict
     from .models import MasterName
+    from django.urls import reverse as url_reverse
+    import json
     vendor_groups = defaultdict(list)
-    # Build vendor photo map: {vendor_name: {article: photo_url}}
     vendor_photo_map = defaultdict(dict)
-    for m in MasterName.objects.filter(department='Vendor').order_by('name', 'article'):
+    for m in MasterName.objects.filter(department='Vendor').order_by('name', 'article').only('id', 'name', 'article', 'photo'):
         if m.article and m.article not in vendor_groups[m.name]:
             vendor_groups[m.name].append(m.article)
         if m.article and m.photo:
-            from django.urls import reverse as url_reverse
-            import time as _time
             photo_url = url_reverse('serve_vendor_photo', args=[m.id])
-            vendor_photo_map[m.name][m.article] = f'{photo_url}?t={int(_time.time())}'
-            
-    import json
+            vendor_photo_map[m.name][m.article] = photo_url  # no timestamp — avoids cache misses
+
     vendor_groups_json = json.dumps(dict(vendor_groups))
     vendor_photo_map_json = json.dumps({k: dict(v) for k, v in vendor_photo_map.items()})
+
+    # Pre-compute is_started / is_complete in Python (entries already loaded — zero extra DB queries)
+    _started = any(
+        (e.qty_a and e.qty_a > 0) or (e.qty_b and e.qty_b > 0) or
+        (e.qty_c and e.qty_c > 0) or (e.qty_d and e.qty_d > 0) or
+        e.status_a in ('green', 'red', 'yellow') or e.status_b in ('green', 'red', 'yellow') or
+        e.status_c in ('green', 'red', 'yellow') or e.status_d in ('green', 'red', 'yellow')
+        for e in entries
+    )
+    _complete = False
+    if _started:
+        _complete = all(
+            (e.status_a == 'green' if (e.qty_a and e.qty_a > 0) else e.status_a not in ('red', 'yellow')) and
+            (e.status_b == 'green' if (e.qty_b and e.qty_b > 0) else e.status_b not in ('red', 'yellow')) and
+            (e.status_c == 'green' if (e.qty_c and e.qty_c > 0) else e.status_c not in ('red', 'yellow')) and
+            (e.status_d == 'green' if (e.qty_d and e.qty_d > 0) else e.status_d not in ('red', 'yellow'))
+            for e in entries
+        )
+
+    # Pre-compute totals per entry in Python — avoids N×4 extra DB queries from model properties
+    tp = int(record.total_pcs or 0)
+    for e in entries:
+        e._total_a = int(tp * e.qty_a) if e.qty_a is not None and tp else None
+        e._total_b = int(tp * e.qty_b) if e.qty_b is not None and tp else None
+        e._total_c = int(tp * e.qty_c) if e.qty_c is not None and tp else None
+        e._total_d = int(tp * e.qty_d) if e.qty_d is not None and tp else None
+        e._grand_total = ((e._total_a or 0) + (e._total_b or 0) + (e._total_c or 0) + (e._total_d or 0)) or None
+        # Check cell photo existence without loading binary blob
+        e._has_photo_a = bool(e.photo_name_a)
+        e._has_photo_b = bool(e.photo_name_b)
+        e._has_photo_c = bool(e.photo_name_c)
+        e._has_photo_d = bool(e.photo_name_d)
 
     return render(request, 'accessories_detail.html', {
         'record': record, 'entries': entries, 'is_admin': is_admin,
         'custom_names_obj': custom_names_obj,
         'vendor_groups_json': vendor_groups_json,
         'vendor_photo_map_json': vendor_photo_map_json,
+        'is_started': _started,
+        'is_complete': _complete,
     })
 
 
