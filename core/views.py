@@ -4470,8 +4470,7 @@ def accessories_view(request):
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied
 
-    from django.db.models import Sum, Max, Count, Q
-
+    from django.db.models import Sum, Max, Count, Q, Prefetch
     jc_data = (
         CuttingReport.objects
         .values('job_card_no')
@@ -4484,13 +4483,13 @@ def accessories_view(request):
         r.job_card_no: r
         for r in AccessoriesRecord.objects
         .prefetch_related(
-            models.Prefetch(
+            Prefetch(
                 'entries',
                 queryset=AccessoriesItemEntry.objects.defer(
                     'photo_data_a', 'photo_data_b', 'photo_data_c', 'photo_data_d'
                 )
             ),
-            models.Prefetch(
+            Prefetch(
                 'photos',
                 queryset=AccessoriesPhoto.objects.only('id')
             )
@@ -4498,11 +4497,11 @@ def accessories_view(request):
         .all()
     }
 
-    # For cutting report photos, only fetch IDs — no binary data
+    # For cutting report photos, only fetch IDs — use values() to avoid deferred field conflict
     cutting_photo_map = {}
-    for cp in CuttingReportPhoto.objects.only('id', 'cutting_report__job_card_no').select_related('cutting_report'):
-        jcn = cp.cutting_report.job_card_no
-        cutting_photo_map.setdefault(jcn, []).append(cp.id)
+    for cp in CuttingReportPhoto.objects.values('id', 'cutting_report__job_card_no'):
+        jcn = cp['cutting_report__job_card_no']
+        cutting_photo_map.setdefault(jcn, []).append(cp['id'])
 
     job_cards = []
     yellow_jc_count = 0
