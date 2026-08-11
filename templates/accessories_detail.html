@@ -36,28 +36,12 @@
       <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <!-- Status Bar & Per-Status Record Fields Card -->
+        <!-- Per-Status Record Fields Card -->
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);">
           
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <label for="id_status_bar" style="color: #f1f5f9; font-size: 0.9rem; font-weight: 700; margin: 0;">Status Bar:</label>
-              <select name="status_bar" id="id_status_bar"
-                style="padding: 0.4rem 0.8rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; font-weight: 700; outline: none; cursor: pointer;
-                       {% if record.status_bar == 'total_received' %}color:#22c55e;
-                       {% elif record.status_bar == 'total_ordered' %}color:#fbbf24;
-                       {% elif record.status_bar == 'total_marked' %}color:#38bdf8;
-                       {% else %}color:#ef4444;{% endif %}"
-                onchange="this.style.color = {'not_started':'#ef4444','total_ordered':'#fbbf24','total_received':'#22c55e','total_marked':'#38bdf8'}[this.value]||'#f1f5f9';">
-                <option value="not_started" {% if record.status_bar == 'not_started' or not record.status_bar %}selected{% endif %} style="color:#ef4444; background:#0f172a;">🔴 Not Started</option>
-                <option value="total_ordered" {% if record.status_bar == 'total_ordered' %}selected{% endif %} style="color:#fbbf24; background:#0f172a;">🟡 Total Ordered</option>
-                <option value="total_received" {% if record.status_bar == 'total_received' %}selected{% endif %} style="color:#22c55e; background:#0f172a;">🟢 Total Received</option>
-                <option value="total_marked" {% if record.status_bar == 'total_marked' %}selected{% endif %} style="color:#38bdf8; background:#0f172a;">🔵 Total Marked</option>
-              </select>
-            </div>
-            
-            <div style="color: #94a3b8; font-size: 0.82rem; font-weight: 500;">
-              ✏️ Enter status record details for each option below:
+          <div style="margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.6rem;">
+            <div style="color: #f1f5f9; font-size: 0.9rem; font-weight: 700;">
+              ✏️ Enter Status Record Details:
             </div>
           </div>
 
