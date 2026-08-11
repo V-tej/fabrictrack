@@ -1050,9 +1050,15 @@ ACCESSORIES_ITEMS = [
 
 class AccessoriesRecord(models.Model):
     """One record per job card — stores total_pcs from cutting report."""
-    job_card_no = models.CharField(max_length=100, unique=True)
-    total_pcs   = models.PositiveIntegerField(default=0)
-    notes       = models.TextField(blank=True, null=True)
+    job_card_no           = models.CharField(max_length=100, unique=True)
+    total_pcs             = models.PositiveIntegerField(default=0)
+    status_bar            = models.CharField(max_length=50, default='not_started', blank=True)
+    status_bar_record     = models.CharField(max_length=255, blank=True, null=True)
+    record_not_started    = models.CharField(max_length=255, blank=True, null=True)
+    record_total_ordered  = models.CharField(max_length=255, blank=True, null=True)
+    record_total_received = models.CharField(max_length=255, blank=True, null=True)
+    record_total_marked   = models.CharField(max_length=255, blank=True, null=True)
+    notes                 = models.TextField(blank=True, null=True)
     created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)

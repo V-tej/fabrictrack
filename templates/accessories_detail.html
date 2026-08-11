@@ -16,65 +16,121 @@
 
     <!-- Left: Main accessories table (scrollable) -->
     <div class="section-card acc-detail-main" style="flex:1; min-width:0; margin:0; overflow-x:auto;">
-      <div style="text-align:center;margin-bottom:1.5rem;">
-        <h2 style="margin:0;font-size:1.4rem;color:#f1f5f9;">Dhruv Fabrics</h2>
-        <h3 style="margin:0.25rem 0 0 0;font-size:1.1rem;color:#94a3b8;letter-spacing:0.1em;">ACCESSORIES</h3>
-        <div style="margin-top:0.75rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
-          <span style="color:#fbbf24;font-weight:bold;">Job Card: {{ record.job_card_no }}</span>
-          <span style="color:#60a5fa;">Total Pcs: <strong>{{ record.total_pcs }}</strong></span>
+      <!-- Header Summary -->
+      <div style="text-align:center; margin-bottom:1.25rem;">
+        <h2 style="margin:0; font-size:1.4rem; color:#f1f5f9;">Dhruv Fabrics</h2>
+        <h3 style="margin:0.25rem 0 0 0; font-size:1.05rem; color:#94a3b8; letter-spacing:0.1em;">ACCESSORIES</h3>
+        <div style="margin-top:0.6rem; display:flex; justify-content:center; align-items:center; gap:1.5rem; flex-wrap:wrap;">
+          <span style="color:#fbbf24; font-weight:bold; font-size:1rem;">Job Card: {{ record.job_card_no }}</span>
+          <span style="color:#60a5fa; font-size:1rem;">Total Pcs: <strong>{{ record.total_pcs }}</strong></span>
           {% if is_complete %}
-          <span
-            style="background:#dcfce7;color:#16a34a;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">✅
-            Completed</span>
+          <span style="background:#dcfce7; color:#16a34a; padding:0.2rem 0.8rem; border-radius:999px; font-size:0.85rem; font-weight:600;">✅ Completed</span>
           {% elif is_started %}
-          <span
-            style="background:#fee2e2;color:#dc2626;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">🔴
-            Pending</span>
+          <span style="background:#fee2e2; color:#dc2626; padding:0.2rem 0.8rem; border-radius:999px; font-size:0.85rem; font-weight:600;">🔴 Pending</span>
           {% else %}
-          <span
-            style="background:#f3f4f6;color:#6b7280;padding:0.15rem 0.8rem;border-radius:999px;font-size:0.85rem;font-weight:600;">⬜
-            Not Started</span>
+          <span style="background:#f3f4f6; color:#6b7280; padding:0.2rem 0.8rem; border-radius:999px; font-size:0.85rem; font-weight:600;">⬜ Not Started</span>
           {% endif %}
-        </div>
-      </div>
-
-      <!-- Filters Row -->
-      <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <!-- Item Name Filter -->
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <label for="detailItemFilter"
-            style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Item:</label>
-          <select id="detailItemFilter"
-            style="padding: 0.5rem 1.5rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
-            <option value="">-- All Items --</option>
-            {% for entry in entries %}
-            <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <!-- Status Color Filter -->
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <label for="detailStatusFilter"
-            style="color: #9ca3af; font-size: 0.85rem; font-weight: 500; white-space:nowrap;">Filter by Status:</label>
-          <select id="detailStatusFilter"
-            style="padding: 0.5rem 1rem 0.5rem 0.75rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; font-weight: 600; color: #f1f5f9;">
-            <option value="" style="color:#f1f5f9;">-- All --</option>
-            <option value="yellow" style="color:#fbbf24;">🟡 Yellow</option>
-            <option value="red" style="color:#ef4444;">🔴 Red</option>
-            <option value="green" style="color:#22c55e;">🟢 Green</option>
-          </select>
         </div>
       </div>
 
       <form method="POST" id="accessoriesForm" enctype="multipart/form-data">
         {% csrf_token %}
-        <div
-          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;">
-          <span style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Fill in the multiplier quantities and
-            select status:</span>
-          <button type="submit" class="btn btn-primary"
-            style="font-size:0.85rem; background: #10b981; border-color: #10b981;">💾 Save Changes</button>
+
+        <!-- Status Bar & Per-Status Record Fields Card -->
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);">
+          
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <label for="id_status_bar" style="color: #f1f5f9; font-size: 0.9rem; font-weight: 700; margin: 0;">Status Bar:</label>
+              <select name="status_bar" id="id_status_bar"
+                style="padding: 0.4rem 0.8rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; font-weight: 700; outline: none; cursor: pointer;
+                       {% if record.status_bar == 'total_received' %}color:#22c55e;
+                       {% elif record.status_bar == 'total_ordered' %}color:#fbbf24;
+                       {% elif record.status_bar == 'total_marked' %}color:#38bdf8;
+                       {% else %}color:#ef4444;{% endif %}"
+                onchange="this.style.color = {'not_started':'#ef4444','total_ordered':'#fbbf24','total_received':'#22c55e','total_marked':'#38bdf8'}[this.value]||'#f1f5f9';">
+                <option value="not_started" {% if record.status_bar == 'not_started' or not record.status_bar %}selected{% endif %} style="color:#ef4444; background:#0f172a;">🔴 Not Started</option>
+                <option value="total_ordered" {% if record.status_bar == 'total_ordered' %}selected{% endif %} style="color:#fbbf24; background:#0f172a;">🟡 Total Ordered</option>
+                <option value="total_received" {% if record.status_bar == 'total_received' %}selected{% endif %} style="color:#22c55e; background:#0f172a;">🟢 Total Received</option>
+                <option value="total_marked" {% if record.status_bar == 'total_marked' %}selected{% endif %} style="color:#38bdf8; background:#0f172a;">🔵 Total Marked</option>
+              </select>
+            </div>
+            
+            <div style="color: #94a3b8; font-size: 0.82rem; font-weight: 500;">
+              ✏️ Enter status record details for each option below:
+            </div>
+          </div>
+
+          <!-- 4 Clean, Aligned Record Fields (One label per field) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; align-items: end;">
+            
+            <!-- Not Started Record -->
+            <div style="background: rgba(239, 68, 68, 0.05); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+              <label for="id_rec_not_started" style="color: #f87171; font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em;">🔴 Not Started Record</label>
+              <input type="text" name="record_not_started" id="id_rec_not_started"
+                value="{{ record.record_not_started|default:'' }}" placeholder="Details for Not Started..."
+                style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; box-sizing: border-box;">
+            </div>
+
+            <!-- Total Ordered Record -->
+            <div style="background: rgba(251, 191, 36, 0.05); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.2);">
+              <label for="id_rec_total_ordered" style="color: #fbbf24; font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em;">🟡 Total Ordered Record</label>
+              <input type="text" name="record_total_ordered" id="id_rec_total_ordered"
+                value="{{ record.record_total_ordered|default:'' }}" placeholder="Details for Total Ordered..."
+                style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; box-sizing: border-box;">
+            </div>
+
+            <!-- Total Received Record -->
+            <div style="background: rgba(34, 197, 94, 0.05); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
+              <label for="id_rec_total_received" style="color: #34d399; font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em;">🟢 Total Received Record</label>
+              <input type="text" name="record_total_received" id="id_rec_total_received"
+                value="{{ record.record_total_received|default:'' }}" placeholder="Details for Total Received..."
+                style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; box-sizing: border-box;">
+            </div>
+
+            <!-- Total Marked Record -->
+            <div style="background: rgba(56, 189, 248, 0.05); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.2);">
+              <label for="id_rec_total_marked" style="color: #38bdf8; font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em;">🔵 Total Marked Record</label>
+              <input type="text" name="record_total_marked" id="id_rec_total_marked"
+                value="{{ record.record_total_marked|default:'' }}" placeholder="Details for Total Marked..."
+                style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #374151; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; box-sizing: border-box;">
+            </div>
+
+          </div>
         </div>
+
+        <!-- Toolbar: Filters on Left, Save Button on Right -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; background: rgba(255,255,255,0.03); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.07);">
+          <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+            <!-- Item Name Filter -->
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <label for="detailItemFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 600; white-space:nowrap;">Filter by Item:</label>
+              <select id="detailItemFilter"
+                style="padding: 0.4rem 1.25rem 0.4rem 0.65rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; color: #f1f5f9; font-size: 0.85rem; outline: none; cursor: pointer;">
+                <option value="">-- All Items --</option>
+                {% for entry in entries %}
+                <option value="{{ entry.item_name }}">{{ entry.item_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Status Color Filter -->
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <label for="detailStatusFilter" style="color: #9ca3af; font-size: 0.85rem; font-weight: 600; white-space:nowrap;">Filter by Status:</label>
+              <select id="detailStatusFilter"
+                style="padding: 0.4rem 1rem 0.4rem 0.65rem; border: 1px solid #374151; border-radius: 8px; background: #0f172a; font-size: 0.85rem; outline: none; cursor: pointer; font-weight: 600; color: #f1f5f9;">
+                <option value="" style="color:#f1f5f9;">-- All Statuses --</option>
+                <option value="red" style="color:#ef4444;">🔴 Not Started</option>
+                <option value="yellow" style="color:#fbbf24;">🟡 Total Ordered</option>
+                <option value="green" style="color:#22c55e;">🟢 Total Received</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary"
+            style="font-size:0.85rem; font-weight:700; background: #10b981; border-color: #10b981; padding:0.5rem 1.25rem;">💾 Save Changes</button>
+        </div>
+
         <div class="table-wrapper" style="overflow-x:auto;">
           <table id="accTable" style="width:100%;border-collapse:collapse;font-size:0.9rem;min-width:750px;">
             <thead>

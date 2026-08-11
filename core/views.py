@@ -4511,7 +4511,12 @@ def accessories_view(request):
     for jc in jc_data:
         rec = existing.get(jc['job_card_no'])
 
-        if rec:
+        if rec and rec.status_bar and rec.status_bar != 'not_started':
+            if rec.status_bar == 'total_received':
+                status = 'complete'
+            else:
+                status = 'pending'
+        elif rec:
             entries = rec.entries.all()  # uses prefetch cache — no extra query
             started = any(
                 (e.qty_a and e.qty_a > 0) or (e.qty_b and e.qty_b > 0) or
@@ -4736,7 +4741,32 @@ def accessories_detail_view(request, job_card_no):
 
 
         record.notes = request.POST.get('notes', '').strip()
-        record.save(update_fields=['notes', 'updated_at'])
+        if 'status_bar' in request.POST:
+            record.status_bar = request.POST.get('status_bar', 'not_started').strip()
+        
+        record.record_not_started    = request.POST.get('record_not_started', '').strip()
+        record.record_total_ordered  = request.POST.get('record_total_ordered', '').strip()
+        record.record_total_received = request.POST.get('record_total_received', '').strip()
+        record.record_total_marked   = request.POST.get('record_total_marked', '').strip()
+
+        # Sync active status_bar_record
+        st = record.status_bar
+        if st == 'total_ordered' and record.record_total_ordered:
+            record.status_bar_record = record.record_total_ordered
+        elif st == 'total_received' and record.record_total_received:
+            record.status_bar_record = record.record_total_received
+        elif st == 'total_marked' and record.record_total_marked:
+            record.status_bar_record = record.record_total_marked
+        elif st == 'not_started' and record.record_not_started:
+            record.status_bar_record = record.record_not_started
+        elif 'status_bar_record' in request.POST:
+            record.status_bar_record = request.POST.get('status_bar_record', '').strip()
+
+        record.save(update_fields=[
+            'notes', 'status_bar', 'status_bar_record',
+            'record_not_started', 'record_total_ordered',
+            'record_total_received', 'record_total_marked', 'updated_at'
+        ])
 
         # Save uploaded photos up to 5
         photos = request.FILES.getlist('photos')
