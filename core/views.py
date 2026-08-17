@@ -5500,7 +5500,7 @@ def serialize_chat_message(msg, user=None):
         'sender_id': msg.sender_id,
         'sender_initial': initial,
         'channel_id': msg.channel_id,
-        'created_at': timezone.localtime(msg.created_at).strftime('%I:%M %p').lstrip('0'),
+        'created_at': timezone.localtime(msg.created_at).strftime('%d %b, %I:%M %p').lstrip('0'),
         'created_full': timezone.localtime(msg.created_at).strftime('%d-%b-%Y %H:%M'),
         'timestamp_iso': msg.created_at.isoformat(),
         'is_pinned': msg.is_pinned,
