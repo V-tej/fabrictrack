@@ -33,3 +33,6 @@ exports/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Cloudflare Tunnel Credentials (NEVER commit these!)
+.cloudflared/
