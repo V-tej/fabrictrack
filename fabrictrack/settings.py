@@ -16,12 +16,19 @@ DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 # Master Ledger section password (set in .env as LEDGER_PASSWORD)
 LEDGER_PASSWORD = os.getenv('LEDGER_PASSWORD', 'ledger@1234')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'fabrictrack.uk',
+    'www.fabrictrack.uk',
+    'localhost',
+    '127.0.0.1',
+    '*',
+]
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://fabrictrack.uk',
+    'https://www.fabrictrack.uk',
     'https://*.onrender.com',
     'https://*.trycloudflare.com',
-
 ]
 
 INSTALLED_APPS = [

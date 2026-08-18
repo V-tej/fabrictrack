@@ -1,7 +1,7 @@
 @echo off
 title FabricTrack Updater
 setlocal
-set "PROJECT_DIR=C:\Users\Administrator\fabrictrack"
+set "PROJECT_DIR=E:\New folder\FabricTrack"
 
 echo =======================================
 echo   FabricTrack — Updating...
