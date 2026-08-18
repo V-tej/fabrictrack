@@ -2,7 +2,7 @@
 title FabricTrack Launcher
 setlocal
 set "CLOUDFLARED=C:\Program Files (x86)\cloudflared\cloudflared.exe"
-set "PROJECT_DIR=E:\New folder\FabricTrack"
+set "PROJECT_DIR=%~dp0."
 
 cd /d "%PROJECT_DIR%"
 
