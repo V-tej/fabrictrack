@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Print {{ section_title }}{% endblock %}
+{% block page_title %}Submissions - Print{% endblock %}
+{% block content %}
+<div class="fade-in" style="max-width: 1100px; margin: 0 auto; padding-bottom: 3rem;">
+
+  <!-- Control Panel (hidden on print) -->
+  <div class="no-print" style="background: var(--bg-card); padding: 20px 24px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+    <div>
+      <h3 style="margin: 0; color: #f1f5f9; font-size: 1.15rem; font-weight: 700;">Print Preview: {{ section_title }}</h3>
+      <p style="margin: 5px 0 0; font-size: 0.85rem; color: var(--text-muted);">
+        {% if date_from or date_to %}
+          Date range:
+          {% if date_from %}<strong style="color:#fbbf24;">{{ date_from|date:"d M Y" }}</strong>{% else %}<span style="color:#64748b;">beginning</span>{% endif %}
+          &nbsp;to&nbsp;
+          {% if date_to %}<strong style="color:#fbbf24;">{{ date_to|date:"d M Y" }}</strong>{% else %}<span style="color:#64748b;">today</span>{% endif %}
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+        {% endif %}
+        <strong style="color: #38bdf8;">{{ total }}</strong> record{{ total|pluralize }} found
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="javascript:void(0);" onclick="if(window.history.length>1){window.history.back();}else{window.close();}" class="btn btn-secondary" style="height: 38px; display: inline-flex; align-items: center; gap: 6px;">✕ Close</a>
+      <button onclick="window.print();" class="btn btn-primary" style="height: 38px; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg,#7c3aed,#4f46e5); border: none;">Print</button>
+    </div>
+  </div>
+
+  <!-- Main Print Document -->
+  <div class="print-document" style="background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); padding: 36px 40px; color: var(--text-primary); box-shadow: var(--shadow); position: relative;">
+
+    <div class="no-print" style="position: absolute; top: 14px; right: 18px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); font-weight: 700; background: rgba(59,130,246,0.1); padding: 4px 10px; border-radius: 4px;">Digital Copy</div>
+
+    <div style="border-bottom: 2px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 1.75rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <h1 style="margin: 0; font-size: 1.7rem; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{{ section_title }}</h1>
+        <p style="margin: 6px 0 0; font-size: 0.9rem; color: var(--text-secondary);">
+          {% if date_from or date_to %}
+            Period:
+            <strong style="color: #fff;">
+              {% if date_from %}{{ date_from|date:"d-M-Y" }}{% else %}All{% endif %}
+              &nbsp;to&nbsp;
+              {% if date_to %}{{ date_to|date:"d-M-Y" }}{% else %}Today{% endif %}
+            </strong>
+          {% else %}All Records{% endif %}
+        </p>
+      </div>
+      <div style="text-align: right;">
+        <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total: <strong style="color: #fff; font-size: 1rem;">{{ total }}</strong></p>
+        <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--text-muted);">Generated: <span style="color: #fff;">{% now "d-M-Y H:i" %}</span></p>
+      </div>
+    </div>
+
+    {% if rows %}
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--border);">
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">#</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">Job Card No.</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">Master / Worker</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">Item / Fabric</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700; text-align: center;">Pcs</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700; text-align: right;">Rate / Amt</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700; text-align: center;">Status</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700; text-align: center;">Signed</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">By</th>
+            <th style="padding: 10px 12px; color: var(--text-muted); font-weight: 700;">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 9px 12px; color: var(--text-muted);">{{ forloop.counter }}</td>
+            <td style="padding: 9px 12px;">
+              <code style="background: rgba(255,255,255,0.07); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #e2e8f0;">{{ row.job_card_no }}</code>
+            </td>
+            <td style="padding: 9px 12px; color: #f1f5f9; font-weight: 500;">{{ row.master }}</td>
+            <td style="padding: 9px 12px; color: var(--text-secondary);">{{ row.item_name }}</td>
+            <td style="padding: 9px 12px; text-align: center; font-weight: 700; color: #f1f5f9;">{{ row.pcs }}</td>
+            <td style="padding: 9px 12px; text-align: right; color: #4ade80;">
+              {% if row.rate and row.rate != '--' %}Rs.{{ row.rate }}{% else %}--{% endif %}
+            </td>
+            <td style="padding: 9px 12px; text-align: center;">
+              {% if row.completed %}
+                <span style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600;">Done</span>
+              {% else %}
+                <span style="background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600;">In Progress</span>
+              {% endif %}
+            </td>
+            <td style="padding: 9px 12px; text-align: center;">{% if row.signed %}Yes{% else %}No{% endif %}</td>
+            <td style="padding: 9px 12px; color: var(--text-secondary); font-size: 0.83rem;">{{ row.by }}</td>
+            <td style="padding: 9px 12px; color: var(--text-muted); font-size: 0.82rem; white-space: nowrap;">{{ row.created_at|date:"d M Y H:i"|default:"--" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background: rgba(255,255,255,0.04); border-top: 2px solid var(--border);">
+            <td colspan="4" style="padding: 10px 12px; font-weight: 700; color: #f1f5f9;">Total Records: {{ total }}</td>
+            <td colspan="6" style="padding: 10px 12px;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 4rem 2rem; color: var(--text-muted);">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">No records</div>
+      <p>No records found for the selected date range.</p>
+    </div>
+    {% endif %}
+
+    <!-- Signature footer -->
+    <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2rem;">
+      <div style="flex: 1; min-width: 180px; border-top: 1px solid var(--border); padding-top: 8px; text-align: center;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Prepared By</span>
+      </div>
+      <div style="flex: 1; min-width: 180px; border-top: 1px solid var(--border); padding-top: 8px; text-align: center;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Verified By</span>
+      </div>
+      <div style="flex: 1; min-width: 180px; border-top: 1px solid var(--border); padding-top: 8px; text-align: center;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Authorised By</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media print {
+    .sidebar, .topbar, .no-print, header, footer, .sidebar-container, .navbar { display: none !important; }
+    body, .print-document { background: white !important; color: black !important; font-family: Arial, sans-serif !important; padding: 0 !important; margin: 0 !important; border: none !important; box-shadow: none !important; }
+    .print-document h1,.print-document h2,.print-document h3,.print-document span,.print-document td,.print-document th,.print-document strong,.print-document code,.print-document p { color: black !important; }
+    .print-document div { background: transparent !important; border-color: #ddd !important; }
+    .print-document table { border-color: #ddd !important; }
+    .print-document th { background: #f5f5f5 !important; border-bottom: 2px solid #ccc !important; }
+    .print-document td { border-bottom: 1px solid #eee !important; }
+    .print-document tfoot tr { background: #f9f9f9 !important; }
+    code { background: #f3f4f6 !important; color: black !important; }
+  }
+</style>
+{% endblock %}

@@ -107,6 +107,7 @@
         {% if request.user.is_superuser %}
         <a href="{% url 'export_options' %}" class="btn btn-success btn-sm" id="btnExport">⬇ Excel</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('cutting','✂️ Cutting Reports')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Cutting section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -241,6 +242,7 @@
         {% if request.user.profile.person_type in 'P4,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'stitching_report' %}" class="btn btn-primary btn-sm" id="btnNewP4Report">+ New Stitching</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('stitching','🧵 Stitching')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Stitching section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -479,6 +481,7 @@
         {% if request.user.profile.person_type in 'P5,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'jobwork_report' %}" class="btn btn-primary btn-sm" id="btnNewP5Report">+ New Job Work</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('jobwork','👔 Job Work')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Job Work section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -715,6 +718,7 @@
         {% if request.user.profile.person_type in 'P11,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'jobwork1_report' %}" class="btn btn-primary btn-sm" id="btnNewP11Report">+ New Job Work 1</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('jobwork1','👔 Job Work 1')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Job Work 1 section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -949,6 +953,7 @@
         {% if request.user.profile.person_type in 'P7,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'embroidery_report' %}" class="btn btn-primary btn-sm" id="btnNewP7Report">+ New Embroidery</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('embroidery','🧵 Embroidery')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Embroidery section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -1183,6 +1188,7 @@
         {% if request.user.profile.person_type in 'P8,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'printing_report' %}" class="btn btn-primary btn-sm" id="btnNewP8Report">+ New Printing</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('printing','🎨 Printing')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Printing section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -1417,6 +1423,7 @@
         {% if request.user.profile.person_type in 'P6,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'finishing_report' %}" class="btn btn-primary btn-sm" id="btnNewP6Report">+ New Finishing Report</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('finishing','👔 Finishing Reports')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Finishing section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -1554,6 +1561,7 @@
         {% if request.user.profile.person_type in 'P9,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'singleneedle_report' %}" class="btn btn-primary btn-sm" id="btnNewP9Report">+ New Singleneedle</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('singleneedle','🪡 Singleneedle')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Singleneedle section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -1792,6 +1800,7 @@
         {% if request.user.profile.person_type in 'P10,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'sewing_report' %}" class="btn btn-primary btn-sm" id="btnNewP10Report">+ New Sewing</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('sewing','🧵 Sewing')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Sewing section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -2032,6 +2041,7 @@
         {% if request.user.profile.person_type in 'P12,ADMIN' or request.user.is_superuser %}
         <a href="{% url 'sewing1_report' %}" class="btn btn-primary btn-sm" id="btnNewP12Report">+ New Sewing 1</a>
         {% endif %}
+        <button onclick="openSectionPrintModal('sewing1','🧵 Sewing 1')" class="btn btn-sm" style="height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:6px;padding:0 12px;font-size:0.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Print entire Sewing 1 section">🖨️ Print All</button>
       </div>
     </div>
 
@@ -2509,6 +2519,74 @@
                 });
             }
         });
+    });
+  </script>
+
+  <!-- ── Section Print Modal ────────────────────────────────────── -->
+  <div id="sectionPrintModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:2rem 2.25rem;width:100%;max-width:440px;box-shadow:0 25px 60px rgba(0,0,0,0.5);position:relative;">
+      <!-- Close button -->
+      <button onclick="closeSectionPrintModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;line-height:1;" title="Close">✕</button>
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;">
+        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🖨️</div>
+        <div>
+          <h3 id="sectionPrintModalTitle" style="margin:0;font-size:1.1rem;color:#f1f5f9;font-weight:700;">Print Section</h3>
+          <p style="margin:3px 0 0 0;font-size:0.8rem;color:#64748b;">Select date range to include in print</p>
+        </div>
+      </div>
+
+      <!-- Date Range Inputs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <label style="display:block;font-size:0.78rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">From Date</label>
+          <input type="date" id="sectionPrintFrom" style="width:100%;padding:0.55rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f1f5f9;font-size:0.9rem;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:0.78rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">To Date</label>
+          <input type="date" id="sectionPrintTo" style="width:100%;padding:0.55rem 0.75rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f1f5f9;font-size:0.9rem;outline:none;box-sizing:border-box;" />
+        </div>
+      </div>
+
+      <!-- Info note -->
+      <p style="font-size:0.8rem;color:#64748b;margin:0 0 1.25rem 0;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;">💡 Leave dates blank to print <strong style="color:#94a3b8;">all records</strong> in this section.</p>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeSectionPrintModal()" style="flex:1;padding:0.6rem;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;font-size:0.9rem;font-weight:600;cursor:pointer;">Cancel</button>
+        <button onclick="doSectionPrint()" style="flex:2;padding:0.6rem;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">🖨️ Review &amp; Print</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var _sectionPrintType = '';
+    function openSectionPrintModal(reportType, label) {
+      _sectionPrintType = reportType;
+      document.getElementById('sectionPrintModalTitle').textContent = 'Print: ' + label;
+      document.getElementById('sectionPrintFrom').value = '';
+      document.getElementById('sectionPrintTo').value = '';
+      var modal = document.getElementById('sectionPrintModal');
+      modal.style.display = 'flex';
+    }
+    function closeSectionPrintModal() {
+      document.getElementById('sectionPrintModal').style.display = 'none';
+    }
+    function doSectionPrint() {
+      var from = document.getElementById('sectionPrintFrom').value;
+      var to   = document.getElementById('sectionPrintTo').value;
+      var url  = '/section/' + _sectionPrintType + '/print/';
+      var params = [];
+      if (from) params.push('date_from=' + from);
+      if (to)   params.push('date_to='   + to);
+      if (params.length) url += '?' + params.join('&');
+      window.open(url, '_blank');
+      closeSectionPrintModal();
+    }
+    // Close modal on backdrop click
+    document.getElementById('sectionPrintModal').addEventListener('click', function(e) {
+      if (e.target === this) closeSectionPrintModal();
     });
   </script>
 

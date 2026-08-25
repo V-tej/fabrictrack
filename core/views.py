@@ -5136,7 +5136,76 @@ def print_report_view(request, report_type, pk):
 
     return render(request, 'report_print_detail.html', context)
 
-
+@login_required
+def section_print_view(request, report_type):
+    from datetime import datetime as dt
+    date_from_str = request.GET.get('date_from', '').strip()
+    date_to_str   = request.GET.get('date_to',   '').strip()
+    def parse_date(s):
+        try:
+            return dt.strptime(s, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+    date_from = parse_date(date_from_str)
+    date_to   = parse_date(date_to_str)
+    SECTION_MAP = {
+        'cutting':      ('Cutting Reports',   CuttingReport),
+        'stitching':    ('Stitching',          StitchingReport),
+        'jobwork':      ('Job Work',           JobWorkReport),
+        'jobwork1':     ('Job Work 1',         JobWork1Report),
+        'embroidery':   ('Embroidery',         EmbroideryReport),
+        'printing':     ('Printing',           PrintingReport),
+        'finishing':    ('Finishing Reports',  FinishingReport),
+        'singleneedle': ('Singleneedle',       SingleneedleReport),
+        'sewing':       ('Sewing',             SewingReport),
+        'sewing1':      ('Sewing 1',           Sewing1Report),
+    }
+    if report_type not in SECTION_MAP:
+        raise Http404('Section type not found')
+    section_title, model_class = SECTION_MAP[report_type]
+    qs = model_class.objects.select_related('created_by').order_by('-created_at')
+    if report_type == 'cutting':
+        qs = qs.select_related('master_entry')
+    if date_from:
+        qs = qs.filter(created_at__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__date__lte=date_to)
+    rows = []
+    for r in qs:
+        row = {}
+        row['job_card_no'] = getattr(r, 'job_card_no', None) or getattr(r, 'lot_no', '--')
+        master = getattr(r, 'master_name', None) or ''
+        worker_fields = [
+            'cutting_master_name', 'stitching_master_name', 'jobworker',
+            'embroidery_worker', 'printing_worker', 'finishing_master_name',
+            'singleneedle_master_name', 'sewing_master_name',
+        ]
+        for wf in worker_fields:
+            val = getattr(r, wf, None)
+            if val:
+                master = '{} ({})'.format(master, val) if master else val
+                break
+        row['master'] = master or '--'
+        row['item_name'] = getattr(r, 'item_name', None) or getattr(r, 'fabric_type_quality', '') or '--'
+        row['pcs'] = getattr(r, 'total_pcs', None) or getattr(r, 'total_pieces', None) or '--'
+        row['rate'] = getattr(r, 'total_rate', None) or getattr(r, 'cutting_rate', None) or '--'
+        out_fields = ['line_out_date', 'jobwork_out', 'embroidery_out', 'printing_out']
+        row['completed'] = any(getattr(r, f, None) for f in out_fields)
+        row['signed'] = bool(getattr(r, 'signature', None))
+        row['by'] = r.created_by.username if r.created_by else '--'
+        row['created_at'] = getattr(r, 'created_at', None)
+        rows.append(row)
+    context = {
+        'section_title': section_title,
+        'report_type': report_type,
+        'rows': rows,
+        'total': len(rows),
+        'date_from': date_from,
+        'date_to': date_to,
+        'date_from_str': date_from_str,
+        'date_to_str': date_to_str,
+    }
+    return render(request, 'section_print.html', context)
 @login_required
 def vendor_report_view(request):
     from collections import defaultdict

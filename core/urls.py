@@ -109,6 +109,9 @@ urlpatterns = [
     # Print Report Route
     path('report/<str:report_type>/<int:pk>/print/', views.print_report_view, name='print_report'),
 
+    # Section Print Route (print all records of a department by date range)
+    path('section/<str:report_type>/print/', views.section_print_view, name='section_print'),
+
     # Team Chat (SlackTask-style)
     path('chat/', views.chat_view, name='chat'),
     path('api/chat/bootstrap/', views.chat_bootstrap_api, name='chat_bootstrap_api'),
