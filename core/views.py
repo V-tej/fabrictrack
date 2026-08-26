@@ -4064,6 +4064,20 @@ def master_ledger_detail_view(request, pk):
             running_balance -= e['amount']
         e['balance'] = running_balance
 
+    # ── Mark earning rows as "paid" ────────────────────────────────────────
+    # An earning is "paid" when, after all events are processed, its running
+    # balance (balance field) is <= 0  — meaning payments after it fully
+    # covered that earning and everything before it.
+    # Two-pass paid flag: sum all payments first, then mark earnings covered by them
+    _total_payments_window = sum(e['amount'] for e in active_events if e['type'] == 'payment')
+    _cum_earn = opening_balance
+    for e in active_events:
+        if e['type'] == 'earning':
+            _cum_earn += e['amount']
+            e['paid'] = (_total_payments_window >= _cum_earn)
+        else:
+            e['paid'] = False
+
     # Overall totals
     total_earnings_all = calculate_master_earnings(master.name)
     total_paid_all = float(master.payments.aggregate(total=Sum('amount'))['total'] or 0.0)
