@@ -136,6 +136,19 @@
     <div class="st-rail-foot">
           Quick: <code>/task @cuttingmaster title tomorrow !p1</code>
     </div>
+
+    <!-- ADMIN: Team Activity section (admin only) -->
+    {% if request.user.is_superuser or request.user.profile.person_type == 'ADMIN' %}
+    <div class="st-section" id="stAdminSection">
+      <div class="st-section-h">
+        <span>👥 Team Activity</span>
+        <span class="st-badge-soft">ADMIN</span>
+      </div>
+      <button type="button" class="st-nav" data-view="admin-activity" id="stAdminActivityNav">
+        <span>📊 User Task Overview</span>
+      </button>
+    </div>
+    {% endif %}
   </aside>
 
   <!-- MOBILE SIDEBAR OVERLAY BACKDROP -->
@@ -211,6 +224,32 @@
       <div class="st-task-head"><h2 id="stSavedTitle">Bookmarked</h2></div>
       <div class="st-feed" id="stSavedFeed"></div>
     </div>
+
+    <!-- ADMIN ACTIVITY PANE -->
+    <div class="st-pane" id="paneAdminActivity" hidden>
+      <div class="st-admin-head">
+        <div class="st-admin-title-row">
+          <h2>👥 User Task Overview</h2>
+          <div class="st-admin-controls">
+            <div class="st-day-filter" id="stDayFilter">
+              <button type="button" class="st-day-btn active" data-days="7">7d</button>
+              <button type="button" class="st-day-btn" data-days="30">30d</button>
+              <button type="button" class="st-day-btn" data-days="0">All</button>
+            </div>
+            <div class="st-view-toggle" id="stAdminViewToggle">
+              <button type="button" class="st-vt-btn active" data-admin-view="list" title="List View">☰ List</button>
+              <button type="button" class="st-vt-btn" data-admin-view="kanban" title="Kanban View">⬛ Kanban</button>
+            </div>
+          </div>
+        </div>
+        <div class="st-admin-summary-bar" id="stAdminSummaryBar"></div>
+      </div>
+      <div class="st-admin-loading" id="stAdminLoading" hidden>
+        <div class="st-admin-spinner"></div>
+        <span>Loading activity…</span>
+      </div>
+      <div class="st-admin-grid" id="stAdminGrid"></div>
+    </div>
   </section>
 
   <!-- LABEL DROPDOWN POPOVER -->
@@ -275,6 +314,21 @@
         <button type="button" id="stJobCardModalClose">✕</button>
       </div>
       <div id="stJobCardModalBody"></div>
+    </div>
+  </div>
+
+  <!-- MASTER PICKER POPUP (shown after @mention selection) -->
+  <div id="stMasterPicker" class="st-master-picker" hidden>
+    <div class="st-master-picker-header">
+      <span>📋 Select Master for <strong id="stMasterPickerUser"></strong></span>
+      <button type="button" id="stMasterPickerClose" title="Skip / Close">✕</button>
+    </div>
+    <div class="st-master-picker-sub">Choose a master name to append to the task, or skip</div>
+    <div class="st-master-picker-grid" id="stMasterPickerGrid">
+      <div class="st-master-picker-loading">Loading…</div>
+    </div>
+    <div class="st-master-picker-foot">
+      <button type="button" class="st-btn ghost" id="stMasterPickerSkip">Skip — no master</button>
     </div>
   </div>
 </div>
@@ -740,12 +794,8 @@
       return !q || name.indexOf(q) !== -1;
     }).slice(0, 10);
     if (!list.length) {
-      // still show empty hint
       const menu = $('#stMentionMenu');
-      if (menu) {
-        menu.hidden = false;
-        menu.innerHTML = '<div class="st-mention-item" style="cursor:default;opacity:.7">No users match</div>';
-      }
+      if (menu) { menu.hidden = false; menu.innerHTML = '<div class="st-mention-item" style="cursor:default;opacity:.7">No users match</div>'; }
       state.mention = { open: false, start: info.start, index: 0, list: [] };
       return;
     }
@@ -767,7 +817,89 @@
     input.setSelectionRange(caret, caret);
     hideMention();
     input.focus();
+    showMasterPicker(username);
   }
+
+  /* -- Master Picker -- */
+  function hideMasterPicker() { const p = $('#stMasterPicker'); if (p) p.hidden = true; }
+
+  async function showMasterPicker(username) {
+    const picker = $('#stMasterPicker');
+    const grid = $('#stMasterPickerGrid');
+    const userLabel = $('#stMasterPickerUser');
+    if (!picker || !grid) return;
+    if (userLabel) userLabel.textContent = '@' + username;
+    grid.innerHTML = '<div class="st-master-picker-loading">Loading\u2026</div>';
+    picker.hidden = false;
+    try {
+      const res = await fetch('/api/chat/user-masters/?username=' + encodeURIComponent(username), { credentials: 'same-origin' });
+      const data = await res.json();
+      const masters = data.masters || [];
+      if (!masters.length) { grid.innerHTML = '<div class="st-master-picker-empty">No masters linked to @' + esc(username) + '</div>'; return; }
+      const grouped = {};
+      masters.forEach(function(m) { if (!grouped[m.department]) grouped[m.department] = []; grouped[m.department].push(m); });
+      grid.innerHTML = Object.keys(grouped).map(function(dept) {
+        return '<div class="st-mp-dept"><div class="st-mp-dept-label">' + esc(dept) + '</div><div class="st-mp-chips">' +
+          grouped[dept].map(function(m) {
+            return '<button type="button" class="st-mp-chip" data-master-name="' + esc(m.name) + '" data-master-dept="' + esc(m.department) + '"><span class="st-mp-chip-name">' + esc(m.name) + '</span><span class="st-mp-chip-dept">' + esc(m.department) + '</span></button>';
+          }).join('') + '</div></div>';
+      }).join('');
+    } catch(err) { grid.innerHTML = '<div class="st-master-picker-empty">Could not load.</div>'; }
+  }
+
+  function applyMasterToInput(masterName) {
+    const input = $('#stInput');
+    if (!input) return;
+    input.value = input.value.trimEnd() + ' [' + masterName + ']';
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.focus();
+    hideMasterPicker();
+  }
+
+  document.addEventListener('click', function(e) {
+    const chip = e.target.closest('.st-mp-chip');
+    if (chip) { applyMasterToInput(chip.dataset.masterName); return; }
+    if (e.target.closest('#stMasterPickerClose') || e.target.closest('#stMasterPickerSkip')) {
+      hideMasterPicker(); const inp = $('#stInput'); if (inp) inp.focus(); return;
+    }
+    // Kanban clear-filter button
+    const clearBtn = e.target.closest('.st-kanban-clear-filter');
+    if (clearBtn) {
+      const uname = clearBtn.dataset.kanbanUser;
+      if (uname) {
+        _kanbanMasterFilter[uname] = '';
+        reRenderKanbanCol(uname);
+      }
+      return;
+    }
+    if (!e.target.closest('#stMasterPicker') && !e.target.closest('#stMentionMenu')) hideMasterPicker();
+  });
+
+  // Kanban master filter select change
+  document.addEventListener('change', function(e) {
+    const sel = e.target.closest('.st-kanban-master-select');
+    if (sel) {
+      const uname = sel.dataset.kanbanUser;
+      if (uname) {
+        _kanbanMasterFilter[uname] = sel.value;
+        reRenderKanbanCol(uname);
+      }
+    }
+  });
+
+  function reRenderKanbanCol(username) {
+    const grid = $('#stAdminGrid');
+    if (!grid || !grid._adminData) return;
+    const u = grid._adminData.find(function(x) { return x.username === username; });
+    if (!u) return;
+    const colEl = grid.querySelector('[data-kanban-col="' + username + '"]');
+    if (!colEl) return;
+    const newColHtml = renderKanbanCol(u);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = newColHtml;
+    colEl.replaceWith(tmp.firstElementChild);
+  }
+
 
   /* ---------- Tasks ---------- */
   function renderTaskRow(t) {
@@ -825,7 +957,304 @@
     $('#paneChat').hidden = name !== 'chat';
     $('#paneTasks').hidden = name !== 'tasks';
     $('#paneSaved').hidden = name !== 'saved';
+    const adminPane = $('#paneAdminActivity');
+    if (adminPane) adminPane.hidden = name !== 'admin-activity';
   }
+
+  /* ---------- Admin: load user task activity ---------- */
+  let adminActivityDays = 7;
+  let adminViewMode = 'list'; // 'list' | 'kanban'
+
+  const PR_LABELS = { p1: 'P1', p2: 'P2', p3: 'P3', p4: 'P4' };
+
+  function renderPriorityBadge(p) {
+    const key = p || 'p3';
+    return '<span class="st-admin-pr st-admin-pr-' + key + '">' + esc(PR_LABELS[key] || key.toUpperCase()) + '</span>';
+  }
+
+  function renderAdminTaskRow(t, mode) {
+    const key = esc(t.task_key || ('#' + t.id));
+    const title = esc(t.title || '\u2014');
+    const assignee = t['assignee__username'] ? '<span class="st-admin-assign">@' + esc(t['assignee__username']) + '</span>' : '';
+    let meta = '';
+    if (mode === 'completed') {
+      meta = '<span class="st-admin-ts">\u2705 ' + esc(t.completed_at || '\u2014') + '</span>';
+    } else if (t.due_label) {
+      const cls = t.due_label.indexOf('Overdue') === 0 ? 'st-admin-ts overdue' : (t.due_label === 'Today' ? 'st-admin-ts today' : 'st-admin-ts');
+      meta = '<span class="' + cls + '">\ud83d\udcc5 ' + esc(t.due_label) + '</span>';
+    } else if (t.created_at) {
+      meta = '<span class="st-admin-ts">\ud83d\udd50 ' + esc(t.created_at) + '</span>';
+    }
+    return (
+      '<div class="st-admin-task-row">' +
+        renderPriorityBadge(t.priority) +
+        '<span class="st-admin-task-key">' + key + '</span>' +
+        '<span class="st-admin-task-title">' + title + '</span>' +
+        '<span class="st-admin-task-meta">' + assignee + meta + '</span>' +
+      '</div>'
+    );
+  }
+
+  function renderAdminTaskList(tasks, mode) {
+    if (!tasks || !tasks.length) return '<div class="st-admin-empty">No tasks.</div>';
+    return tasks.map(function(t) { return renderAdminTaskRow(t, mode); }).join('');
+  }
+
+  /* -- LIST VIEW user cards -- */
+  function renderUserCard(u, idx) {
+    const totalLabel = u.open_count + u.created_count + u.completed_count;
+    return (
+      '<div class="st-admin-card" data-user-idx="' + idx + '">' +
+        '<div class="st-admin-card-header" data-expand-user="' + idx + '">' +
+          '<div class="st-admin-card-left">' +
+            '<div class="st-admin-av">' + esc(u.initial) + '</div>' +
+            '<div class="st-admin-uinfo">' +
+              '<div class="st-admin-uname">' + esc(u.username) + '</div>' +
+              '<div class="st-admin-utotal">' + totalLabel + ' task' + (totalLabel !== 1 ? 's' : '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="st-admin-stats">' +
+            '<div class="st-admin-stat open" title="Open tasks (all time)">' +
+              '<span class="st-admin-stat-n">' + u.open_count + '</span>' +
+              '<span class="st-admin-stat-l">\ud83d\udfe2 Open</span>' +
+            '</div>' +
+            '<div class="st-admin-stat done" title="Completed tasks">' +
+              '<span class="st-admin-stat-n">' + u.completed_count + '</span>' +
+              '<span class="st-admin-stat-l">\u2705 Done</span>' +
+            '</div>' +
+            '<div class="st-admin-stat created" title="Created in window">' +
+              '<span class="st-admin-stat-n">' + u.created_count + '</span>' +
+              '<span class="st-admin-stat-l">\u2795 Created</span>' +
+            '</div>' +
+            '<div class="st-admin-stat edited" title="Edited messages in window">' +
+              '<span class="st-admin-stat-n">' + u.edited_count + '</span>' +
+              '<span class="st-admin-stat-l">\u270f\ufe0f Edited</span>' +
+            '</div>' +
+          '</div>' +
+          '<span class="st-admin-chevron" aria-hidden="true">\u203a</span>' +
+        '</div>' +
+        '<div class="st-admin-detail" id="stAdminDetail-' + idx + '" hidden>' +
+          '<div class="st-admin-tabs">' +
+            '<button type="button" class="st-admin-tab active" data-user-tab="' + idx + '" data-tab-target="open">' +
+              '\ud83d\udfe2 Open <span class="st-admin-tab-cnt">' + u.open_count + '</span></button>' +
+            '<button type="button" class="st-admin-tab" data-user-tab="' + idx + '" data-tab-target="created">' +
+              '\u2795 Created <span class="st-admin-tab-cnt">' + u.created_count + '</span></button>' +
+            '<button type="button" class="st-admin-tab" data-user-tab="' + idx + '" data-tab-target="completed">' +
+              '\u2705 Done <span class="st-admin-tab-cnt">' + u.completed_count + '</span></button>' +
+          '</div>' +
+          '<div class="st-admin-tab-body" id="stAdminTabBody-' + idx + '">' +
+            renderAdminTaskList(u.open_tasks, 'open') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* -- KANBAN VIEW per-user columns -- */
+  function renderKanbanTaskCard(t, mode) {
+    const key = esc(t.task_key || '#' + t.id);
+    const title = esc(t.title || '\u2014');
+    const assignee = t['assignee__username'] ? '@' + esc(t['assignee__username']) : '';
+    let dueMeta = '';
+    if (mode === 'completed') {
+      dueMeta = '\u2705 ' + esc(t.completed_at || '\u2014');
+    } else if (t.due_label) {
+      const cls = t.due_label.indexOf('Overdue') === 0 ? 'kanban-due overdue' : (t.due_label === 'Today' ? 'kanban-due today' : 'kanban-due');
+      dueMeta = '<span class="' + cls + '">\ud83d\udcc5 ' + esc(t.due_label) + '</span>';
+    }
+    return (
+      '<div class="st-kanban-task st-kanban-pr-' + (t.priority || 'p3') + '">' +
+        '<div class="st-kanban-task-top">' + renderPriorityBadge(t.priority) + '<span class="st-kanban-key">' + key + '</span></div>' +
+        '<div class="st-kanban-task-title">' + title + '</div>' +
+        '<div class="st-kanban-task-foot">' +
+          (assignee ? '<span class="st-kanban-assign">' + assignee + '</span>' : '') +
+          (typeof dueMeta === 'string' ? '<span class="st-kanban-meta">' + dueMeta + '</span>' : dueMeta) +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* -- State: master filter per user -- */
+  const _kanbanMasterFilter = {};  // { username: masterName|'' }
+
+  function taskBelongsToUser(t, username) {
+    if (t['assignee__username']) {
+      if (t['assignee__username'] === username) return true;
+    } else if (t['created_by__username'] === username) {
+      return true;
+    }
+    const titleLower = (t.title || '').toLowerCase();
+    return titleLower.indexOf('@' + username.toLowerCase()) !== -1;
+  }
+
+  function taskMatchesMaster(t, masterName) {
+    if (!masterName) return true; // no filter = show all
+    // Look for [MasterName] in task title (case-insensitive)
+    const titleLower = (t.title || '').toLowerCase();
+    return titleLower.indexOf('[' + masterName.toLowerCase() + ']') !== -1;
+  }
+
+  function renderKanbanCol(u) {
+    const selectedMaster = _kanbanMasterFilter[u.username] || '';
+    const masters = u.masters || [];
+
+    const myOpenTasks = u.open_tasks
+      .filter(function(t) { return taskBelongsToUser(t, u.username) && taskMatchesMaster(t, selectedMaster); });
+    const myDoneTasks = u.completed_tasks
+      .filter(function(t) { return taskBelongsToUser(t, u.username) && taskMatchesMaster(t, selectedMaster); });
+
+    // Master filter dropdown HTML
+    const masterDropdown = masters.length > 0
+      ? '<select class="st-kanban-master-select" data-kanban-user="' + esc(u.username) + '" title="Filter by master">' +
+          '<option value="">All masters</option>' +
+          masters.map(function(m) {
+            return '<option value="' + esc(m.name) + '"' + (selectedMaster === m.name ? ' selected' : '') + '>' +
+              esc(m.name) + '</option>';
+          }).join('') +
+        '</select>'
+      : '';
+
+    return (
+      '<div class="st-kanban-col" data-kanban-col="' + esc(u.username) + '">' +
+        '<div class="st-kanban-col-header">' +
+          '<div class="st-kanban-col-av">' + esc(u.initial) + '</div>' +
+          '<div class="st-kanban-col-meta">' +
+            '<div class="st-kanban-col-name">' + esc(u.username) + '</div>' +
+            '<div class="st-kanban-col-counts">' +
+              '<span class="kc-open">\ud83d\udfe2 ' + myOpenTasks.length + '</span>' +
+              '<span class="kc-done">\u2705 ' + myDoneTasks.length + '</span>' +
+            '</div>' +
+          '</div>' +
+          (masterDropdown ? '<div class="st-kanban-master-wrap">' + masterDropdown + '</div>' : '') +
+        '</div>' +
+        (selectedMaster ? '<div class="st-kanban-active-filter">\ud83d\udd0d ' + esc(selectedMaster) + ' <button class="st-kanban-clear-filter" data-kanban-user="' + esc(u.username) + '">\u00d7</button></div>' : '') +
+        '<div class="st-kanban-col-body">' +
+          '<div class="st-kanban-section-label">Open (' + myOpenTasks.length + ')</div>' +
+          (myOpenTasks.length ? myOpenTasks.map(function(t) { return renderKanbanTaskCard(t, 'open'); }).join('') : '<div class="st-admin-empty small">No open tasks</div>') +
+          (myDoneTasks.length ?
+            '<div class="st-kanban-section-label done-label">Done (' + myDoneTasks.length + ')</div>' +
+            myDoneTasks.map(function(t) { return renderKanbanTaskCard(t, 'completed'); }).join('') : ''
+          ) +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderKanbanView(users) {
+    const activeUsers = users.filter(function(u) { return u.open_count || u.completed_count || u.created_count; });
+    if (!activeUsers.length) return '<div class="st-admin-empty">No task activity found.</div>';
+    return '<div class="st-kanban-board">' + activeUsers.map(renderKanbanCol).join('') + '</div>';
+  }
+
+  /* -- Summary bar -- */
+  function renderSummaryBar(users) {
+    const bar = $('#stAdminSummaryBar');
+    if (!bar) return;
+    const totalOpen = users.reduce(function(s, u) { return s + u.open_count; }, 0);
+    const totalDone = users.reduce(function(s, u) { return s + u.completed_count; }, 0);
+    const totalCreated = users.reduce(function(s, u) { return s + u.created_count; }, 0);
+    bar.innerHTML = (
+      '<span class="sb-item open">\ud83d\udfe2 <strong>' + totalOpen + '</strong> Open</span>' +
+      '<span class="sb-sep">\u00b7</span>' +
+      '<span class="sb-item done">\u2705 <strong>' + totalDone + '</strong> Done</span>' +
+      '<span class="sb-sep">\u00b7</span>' +
+      '<span class="sb-item created">\u2795 <strong>' + totalCreated + '</strong> Created</span>' +
+      '<span class="sb-sep">\u00b7</span>' +
+      '<span class="sb-item users">\ud83d\udc64 <strong>' + users.length + '</strong> Users</span>'
+    );
+  }
+
+  /* -- Main loader -- */
+  async function loadAdminActivity(days) {
+    adminActivityDays = days;
+    const loading = $('#stAdminLoading');
+    const grid = $('#stAdminGrid');
+    if (!grid) return;
+    if (loading) loading.hidden = false;
+    grid.innerHTML = '';
+    try {
+      const res = await fetch('/api/chat/admin/user-tasks/?days=' + days, { credentials: 'same-origin' });
+      if (!res.ok) { grid.innerHTML = '<div class="st-admin-error">Failed to load (' + res.status + ').</div>'; return; }
+      const data = await res.json();
+      if (!data.users || !data.users.length) { grid.innerHTML = '<div class="st-admin-empty">No users found.</div>'; return; }
+      grid._adminData = data.users;
+      renderSummaryBar(data.users);
+      renderAdminCurrentView(data.users);
+    } catch (err) {
+      grid.innerHTML = '<div class="st-admin-error">Error loading data.</div>';
+    } finally {
+      if (loading) loading.hidden = true;
+    }
+  }
+
+  function renderAdminCurrentView(users) {
+    const grid = $('#stAdminGrid');
+    if (!grid) return;
+    grid.className = 'st-admin-grid' + (adminViewMode === 'kanban' ? ' kanban-mode' : '');
+    if (adminViewMode === 'kanban') {
+      grid.innerHTML = renderKanbanView(users);
+    } else {
+      grid.innerHTML = users.map(function(u, i) { return renderUserCard(u, i); }).join('');
+    }
+  }
+
+  // Day filter button clicks
+  document.addEventListener('click', function(e) {
+    const dayBtn = e.target.closest('.st-day-btn');
+    if (dayBtn && dayBtn.closest('#stDayFilter')) {
+      $$('.st-day-btn').forEach(function(b) { b.classList.remove('active'); });
+      dayBtn.classList.add('active');
+      loadAdminActivity(parseInt(dayBtn.dataset.days, 10));
+      return;
+    }
+
+    // View toggle (List / Kanban)
+    const vtBtn = e.target.closest('.st-vt-btn');
+    if (vtBtn && vtBtn.closest('#stAdminViewToggle')) {
+      $$('.st-vt-btn').forEach(function(b) { b.classList.remove('active'); });
+      vtBtn.classList.add('active');
+      adminViewMode = vtBtn.dataset.adminView;
+      const grid = $('#stAdminGrid');
+      if (grid && grid._adminData) renderAdminCurrentView(grid._adminData);
+      return;
+    }
+
+    // Expand/collapse user card
+    const expandBtn = e.target.closest('[data-expand-user]');
+    if (expandBtn) {
+      const idx = expandBtn.dataset.expandUser;
+      const detail = $('#stAdminDetail-' + idx);
+      const card = expandBtn.closest('.st-admin-card');
+      if (detail) {
+        const isOpen = !detail.hidden;
+        detail.hidden = isOpen;
+        if (card) card.classList.toggle('expanded', !isOpen);
+      }
+      return;
+    }
+
+    // Admin tab switching
+    const adminTab = e.target.closest('[data-user-tab]');
+    if (adminTab) {
+      const idx = adminTab.dataset.userTab;
+      const target = adminTab.dataset.tabTarget;
+      const tabGroup = adminTab.closest('.st-admin-tabs');
+      if (tabGroup) {
+        tabGroup.querySelectorAll('.st-admin-tab').forEach(function(t) { t.classList.remove('active'); });
+        adminTab.classList.add('active');
+      }
+      const body = $('#stAdminTabBody-' + idx);
+      const grid2 = $('#stAdminGrid');
+      if (body && grid2 && grid2._adminData) {
+        const u = grid2._adminData[parseInt(idx, 10)];
+        if (!u) return;
+        if (target === 'open') body.innerHTML = renderAdminTaskList(u.open_tasks, 'open');
+        else if (target === 'created') body.innerHTML = renderAdminTaskList(u.created_tasks, 'created');
+        else if (target === 'completed') body.innerHTML = renderAdminTaskList(u.completed_tasks, 'completed');
+      }
+      return;
+    }
+  });
 
   /* ---------- Mobile Sidebar Drawer ---------- */
   function closeMobileSidebar() {
@@ -869,6 +1298,11 @@
         state.view = 'saved';
         showPane('saved');
         loadSaved(nav.dataset.kind || 'bookmarks');
+      } else if (view === 'admin-activity') {
+        stopPoll();
+        state.view = 'admin-activity';
+        showPane('admin-activity');
+        loadAdminActivity(adminActivityDays);
       }
       return;
     }

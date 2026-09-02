@@ -6342,6 +6342,79 @@ def chat_label_delete_api(request, label_id):
 
 @login_required
 @require_http_methods(['GET'])
+def chat_user_masters_api(request):
+    """Return master names for a given username (for the master-picker popup).
+    Auto-infers based on linked_masters → person_type → username pattern.
+    Query param: username=<str>
+    """
+    username = (request.GET.get('username') or '').strip()
+    if not username:
+        return JsonResponse({'masters': []})
+    try:
+        target_user = User.objects.get(username__iexact=username, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse({'masters': []})
+
+    PERSON_TYPE_TO_DEPT = {
+        'P1': 'Cutting', 'P2': 'Cutting', 'P3': 'Cutting',
+        'P4': 'Stitching',
+        'P5': 'Job Work',
+        'P6': 'Finishing',
+        'P7': 'Embroidery',
+        'P8': 'Printing',
+        'P9': 'Singleneedle',
+        'P10': 'Sewing',
+        'P11': 'Job Work 1',
+        'P12': 'Sewing 1',
+    }
+
+    # Tier 1: explicitly linked masters
+    try:
+        masters = list(
+            target_user.profile.linked_masters
+            .order_by('department', 'name')
+            .values('id', 'name', 'department')
+        )
+    except Exception:
+        masters = []
+
+    # Tier 2: person_type → department
+    if not masters:
+        try:
+            dept = PERSON_TYPE_TO_DEPT.get(getattr(target_user.profile, 'person_type', ''), '')
+            if dept:
+                masters = list(
+                    MasterName.objects.filter(department=dept)
+                    .order_by('name')
+                    .values('id', 'name', 'department')
+                )
+        except Exception:
+            pass
+
+    # Tier 3: username pattern matches a department name
+    if not masters:
+        uname_clean = target_user.username.lower().replace(' ', '').replace('_', '').replace('-', '')
+        try:
+            all_depts = MasterName.objects.values_list('department', flat=True).distinct()
+            matched = [
+                d for d in all_depts
+                if d.lower().replace(' ', '') in uname_clean or
+                   uname_clean in d.lower().replace(' ', '')
+            ]
+            if matched:
+                masters = list(
+                    MasterName.objects.filter(department__in=matched)
+                    .order_by('department', 'name')
+                    .values('id', 'name', 'department')
+                )
+        except Exception:
+            pass
+
+    return JsonResponse({'username': target_user.username, 'masters': masters})
+
+
+@login_required
+@require_http_methods(['GET'])
 def chat_saved_api(request):
     kind = request.GET.get('kind', 'bookmarks')
     user = request.user
@@ -6365,3 +6438,190 @@ def chat_saved_api(request):
         'messages': [serialize_chat_message(m, user) for m in msgs]
     })
 
+
+@login_required
+@require_http_methods(['GET'])
+def chat_admin_user_tasks_api(request):
+    """Admin-only: returns per-user task activity summary.
+
+    Query params:
+      - days=7 (default) — look-back window in days (0 = all time)
+    """
+    user = request.user
+    is_admin = user.is_superuser or (
+        getattr(user, 'profile', None) and user.profile.person_type == 'ADMIN'
+    )
+    if not is_admin:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        days = int(request.GET.get('days', 7))
+    except (ValueError, TypeError):
+        days = 7
+
+    since = timezone.now() - timedelta(days=days) if days > 0 else None
+
+    active_users = list(
+        User.objects.filter(is_active=True)
+        .select_related('profile')
+        .order_by('username')
+    )
+
+    result = []
+    for u in active_users:
+        # Open tasks: assigned to user, created by user, OR @mentioned in title
+        open_qs = ChatTask.objects.filter(
+            Q(created_by=u) | Q(assignee=u) | Q(title__icontains='@' + u.username),
+            completed=False
+        ).distinct()
+
+        # Created tasks in window
+        created_qs = ChatTask.objects.filter(created_by=u)
+        if since:
+            created_qs = created_qs.filter(created_at__gte=since)
+
+        # Completed tasks — also include tasks @mentioning the user in title
+        completed_qs = ChatTask.objects.filter(
+            Q(created_by=u) | Q(assignee=u) | Q(title__icontains='@' + u.username),
+            completed=True
+        ).distinct()
+        if since:
+            # Prefer completed_at but fall back to updated (tasks completed in window
+            # may have completed_at=None if it was an older record)
+            completed_qs = completed_qs.filter(
+                Q(completed_at__gte=since) | Q(completed_at__isnull=True, created_at__gte=since)
+            )
+
+        # Edited messages in window
+        edited_qs = ChatMessage.objects.filter(sender=u, edited_at__isnull=False)
+        if since:
+            edited_qs = edited_qs.filter(edited_at__gte=since)
+
+        # Detailed task lists (up to 30 each)
+        open_tasks = list(
+            open_qs.order_by('due_date', '-created_at')[:30].values(
+                'id', 'task_key', 'title', 'priority', 'due_date', 'created_at',
+                'assignee__username', 'created_by__username'
+            )
+        )
+        created_tasks = list(
+            created_qs.order_by('-created_at')[:30].values(
+                'id', 'task_key', 'title', 'priority', 'due_date', 'completed', 'created_at',
+                'assignee__username'
+            )
+        )
+        completed_tasks = list(
+            completed_qs.order_by('-completed_at', '-created_at')[:30].values(
+                'id', 'task_key', 'title', 'priority', 'completed_at', 'created_at',
+                'assignee__username', 'created_by__username'
+            )
+        )
+
+        # Serialize dates for JSON
+        today = timezone.localdate()
+        def fmt_due(d):
+            if not d:
+                return None
+            delta = (d - today).days
+            if delta < 0:
+                return f'Overdue ({abs(delta)}d)'
+            elif delta == 0:
+                return 'Today'
+            elif delta == 1:
+                return 'Tomorrow'
+            elif delta <= 7:
+                return f'In {delta}d'
+            return d.strftime('%d %b')
+
+        for t in open_tasks:
+            t['due_label'] = fmt_due(t.get('due_date'))
+            t['due_date'] = t['due_date'].strftime('%d %b') if t.get('due_date') else None
+            t['created_at'] = timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else None
+
+        for t in created_tasks:
+            t['due_label'] = fmt_due(t.get('due_date'))
+            t['due_date'] = t['due_date'].strftime('%d %b') if t.get('due_date') else None
+            t['created_at'] = timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else None
+
+        for t in completed_tasks:
+            t['completed_at'] = (
+                timezone.localtime(t['completed_at']).strftime('%d %b, %I:%M %p')
+                if t.get('completed_at') else (
+                    timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else '—'
+                )
+            )
+            t['created_at'] = None  # not needed in completed view
+
+        # Masters for this user (for Kanban filter dropdown)
+        # Priority:
+        #   1. Explicitly linked via profile.linked_masters
+        #   2. Masters whose department matches user's person_type
+        #   3. Masters whose department name matches username pattern
+        PERSON_TYPE_TO_DEPT = {
+            'P1': 'Cutting', 'P2': 'Cutting', 'P3': 'Cutting',
+            'P4': 'Stitching',
+            'P5': 'Job Work',
+            'P6': 'Finishing',
+            'P7': 'Embroidery',
+            'P8': 'Printing',
+            'P9': 'Singleneedle',
+            'P10': 'Sewing',
+            'P11': 'Job Work 1',
+            'P12': 'Sewing 1',
+        }
+        try:
+            user_masters = list(
+                u.profile.linked_masters
+                .order_by('department', 'name')
+                .values('id', 'name', 'department')
+            )
+        except Exception:
+            user_masters = []
+
+        if not user_masters:
+            # Fallback 2: match via person_type → department
+            try:
+                dept = PERSON_TYPE_TO_DEPT.get(getattr(u.profile, 'person_type', ''), '')
+                if dept:
+                    user_masters = list(
+                        MasterName.objects.filter(department=dept)
+                        .order_by('name')
+                        .values('id', 'name', 'department')
+                    )
+            except Exception:
+                pass
+
+        if not user_masters:
+            # Fallback 3: match username against department name (e.g. 'jobwork' → 'Job Work')
+            uname_clean = u.username.lower().replace(' ', '').replace('_', '').replace('-', '')
+            try:
+                all_depts = MasterName.objects.values_list('department', flat=True).distinct()
+                matched = [
+                    d for d in all_depts
+                    if d.lower().replace(' ', '') in uname_clean or
+                       uname_clean in d.lower().replace(' ', '')
+                ]
+                if matched:
+                    user_masters = list(
+                        MasterName.objects.filter(department__in=matched)
+                        .order_by('department', 'name')
+                        .values('id', 'name', 'department')
+                    )
+            except Exception:
+                pass
+
+        result.append({
+            'user_id': u.id,
+            'username': u.username,
+            'initial': (u.username[:1] or '?').upper(),
+            'open_count': open_qs.count(),
+            'completed_count': completed_qs.count(),
+            'created_count': created_qs.count(),
+            'edited_count': edited_qs.count(),
+            'open_tasks': open_tasks,
+            'completed_tasks': completed_tasks,
+            'created_tasks': created_tasks,
+            'masters': user_masters,
+        })
+
+    return JsonResponse({'users': result, 'days': days})

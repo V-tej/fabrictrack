@@ -134,4 +134,6 @@ urlpatterns = [
     path('api/chat/saved/', views.chat_saved_api, name='chat_saved_api'),
     path('api/chat/labels/<int:label_id>/delete/', views.chat_label_delete_api, name='chat_label_delete'),
     path('api/chat/jobcard-lookup/', views.chat_jobcard_lookup_api, name='chat_jobcard_lookup'),
+    path('api/chat/admin/user-tasks/', views.chat_admin_user_tasks_api, name='chat_admin_user_tasks'),
+    path('api/chat/user-masters/', views.chat_user_masters_api, name='chat_user_masters'),
 ]
