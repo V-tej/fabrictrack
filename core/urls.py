@@ -124,6 +124,7 @@ urlpatterns = [
     path('api/chat/message/<int:message_id>/edit/', views.chat_edit_api, name='chat_edit'),
     path('api/chat/message/<int:message_id>/delete/', views.chat_message_delete_api, name='chat_message_delete'),
     path('api/chat/message/<int:message_id>/image/', views.chat_message_image_api, name='chat_message_image'),
+    path('api/chat/message/<int:message_id>/audio/', views.chat_message_audio_api, name='chat_message_audio'),
     path('api/chat/tasks/', views.chat_tasks_api, name='chat_tasks_api'),
     path('api/chat/tasks/<int:task_id>/toggle/', views.chat_task_toggle_api, name='chat_task_toggle'),
     path('api/chat/tasks/<int:task_id>/delete/', views.chat_task_delete_api, name='chat_task_delete'),

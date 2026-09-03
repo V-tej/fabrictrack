@@ -4,7 +4,7 @@
 {% block page_title %}💬 Team Chat{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/chat.css' %}?v=5" />
+<link rel="stylesheet" href="{% static 'css/chat.css' %}?v=6" />
 <script id="stUsersData" type="application/json">{{ mention_users_json|safe }}</script>
 
 <div class="st-app" id="stApp"
@@ -183,6 +183,15 @@
         <div class="st-composer-box">
           <div class="st-mention-menu" id="stMentionMenu" hidden role="listbox"></div>
           <div class="st-attach-preview" id="stAttachPreview" hidden></div>
+          <div class="st-voice-bar" id="stVoiceBar" hidden>
+            <span class="st-voice-dot" id="stVoiceDot"></span>
+            <span class="st-voice-timer" id="stVoiceTimer">0:00</span>
+            <span class="st-voice-hint" id="stVoiceHint">Recording…</span>
+            <audio id="stVoicePreview" controls hidden></audio>
+            <button type="button" class="st-mini danger" id="stVoiceCancel">Discard</button>
+            <button type="button" class="st-mini" id="stVoiceStop">Stop</button>
+            <button type="button" class="st-btn primary" id="stVoiceSend" hidden>Send Voice</button>
+          </div>
           <textarea id="stInput" rows="1" placeholder="Message — /task @user title | /jobcard 2003 linein | /jobcard 2003 lineout" autocomplete="off"></textarea>
           <div class="st-composer-bar">
             <div class="st-composer-tools">
@@ -190,6 +199,7 @@
                 📎
                 <input type="file" id="stFile" accept="image/*" hidden />
               </label>
+              <button type="button" class="st-tool" id="stVoiceBtn" title="Record voice note">🎤 Voice</button>
               <button type="button" class="st-tool" id="stTaskModeBtn" title="Create as task">⚡ /task</button>
               <button type="button" class="st-tool" id="stJobCardBtn" title="Job Card Lookup">📋 Job Card</button>
               <button type="button" class="st-tool" id="stLineInBtn" title="Look up Line In dates">↘ Line In</button>
@@ -297,6 +307,16 @@
             <div id="stAssigneeDropdown" class="st-assignee-dropdown" hidden></div>
           </div>
         </div>
+        <!-- Master dropdown (loaded per assignee) -->
+        <div id="stTaskEditMasterRow" style="margin-top:10px;display:none">
+          <label class="st-edit-label">Master</label>
+          <div style="position:relative">
+            <select id="stTaskEditMaster" style="width:100%;padding:8px 12px;background:#1a1625;border:1.5px solid rgba(168,85,247,.25);border-radius:8px;color:#e2d9f3;font-size:13px;cursor:pointer">
+              <option value="">— No master —</option>
+            </select>
+            <div id="stTaskEditMasterLoading" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:#9b8fb5">Loading…</div>
+          </div>
+        </div>
         <div class="st-task-edit-actions">
           <button type="button" class="st-btn primary" id="stTaskEditSave">💾 Save</button>
           <button type="button" class="st-btn ghost" id="stTaskEditCancel">Cancel</button>
@@ -355,6 +375,8 @@
     taskScope: 'inbox',
     taskMode: false,
     file: null,
+    voiceBlob: null,
+    voiceDuration: 0,
     pollAbort: null,
     polling: false,
     messages: [],
@@ -390,6 +412,10 @@
     if (n < 1024) return n + ' B';
     if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
     return (n/1048576).toFixed(1) + ' MB';
+  }
+  function fmtDur(s) {
+    s = Math.max(0, Math.floor(Number(s) || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
   }
 
   /* ---------- Render message ---------- */
@@ -443,10 +469,10 @@
             '<span class="st-time">' + esc(msg.created_at) + (msg.edited_at ? ' <span class="st-edited">✏️ edited</span>' : '') + '</span>' +
             (msg.is_pinned ? '<span class="st-pin-badge">📌</span>' : '') +
             '<div class="st-hover-actions">' +
-              '<button type="button" class="st-ha" data-reply-msg="' + msg.id + '" data-reply-user="' + esc(msg.sender) + '" data-reply-text="' + esc(msg.content || 'Attachment') + '" title="Reply">↩ Reply</button>' +
-              (mine ? '<button type="button" class="st-ha" data-edit="' + msg.id + '" title="Edit">✏️ Edit</button>' : '') +
+              '<button type="button" class="st-ha" data-reply-msg="' + msg.id + '" data-reply-user="' + esc(msg.sender) + '" data-reply-text="' + esc(msg.content || (msg.has_audio ? 'Voice message' : 'Attachment')) + '" title="Reply">↩ Reply</button>' +
+              (mine && msg.content && !msg.has_audio ? '<button type="button" class="st-ha" data-edit="' + msg.id + '" title="Edit">✏️ Edit</button>' : '') +
               (mine ? '<button type="button" class="st-ha danger" data-delete-msg="' + msg.id + '" title="Delete Message">🗑 Delete</button>' : '') +
-              '<button type="button" class="st-ha" data-to-task="' + msg.id + '" title="Convert to Task">⚡ To Task</button>' +
+              (msg.content ? '<button type="button" class="st-ha" data-to-task="' + msg.id + '" title="Convert to Task">⚡ To Task</button>' : '') +
               '<button type="button" class="st-ha" data-react="' + msg.id + '" data-emoji="👍" title="React">👍</button>' +
               '<button type="button" class="st-ha" data-react="' + msg.id + '" data-emoji="🔥" title="React">🔥</button>' +
               '<button type="button" class="st-ha' + (msg.is_pinned ? ' active' : '') + '" data-pin="' + msg.id + '" title="' + (msg.is_pinned ? 'Unpin' : 'Pin') + '">' + (msg.is_pinned ? '📌' : '📍') + '</button>' +
@@ -455,6 +481,14 @@
           '</div>' +
           replyQuote +
           (msg.content ? '<div class="st-msg-body" data-body="' + msg.id + '">' + esc(msg.content) + '</div>' : '') +
+          (msg.has_audio ? (
+            '<div class="st-voice-msg">' +
+              '<button type="button" class="st-voice-play" data-voice-play="' + msg.id + '" title="Play">▶</button>' +
+              '<div class="st-voice-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>' +
+              '<span class="st-voice-dur">' + fmtDur(msg.audio_duration) + '</span>' +
+              '<audio preload="none" src="' + esc(msg.audio_url) + '" data-voice-audio="' + msg.id + '"></audio>' +
+            '</div>'
+          ) : '') +
           (msg.has_image ? (
             '<a class="st-img-wrap" href="' + esc(msg.image_url) + '" target="_blank" rel="noopener">' +
               '<img src="' + esc(msg.image_url) + '" alt="' + esc(msg.image_name) + '" />' +
@@ -630,9 +664,13 @@
 
   async function sendMessage() {
     if (!state.channelId) return;
+    if (voiceRec && voiceRec.state === 'recording') {
+      stopVoiceRecord();
+      return;
+    }
     const input = $('#stInput');
     let text = (input.value || '').trim();
-    const asTask = state.taskMode || /^\/task\b/i.test(text);
+    const asTask = !state.voiceBlob && (state.taskMode || /^\/task\b/i.test(text));
 
     // ── /jobcard command intercept ───────────────────────────────────────────
     // Syntax: /jobcard <number> [linein|lineout]   e.g.  /jobcard 2003 linein
@@ -662,16 +700,20 @@
       return;
     }
 
-    if (!text && !state.file) return;
+    if (!text && !state.file && !state.voiceBlob) return;
 
     const btn = $('#stSendBtn');
     btn.disabled = true;
     try {
       let res, data;
-      if (state.file) {
+      if (state.file || state.voiceBlob) {
         const fd = new FormData();
         fd.append('content', text);
-        fd.append('image', state.file);
+        if (state.file) fd.append('image', state.file);
+        if (state.voiceBlob) {
+          fd.append('audio', state.voiceBlob, state.voiceBlob.name || 'voice.webm');
+          fd.append('audio_duration', String(state.voiceDuration || 0));
+        }
         if (asTask) fd.append('as_task', '1');
         if (state.replyTo) fd.append('reply_to_id', state.replyTo.id);
         res = await fetch('/api/chat/' + state.channelId + '/send/', {
@@ -694,6 +736,7 @@
       if (!res.ok) throw new Error(data.error || 'Send failed');
       input.value = '';
       clearAttach();
+      clearVoice();
       clearReply();
       state.taskMode = false;
       $('#stTaskModeBtn').classList.remove('on');
@@ -1062,6 +1105,14 @@
       const cls = t.due_label.indexOf('Overdue') === 0 ? 'kanban-due overdue' : (t.due_label === 'Today' ? 'kanban-due today' : 'kanban-due');
       dueMeta = '<span class="' + cls + '">\ud83d\udcc5 ' + esc(t.due_label) + '</span>';
     }
+    // date_label: "Created 03 Sep, 09:15 AM" or "Updated 03 Sep, 02:30 PM"
+    const isUpdated = t.date_label && t.date_label.indexOf('Updated') === 0;
+    const dateLine = t.date_label
+      ? '<div class="st-kanban-date' + (isUpdated ? ' updated' : '') + '">' +
+          '<span class="st-kanban-date-icon">' + (isUpdated ? '✏️' : '🕐') + '</span>' +
+          esc(t.date_label) +
+        '</div>'
+      : '';
     return (
       '<div class="st-kanban-task st-kanban-pr-' + (t.priority || 'p3') + '">' +
         '<div class="st-kanban-task-top">' + renderPriorityBadge(t.priority) + '<span class="st-kanban-key">' + key + '</span></div>' +
@@ -1070,6 +1121,7 @@
           (assignee ? '<span class="st-kanban-assign">' + assignee + '</span>' : '') +
           (typeof dueMeta === 'string' ? '<span class="st-kanban-meta">' + dueMeta + '</span>' : dueMeta) +
         '</div>' +
+        dateLine +
       '</div>'
     );
   }
@@ -1560,8 +1612,17 @@
       document.getElementById('stTaskEditError').textContent = '';
 
       modal.dataset.editingTaskId = taskId;
+
+      // Extract existing master from title e.g. "Cut lot [MasterName]" → pre-select
+      const masterMatch = title.match(/\[([^\]]+)\]\s*$/);
+      modal.dataset.existingMaster = masterMatch ? masterMatch[1] : '';
+
       modal.hidden = false;
       document.getElementById('stTaskEditTitle').focus();
+
+      // Load masters for the assignee
+      if (assignee) loadEditMasters(assignee);
+      else hideEditMasterRow();
       return;
     }
 
@@ -1660,6 +1721,234 @@
     p.hidden = false;
     p.innerHTML = '<span>📎 ' + esc(f.name) + ' (' + fmtSize(f.size) + ')</span><button type="button" id="stClearFile">✕</button>';
     $('#stClearFile').onclick = clearAttach;
+  });
+
+  let voiceRec = null;
+  let voiceChunks = [];
+  let voiceStream = null;
+  let voiceTimer = null;
+  let voiceSeconds = 0;
+  let voicePreviewUrl = '';
+
+  function voiceEls() {
+    return {
+      bar: $('#stVoiceBar'),
+      btn: $('#stVoiceBtn'),
+      timer: $('#stVoiceTimer'),
+      hint: $('#stVoiceHint'),
+      stop: $('#stVoiceStop'),
+      send: $('#stVoiceSend'),
+      cancel: $('#stVoiceCancel'),
+      preview: $('#stVoicePreview'),
+      dot: $('#stVoiceDot'),
+    };
+  }
+
+  function pickVoiceMime() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+    for (let i = 0; i < types.length; i++) {
+      if (MediaRecorder.isTypeSupported(types[i])) return types[i];
+    }
+    return '';
+  }
+
+  function setVoiceTimer(sec) {
+    const el = voiceEls().timer;
+    if (el) el.textContent = fmtDur(sec);
+  }
+
+  function stopVoiceTracks() {
+    if (voiceStream) {
+      voiceStream.getTracks().forEach(function (t) { try { t.stop(); } catch (_) {} });
+      voiceStream = null;
+    }
+  }
+
+  function clearVoiceTimer() {
+    if (voiceTimer) {
+      clearInterval(voiceTimer);
+      voiceTimer = null;
+    }
+    voiceSeconds = 0;
+  }
+
+  function clearVoice() {
+    if (voiceRec && voiceRec.state === 'recording') {
+      try { voiceRec.stop(); } catch (_) {}
+    }
+    voiceRec = null;
+    voiceChunks = [];
+    stopVoiceTracks();
+    clearVoiceTimer();
+    state.voiceBlob = null;
+    state.voiceDuration = 0;
+    if (voicePreviewUrl) {
+      try { URL.revokeObjectURL(voicePreviewUrl); } catch (_) {}
+      voicePreviewUrl = '';
+    }
+    const v = voiceEls();
+    if (v.bar) v.bar.hidden = true;
+    if (v.btn) v.btn.classList.remove('on', 'rec');
+    if (v.send) v.send.hidden = true;
+    if (v.stop) v.stop.hidden = false;
+    if (v.preview) {
+      v.preview.hidden = true;
+      v.preview.removeAttribute('src');
+    }
+    if (v.hint) v.hint.textContent = 'Recording…';
+    if (v.dot) v.dot.classList.remove('preview');
+    setVoiceTimer(0);
+  }
+
+  function showVoicePreview(blob, seconds) {
+    const mime = blob.type || 'audio/webm';
+    const ext = mime.indexOf('mp4') >= 0 ? 'm4a' : (mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm');
+    state.voiceBlob = new File([blob], 'voice.' + ext, { type: mime });
+    state.voiceDuration = seconds;
+    if (voicePreviewUrl) {
+      try { URL.revokeObjectURL(voicePreviewUrl); } catch (_) {}
+    }
+    voicePreviewUrl = URL.createObjectURL(blob);
+    const v = voiceEls();
+    if (v.bar) v.bar.hidden = false;
+    if (v.hint) v.hint.textContent = 'Preview';
+    if (v.stop) v.stop.hidden = true;
+    if (v.send) v.send.hidden = false;
+    if (v.preview) {
+      v.preview.src = voicePreviewUrl;
+      v.preview.hidden = false;
+    }
+    if (v.dot) v.dot.classList.add('preview');
+    if (v.btn) v.btn.classList.remove('rec');
+    setVoiceTimer(seconds);
+  }
+
+  async function startVoiceRecord() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Voice recording is not supported in this browser.');
+      return;
+    }
+    if (!window.MediaRecorder) {
+      alert('Voice recording is not supported in this browser.');
+      return;
+    }
+    clearAttach();
+    try {
+      voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      alert('Microphone permission is required to send voice notes.');
+      return;
+    }
+    voiceChunks = [];
+    const mime = pickVoiceMime();
+    try {
+      voiceRec = mime ? new MediaRecorder(voiceStream, { mimeType: mime }) : new MediaRecorder(voiceStream);
+    } catch (_) {
+      voiceRec = new MediaRecorder(voiceStream);
+    }
+    voiceRec.ondataavailable = function (e) {
+      if (e.data && e.data.size) voiceChunks.push(e.data);
+    };
+    voiceRec.onstop = function () {
+      stopVoiceTracks();
+      clearVoiceTimer();
+      const blob = new Blob(voiceChunks, { type: voiceRec && voiceRec.mimeType ? voiceRec.mimeType : 'audio/webm' });
+      voiceChunks = [];
+      if (!blob.size) {
+        clearVoice();
+        setStatus('Recording was empty', false);
+        return;
+      }
+      showVoicePreview(blob, state.voiceDuration || voiceSeconds || 1);
+    };
+    state.voiceDuration = 0;
+    voiceSeconds = 0;
+    setVoiceTimer(0);
+    const v = voiceEls();
+    if (v.bar) v.bar.hidden = false;
+    if (v.send) v.send.hidden = true;
+    if (v.stop) v.stop.hidden = false;
+    if (v.preview) v.preview.hidden = true;
+    if (v.hint) v.hint.textContent = 'Recording…';
+    if (v.dot) v.dot.classList.remove('preview');
+    if (v.btn) v.btn.classList.add('on', 'rec');
+    voiceRec.start(250);
+    voiceTimer = setInterval(function () {
+      voiceSeconds += 1;
+      state.voiceDuration = voiceSeconds;
+      setVoiceTimer(voiceSeconds);
+      if (voiceSeconds >= 120 && voiceRec && voiceRec.state === 'recording') {
+        try { voiceRec.stop(); } catch (_) {}
+      }
+    }, 1000);
+  }
+
+  function stopVoiceRecord() {
+    if (voiceRec && voiceRec.state === 'recording') {
+      try { voiceRec.stop(); } catch (_) {}
+    }
+  }
+
+  const voiceBtn = $('#stVoiceBtn');
+  if (voiceBtn) voiceBtn.addEventListener('click', function () {
+    if (voiceRec && voiceRec.state === 'recording') {
+      stopVoiceRecord();
+      return;
+    }
+    if (state.voiceBlob) {
+      clearVoice();
+      return;
+    }
+    startVoiceRecord();
+  });
+  const voiceStop = $('#stVoiceStop');
+  if (voiceStop) voiceStop.addEventListener('click', stopVoiceRecord);
+  const voiceCancel = $('#stVoiceCancel');
+  if (voiceCancel) voiceCancel.addEventListener('click', clearVoice);
+  const voiceSend = $('#stVoiceSend');
+  if (voiceSend) voiceSend.addEventListener('click', function () {
+    if (!state.voiceBlob) return;
+    sendMessage();
+  });
+
+  document.addEventListener('click', function (e) {
+    const playBtn = e.target.closest('[data-voice-play]');
+    if (!playBtn) return;
+    const id = playBtn.dataset.voicePlay;
+    const audio = document.querySelector('[data-voice-audio="' + id + '"]');
+    if (!audio) return;
+    document.querySelectorAll('[data-voice-audio]').forEach(function (a) {
+      if (a !== audio) {
+        a.pause();
+        const otherBtn = document.querySelector('[data-voice-play="' + a.dataset.voiceAudio + '"]');
+        if (otherBtn) {
+          otherBtn.textContent = '▶';
+          otherBtn.classList.remove('playing');
+        }
+        const wrap = a.closest('.st-voice-msg');
+        if (wrap) wrap.classList.remove('playing');
+      }
+    });
+    const wrap = playBtn.closest('.st-voice-msg');
+    if (audio.paused) {
+      audio.play().catch(function () {
+        alert('Could not play this voice note.');
+      });
+      playBtn.textContent = '❚❚';
+      playBtn.classList.add('playing');
+      if (wrap) wrap.classList.add('playing');
+    } else {
+      audio.pause();
+      playBtn.textContent = '▶';
+      playBtn.classList.remove('playing');
+      if (wrap) wrap.classList.remove('playing');
+    }
+    audio.onended = function () {
+      playBtn.textContent = '▶';
+      playBtn.classList.remove('playing');
+      if (wrap) wrap.classList.remove('playing');
+    };
   });
   $('#stSearch').addEventListener('input', applySearchFilter);
   $('#stAddTaskBtn').addEventListener('click', function () {
@@ -2166,17 +2455,99 @@
     if (modal && !modal.hidden && e.target === modal) modal.hidden = true;
   });
 
+  // ── Edit Modal: master helpers ─────────────────────────────────────────────
+  function hideEditMasterRow() {
+    var row = document.getElementById('stTaskEditMasterRow');
+    if (row) row.style.display = 'none';
+    var sel = document.getElementById('stTaskEditMaster');
+    if (sel) { sel.innerHTML = '<option value="">— No master —</option>'; }
+  }
+
+  async function loadEditMasters(username) {
+    const row     = document.getElementById('stTaskEditMasterRow');
+    const sel     = document.getElementById('stTaskEditMaster');
+    const loader  = document.getElementById('stTaskEditMasterLoading');
+    const modal   = document.getElementById('stTaskEditModal');
+    if (!row || !sel) return;
+
+    loader.style.display = 'block';
+    row.style.display = 'block';
+    sel.innerHTML = '<option value="">— No master —</option>';
+
+    try {
+      const res  = await fetch('/api/chat/user-masters/?username=' + encodeURIComponent(username), { credentials: 'same-origin' });
+      const data = await res.json();
+      const masters = data.masters || [];
+      if (!masters.length) { row.style.display = 'none'; return; }
+
+      // Group by department
+      const grouped = {};
+      masters.forEach(function(m) {
+        if (!grouped[m.department]) grouped[m.department] = [];
+        grouped[m.department].push(m);
+      });
+
+      Object.keys(grouped).forEach(function(dept) {
+        const og = document.createElement('optgroup');
+        og.label = dept;
+        grouped[dept].forEach(function(m) {
+          const opt = document.createElement('option');
+          opt.value = m.name;
+          opt.textContent = m.name;
+          og.appendChild(opt);
+        });
+        sel.appendChild(og);
+      });
+
+      // Pre-select existing master if title contained one
+      const existing = (modal && modal.dataset.existingMaster) || '';
+      if (existing) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === existing) { sel.selectedIndex = i; break; }
+        }
+      }
+    } catch(_) {
+      row.style.display = 'none';
+    } finally {
+      loader.style.display = 'none';
+    }
+  }
+
+  // Reload masters when assignee changes
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'stTaskEditAssignee') {
+      const raw = (e.target.value || '').trim().replace(/^@/, '');
+      if (raw) loadEditMasters(raw); else hideEditMasterRow();
+    }
+  });
+
+  // Also reload when user picks from the assignee autocomplete dropdown
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#stAssigneeDropdown .st-assignee-opt')) {
+      const username = e.target.closest('.st-assignee-opt').dataset.username;
+      if (username) setTimeout(function() { loadEditMasters(username); }, 50);
+    }
+  });
+
   // ── Task Edit Modal: Save / Cancel / Close ────────────────────────────────
   async function saveTaskEdit() {
     const modal = document.getElementById('stTaskEditModal');
     if (!modal) return;
     const taskId  = modal.dataset.editingTaskId;
-    const title   = (document.getElementById('stTaskEditTitle').value || '').trim();
+    let   title   = (document.getElementById('stTaskEditTitle').value || '').trim();
     const due     = (document.getElementById('stTaskEditDue').value || '').trim();
     const priority= document.getElementById('stTaskEditPriority').value;
     const assigneeRaw = (document.getElementById('stTaskEditAssignee').value || '').trim();
     const assignee= assigneeRaw.replace(/^@/, '');
     const errEl   = document.getElementById('stTaskEditError');
+
+    // Strip any existing [master] suffix from title before appending new one
+    title = title.replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+
+    // Append selected master to title
+    const masterSel = document.getElementById('stTaskEditMaster');
+    const selectedMaster = masterSel ? masterSel.value.trim() : '';
+    if (selectedMaster) title = title + ' [' + selectedMaster + ']';
 
     if (!title) { errEl.textContent = 'Title is required.'; return; }
     errEl.textContent = '';

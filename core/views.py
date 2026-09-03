@@ -5563,6 +5563,8 @@ def serialize_chat_message(msg, user=None):
         p = msg.parent
         p_sender = p.sender.username if p.sender else 'Unknown'
         p_text = p.content if p.content else (p.task.title if getattr(p, 'task', None) else 'Message')
+        if getattr(p, 'message_type', '') == 'voice' and not p.content:
+            p_text = 'Voice message'
         if len(p_text) > 80:
             p_text = p_text[:80] + '…'
         reply_to = {
@@ -5573,8 +5575,9 @@ def serialize_chat_message(msg, user=None):
             'task_key': p.task.task_key if getattr(p, 'task', None) else None,
         }
 
-    # Never load BinaryField image_data in list serialization — use image_size flag
+    # Never load BinaryField blobs in list serialization — use size/name flags
     has_image = bool(getattr(msg, 'image_size', 0)) or bool(getattr(msg, 'image_name', ''))
+    has_audio = bool(getattr(msg, 'audio_mime', '')) or bool(getattr(msg, 'audio_duration', 0))
     data = {
         'id': msg.id,
         'content': msg.content,
@@ -5594,6 +5597,9 @@ def serialize_chat_message(msg, user=None):
         'image_name': msg.image_name or '',
         'image_size': msg.image_size or 0,
         'image_url': f'/api/chat/message/{msg.id}/image/' if has_image else None,
+        'has_audio': has_audio,
+        'audio_duration': getattr(msg, 'audio_duration', 0) or 0,
+        'audio_url': f'/api/chat/message/{msg.id}/audio/' if has_audio else None,
         'task': serialize_chat_task(msg.task) if msg.task_id else None,
         'reply_to': reply_to,
     }
@@ -5797,7 +5803,7 @@ def chat_messages_api(request, channel_id):
             'parent', 'parent__sender', 'parent__task',
         )
         .prefetch_related('reactions__user', 'bookmarks', 'task__labels')
-        .defer('image_data')
+        .defer('image_data', 'audio_data')
     )
 
     # Long-poll removed: it held Gunicorn workers for ~18s and froze the whole app on Render.
@@ -5830,12 +5836,19 @@ def chat_send_api(request, channel_id):
 
     content_type = request.content_type or ''
     image_file = None
+    audio_file = None
+    audio_duration = 0
     if 'multipart/form-data' in content_type:
         content = (request.POST.get('content') or '').strip()
         image_file = request.FILES.get('image')
+        audio_file = request.FILES.get('audio')
         as_task = request.POST.get('as_task') == '1'
         priority = request.POST.get('priority') or 'p3'
         reply_to_id = request.POST.get('reply_to_id')
+        try:
+            audio_duration = max(0, min(int(request.POST.get('audio_duration') or 0), 180))
+        except (TypeError, ValueError):
+            audio_duration = 0
     else:
         try:
             payload = json.loads(request.body.decode('utf-8') or '{}')
@@ -5877,7 +5890,7 @@ def chat_send_api(request, channel_id):
         )
         return JsonResponse({'message': serialize_chat_message(msg, request.user)}, status=201)
 
-    if not content and not image_file:
+    if not content and not image_file and not audio_file:
         return JsonResponse({'error': 'Message cannot be empty.'}, status=400)
     if len(content) > 4000:
         return JsonResponse({'error': 'Message too long.'}, status=400)
@@ -5886,7 +5899,7 @@ def chat_send_api(request, channel_id):
         channel=channel,
         sender=request.user,
         content=content,
-        message_type=ChatMessage.TYPE_TEXT,
+        message_type=ChatMessage.TYPE_VOICE if audio_file else ChatMessage.TYPE_TEXT,
         parent=parent_msg,
     )
     if image_file:
@@ -5897,6 +5910,22 @@ def chat_send_api(request, channel_id):
         msg.image_name = image_file.name[:255]
         msg.image_content_type = getattr(image_file, 'content_type', None) or 'image/jpeg'
         msg.image_size = len(data)
+    if audio_file:
+        allowed = (
+            'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+            'audio/x-m4a', 'audio/aac', 'audio/mp3', 'video/webm',
+        )
+        ctype = (getattr(audio_file, 'content_type', None) or '').split(';')[0].strip().lower()
+        if ctype and ctype not in allowed and not ctype.startswith('audio/'):
+            return JsonResponse({'error': 'Unsupported audio format.'}, status=400)
+        data = audio_file.read()
+        if len(data) > 5 * 1024 * 1024:
+            return JsonResponse({'error': 'Voice note max 5MB.'}, status=400)
+        msg.audio_data = data
+        msg.audio_mime = ctype or 'audio/webm'
+        msg.audio_duration = audio_duration or 1
+        if not msg.content:
+            msg.content = ''
     msg.save()
     return JsonResponse({'message': serialize_chat_message(msg, request.user)}, status=201)
 
@@ -6029,6 +6058,20 @@ def chat_message_image_api(request, message_id):
     if not msg.image_data:
         raise Http404()
     return HttpResponse(bytes(msg.image_data), content_type=msg.image_content_type or 'image/jpeg')
+
+
+@login_required
+@require_http_methods(['GET'])
+def chat_message_audio_api(request, message_id):
+    msg = get_object_or_404(ChatMessage, pk=message_id)
+    if not user_can_access_channel(request.user, msg.channel):
+        raise Http404()
+    if not msg.audio_data:
+        raise Http404()
+    response = HttpResponse(bytes(msg.audio_data), content_type=msg.audio_mime or 'audio/webm')
+    response['Accept-Ranges'] = 'bytes'
+    response['Content-Disposition'] = 'inline'
+    return response
 
 
 @login_required
@@ -6533,24 +6576,36 @@ def chat_admin_user_tasks_api(request):
                 return f'In {delta}d'
             return d.strftime('%d %b')
 
+        def fmt_ts(dt):
+            """Format a datetime to a friendly string like '03 Sep, 09:15 AM'."""
+            if not dt:
+                return None
+            return timezone.localtime(dt).strftime('%d %b, %I:%M %p')
+
         for t in open_tasks:
             t['due_label'] = fmt_due(t.get('due_date'))
             t['due_date'] = t['due_date'].strftime('%d %b') if t.get('due_date') else None
-            t['created_at'] = timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else None
+            raw_cre = t.get('created_at')
+            t['date_label'] = 'Created ' + fmt_ts(raw_cre) if raw_cre else None
+            t['created_at'] = timezone.localtime(raw_cre).strftime('%d %b') if raw_cre else None
 
         for t in created_tasks:
             t['due_label'] = fmt_due(t.get('due_date'))
             t['due_date'] = t['due_date'].strftime('%d %b') if t.get('due_date') else None
-            t['created_at'] = timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else None
+            raw_cre = t.get('created_at')
+            t['date_label'] = 'Created ' + fmt_ts(raw_cre) if raw_cre else None
+            t['created_at'] = timezone.localtime(raw_cre).strftime('%d %b') if raw_cre else None
 
         for t in completed_tasks:
+            raw_cre = t.get('created_at')
             t['completed_at'] = (
                 timezone.localtime(t['completed_at']).strftime('%d %b, %I:%M %p')
                 if t.get('completed_at') else (
-                    timezone.localtime(t['created_at']).strftime('%d %b') if t.get('created_at') else '—'
+                    fmt_ts(raw_cre) if raw_cre else '—'
                 )
             )
-            t['created_at'] = None  # not needed in completed view
+            t['date_label'] = 'Created ' + fmt_ts(raw_cre) if raw_cre else None
+            t['created_at'] = None
 
         # Masters for this user (for Kanban filter dropdown)
         # Priority:

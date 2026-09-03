@@ -1365,9 +1365,11 @@ class ChatMessage(models.Model):
     """Channel / DM message; may embed a task card or image."""
     TYPE_TEXT = 'text'
     TYPE_TASK = 'task'
+    TYPE_VOICE = 'voice'
     TYPE_CHOICES = [
         (TYPE_TEXT, 'Text'),
         (TYPE_TASK, 'Task card'),
+        (TYPE_VOICE, 'Voice note'),
     ]
     channel = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='chat_messages')
@@ -1379,6 +1381,9 @@ class ChatMessage(models.Model):
     image_name = models.CharField(max_length=255, blank=True)
     image_content_type = models.CharField(max_length=100, blank=True)
     image_size = models.PositiveIntegerField(default=0)
+    audio_data = models.BinaryField(null=True, blank=True)
+    audio_mime = models.CharField(max_length=100, blank=True)
+    audio_duration = models.PositiveIntegerField(default=0)
     is_pinned = models.BooleanField(default=False)
     edited_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
