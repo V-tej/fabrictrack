@@ -1,0 +1,9 @@
+tunnel: 6fe9a24b-06d8-4611-9a94-40db9e6f3f0f
+credentials-file: .cloudflared/6fe9a24b-06d8-4611-9a94-40db9e6f3f0f.json
+
+ingress:
+  - hostname: fabrictrack.uk
+    service: http://localhost:8000
+  - hostname: www.fabrictrack.uk
+    service: http://localhost:8000
+  - service: http_status:404

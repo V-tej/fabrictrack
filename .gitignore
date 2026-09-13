@@ -35,4 +35,4 @@ exports/
 Thumbs.db
 
 # Cloudflare Tunnel Credentials (NEVER commit these!)
-.cloudflared/
+.cloudflared/*.json
