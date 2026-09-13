@@ -13,7 +13,7 @@ echo Waiting 10 seconds for Django to be ready...
 timeout /t 10 /nobreak > nul
 
 echo Starting Cloudflare Tunnel (fabrictrack.uk)...
-start "FabricTrack Tunnel" cmd /k ""%CLOUDFLARED%" --config "%PROJECT_DIR%.cloudflared\config.yml" tunnel run --credentials-file "%PROJECT_DIR%.cloudflared\6fe9a24b-06d8-4611-9a94-40db9e6f3f0f.json""
+start "FabricTrack Tunnel" cmd /k ""%CLOUDFLARED%" --config "%PROJECT_DIR%.cloudflared\config.yml" tunnel run"
 
 echo.
 echo ==========================================
