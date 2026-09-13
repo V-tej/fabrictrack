@@ -2,7 +2,7 @@
 title FabricTrack Launcher
 setlocal
 set "CLOUDFLARED=C:\Program Files (x86)\cloudflared\cloudflared.exe"
-set "PROJECT_DIR=%~dp0."
+set "PROJECT_DIR=%~dp0"
 
 cd /d "%PROJECT_DIR%"
 
@@ -13,7 +13,7 @@ echo Waiting 10 seconds for Django to be ready...
 timeout /t 10 /nobreak > nul
 
 echo Starting Cloudflare Tunnel (fabrictrack.uk)...
-start "FabricTrack Tunnel" cmd /k ""%CLOUDFLARED%" --config "%PROJECT_DIR%\.cloudflared\config.yml" tunnel run fabricstrack"
+start "FabricTrack Tunnel" cmd /k ""%CLOUDFLARED%" --config "%PROJECT_DIR%.cloudflared\config.yml" tunnel run fabricstrack"
 
 echo.
 echo ==========================================
